@@ -1,17 +1,14 @@
-use std::io::Error;
-
 use super::*;
 
-const variable_terms : &[&str] = &["species", "variable", "var"];
-const transition_terms : &[&str] = &["reaction", "transition"];
-const decrease_terms : &[&str] = &["consume", "decrease", "decrement"];
-const increase_terms : &[&str] = &["produce", "increase", "increment"];
-const rate_terms : &[&str] = &["rate", "const"];
-const target_terms : &[&str] = &["target", "goal", "prop", "check"];
-
+const VARIABLE_TERMS : &[&str] = &["species", "variable", "var"];
+const TRANSITION_TERMS : &[&str] = &["reaction", "transition"];
+const DECREASE_TERMS : &[&str] = &["consume", "decrease", "decrement"];
+const INCREASE_TERMS : &[&str] = &["produce", "increase", "increment"];
+const RATE_TERMS : &[&str] = &["rate", "const"];
+const TARGET_TERMS : &[&str] = &["target", "goal", "prop", "check"];
 
 // TODO: Add a correct error type, potentially still with a message, or just print the error?
-pub fn parse_model(filename: String) -> Result<vas_model::Vas_Model, String> {
+pub fn parse_model(filename: String) -> Result<vas_model::VasModel, String> {
     if let Ok(lines) = util::read_lines(filename) {
         let mut v: Vec<Box<vas_model::Variable>> = vec![];
         let mut t: Vec<Box<vas_model::Transition>> = vec![];
@@ -23,7 +20,7 @@ pub fn parse_model(filename: String) -> Result<vas_model::Vas_Model, String> {
             let words: &[&str] = &line.split_whitespace().collect::<Vec<&str>>()[..];
 
             if let Some(first_word) = words.get(0) {
-                if variable_terms.contains(&first_word) {
+                if VARIABLE_TERMS.contains(&first_word) {
                     // Check the number of words
                     match words.len() {
                         2 => {
@@ -51,10 +48,10 @@ pub fn parse_model(filename: String) -> Result<vas_model::Vas_Model, String> {
                             }
                         }
                         _ => {
-                            return Err(format!("Model parsing error: Unexpected number of words for variable term: {}", words.len()));
+                            return Err(format!("Model parsing error: Unexpected number of words for variable term: {} words in term <{}>", words.len(), line));
                         }
                     }
-                } else if transition_terms.contains(&first_word) {
+                } else if TRANSITION_TERMS.contains(&first_word) {
                     match words.len() {
                         2 => {
                             let transition_name = words[1].to_string();
@@ -67,10 +64,10 @@ pub fn parse_model(filename: String) -> Result<vas_model::Vas_Model, String> {
                             }));
                         }
                         _ => {
-                            return Err(format!("Model parsing error: Unexpected number of words for transition term: {}", words.len()));
+                            return Err(format!("Model parsing error: Unexpected number of words for transition term: {} words in term <{}>", words.len(), line));
                         }
                     }
-                } else if decrease_terms.contains(&first_word) {
+                } else if DECREASE_TERMS.contains(&first_word) {
                     if current_transition.is_some() {
                         let species_name : String;
                         let count;
@@ -90,7 +87,7 @@ pub fn parse_model(filename: String) -> Result<vas_model::Vas_Model, String> {
                                 }
                             }
                             _ => {
-                                return Err(format!("Model parsing error: Unexpected number of words for decrease term: {}", words.len()));
+                                return Err(format!("Model parsing error: Unexpected number of words for decrease term: {} words in term <{}>", words.len(), line));
                             }
                         }
 
@@ -112,7 +109,7 @@ pub fn parse_model(filename: String) -> Result<vas_model::Vas_Model, String> {
                     else {
                         return Err(format!("Model parsing error: keyword {} used before declaring a transition.", first_word));
                     }
-                } else if increase_terms.contains(&first_word) {
+                } else if INCREASE_TERMS.contains(&first_word) {
                     if current_transition.is_some() {
                         let species_name : String;
                         let count;
@@ -132,7 +129,7 @@ pub fn parse_model(filename: String) -> Result<vas_model::Vas_Model, String> {
                                 }
                             }
                             _ => {
-                                return Err(format!("Model parsing error: Unexpected number of words for increase term: {}", words.len()));
+                                return Err(format!("Model parsing error: Unexpected number of words for increase term: {} words in term <{}>", words.len(), line));
                             }
                         }
 
@@ -154,7 +151,7 @@ pub fn parse_model(filename: String) -> Result<vas_model::Vas_Model, String> {
                     else {
                         return Err(format!("Model parsing error: keyword {} used before declaring a transition.", first_word));
                     }
-                } else if rate_terms.contains(&first_word) {
+                } else if RATE_TERMS.contains(&first_word) {
                     if current_transition.is_some() {
                         match words.len() {
                             2 => {
@@ -176,14 +173,14 @@ pub fn parse_model(filename: String) -> Result<vas_model::Vas_Model, String> {
                                 }
                             }
                             _ => {
-                                return Err(format!("Model parsing error: Unexpected number of words for rate term: {}", words.len()));
+                                return Err(format!("Model parsing error: Unexpected number of words for rate term: {} words in term <{}>", words.len(), line));
                             }
                         }
                     }
                     else {
                         return Err(format!("Model parsing error: keyword {} used before declaring a transition.", first_word));
                     }
-                } else if target_terms.contains(&first_word) {
+                } else if TARGET_TERMS.contains(&first_word) {
                     println!("Found target term: {}", first_word);
                     // Handle target logic here
                     p = words[1..].join(" ");
@@ -193,7 +190,7 @@ pub fn parse_model(filename: String) -> Result<vas_model::Vas_Model, String> {
             }
         }
 
-        Ok(vas_model::Vas_Model {
+        Ok(vas_model::VasModel {
             variables: v,
             transitions: t,
             property: p,

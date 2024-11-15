@@ -3,12 +3,16 @@ use model::parser::parse_model;
 mod model;
 
 fn main() {
-	if let Ok(test_vas)  = parse_model(String::from("models/toy.crn")) {
-		println!("{}", test_vas.to_string());
-		println!("worked");
+	let res = parse_model(String::from("models/toy.crn"));
+	if res.is_ok() {
+		println!("{}", res.unwrap().to_string());
+		println!("parsing worked!");
 	}
 	else {
-		println!("failed");
+		println!("parsing failed");
+		if let Err(e) = res {
+			println!("{}", e);
+		}
 	}
 
 }

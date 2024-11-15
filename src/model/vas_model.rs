@@ -1,7 +1,4 @@
-use prusti_contracts::*;
-use std::fs::read_to_string;
-
-pub(crate) struct Vas_Model {
+pub(crate) struct VasModel {
     // TODO: Might we want to use hashmaps instead? We can think about this later if we need an efficiency boost
     pub(super) variables: Vec<Box<Variable>>,
     pub(super) transitions: Vec<Box<Transition>>,
@@ -21,7 +18,7 @@ pub(crate) struct Transition {
     pub(super) transition_rate: f64,
 }
 
-impl Vas_Model {
+impl VasModel {
     pub fn to_string(&self) -> String {
         let mut result = String::new();
 
@@ -61,14 +58,14 @@ impl Vas_Model {
 
 
 
-impl Transition {
-    fn is_catalyst(&self, species_name: String) -> bool {
-        // TODO
-        unimplemented!()
-    }
-    fn to_string(&self) -> String {
-        self.transition_name.clone()
-    }
-}
+// impl Transition {
+//     fn is_catalyst(&self, species_name: String) -> bool {
+//         // TODO
+//         unimplemented!()
+//     }
+//     fn to_string(&self) -> String {
+//         self.transition_name.clone()
+//     }
+// }
 
 
