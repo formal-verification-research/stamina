@@ -1,0 +1,12 @@
+species S1 init 100
+species S2 init 200
+species S3 init 300
+target S3 = 340
+reaction R1
+	consume S1 10
+	produce S2 3
+	const 0.4
+reaction R2
+	consume S1 1
+	produce S3 1
+	const 0.6

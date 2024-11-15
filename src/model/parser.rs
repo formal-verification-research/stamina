@@ -1,0 +1,204 @@
+use std::io::Error;
+
+use super::*;
+
+const variable_terms : &[&str] = &["species", "variable", "var"];
+const transition_terms : &[&str] = &["reaction", "transition"];
+const decrease_terms : &[&str] = &["consume", "decrease", "decrement"];
+const increase_terms : &[&str] = &["produce", "increase", "increment"];
+const rate_terms : &[&str] = &["rate", "const"];
+const target_terms : &[&str] = &["target", "goal", "prop", "check"];
+
+
+// TODO: Add a correct error type, potentially still with a message, or just print the error?
+pub fn parse_model(filename: String) -> Result<vas_model::Vas_Model, String> {
+    if let Ok(lines) = util::read_lines(filename) {
+        let mut v: Vec<Box<vas_model::Variable>> = vec![];
+        let mut t: Vec<Box<vas_model::Transition>> = vec![];
+        let mut p: String = String::from("unspecified");
+        let mut current_transition: Option<String> = None;
+
+        for line in lines.flatten() {
+            // Split the line into words and convert to a slice
+            let words: &[&str] = &line.split_whitespace().collect::<Vec<&str>>()[..];
+
+            if let Some(first_word) = words.get(0) {
+                if variable_terms.contains(&first_word) {
+                    // Check the number of words
+                    match words.len() {
+                        2 => {
+                            // Handle case with 2 words
+                            let variable_name = words[1].to_string();
+                            v.push(Box::new(vas_model::Variable {
+                                variable_name,
+                                initial_count: 0, // Default or unspecified initial count
+                            }));
+                        }
+                        4 => {
+                            // Handle case with 4 words
+                            if words[2] == "init" {
+                                if let Ok(initial_count) = words[3].parse::<u64>() {
+                                    let variable_name = words[1].to_string();
+                                    v.push(Box::new(vas_model::Variable {
+                                        variable_name,
+                                        initial_count,
+                                    }));
+                                } else {
+                                    return Err(format!("Model parsing error: Initial count is not a valid number: {}", words[3]));
+                                }
+                            } else {
+                                return Err(format!("Model parsing error: Expected 'init' as the third word, found: {}", words[2]));
+                            }
+                        }
+                        _ => {
+                            return Err(format!("Model parsing error: Unexpected number of words for variable term: {}", words.len()));
+                        }
+                    }
+                } else if transition_terms.contains(&first_word) {
+                    match words.len() {
+                        2 => {
+                            let transition_name = words[1].to_string();
+                            current_transition = Some(String::from(transition_name.clone()));
+                            t.push(Box::new(vas_model::Transition {
+                                increment_vector: vec![Box::new(0); v.len()],
+                                decrement_vector: vec![Box::new(0); v.len()],
+                                transition_name: transition_name,
+                                transition_rate: 0.0,
+                            }));
+                        }
+                        _ => {
+                            return Err(format!("Model parsing error: Unexpected number of words for transition term: {}", words.len()));
+                        }
+                    }
+                } else if decrease_terms.contains(&first_word) {
+                    if current_transition.is_some() {
+                        let species_name : String;
+                        let count;
+                        match words.len() {
+                            2 => {
+                                species_name = String::from(words[1]);
+                                count = 1;
+                            }
+                            3 => {
+                                species_name = String::from(words[1]);
+                                let count_s = words[2].parse::<u64>();
+                                if count_s.is_ok() {
+                                    count = count_s.unwrap();
+                                }
+                                else {
+                                    return Err(format!("Model parsing error: Cannot parse into int: {}", words[2]));
+                                }
+                            }
+                            _ => {
+                                return Err(format!("Model parsing error: Unexpected number of words for decrease term: {}", words.len()));
+                            }
+                        }
+
+                        let index = v.clone().into_iter().position(|r| r.variable_name == species_name);
+                        if index.is_some() {
+                            if let Some(transition) = t
+                                .iter_mut()
+                                .find(|x| x.transition_name == current_transition.clone().unwrap()) { 
+                                    transition.decrement_vector[index.unwrap()] = Box::new(count);
+                                }
+                                else {
+                                    return Err(format!("Model parsing error: Transition {} not found.", current_transition.clone().unwrap()));
+                                }
+                        }
+                        else {
+                            return Err(format!("Model parsing error: Attempting to decrease species that does not exist: {}", words[1]));
+                        }
+                    }
+                    else {
+                        return Err(format!("Model parsing error: keyword {} used before declaring a transition.", first_word));
+                    }
+                } else if increase_terms.contains(&first_word) {
+                    if current_transition.is_some() {
+                        let species_name : String;
+                        let count;
+                        match words.len() {
+                            2 => {
+                                species_name = String::from(words[1]);
+                                count = 1;
+                            }
+                            3 => {
+                                species_name = String::from(words[1]);
+                                let count_s = words[2].parse::<u64>();
+                                if count_s.is_ok() {
+                                    count = count_s.unwrap();
+                                }
+                                else {
+                                    return Err(format!("Model parsing error: Cannot parse into int: {}", words[2]));
+                                }
+                            }
+                            _ => {
+                                return Err(format!("Model parsing error: Unexpected number of words for increase term: {}", words.len()));
+                            }
+                        }
+
+                        let index = v.clone().into_iter().position(|r| r.variable_name == species_name);
+                        if index.is_some() {
+                            if let Some(transition) = t
+                                .iter_mut()
+                                .find(|x| x.transition_name == current_transition.clone().unwrap()) { 
+                                    transition.increment_vector[index.unwrap()] = Box::new(count);
+                                }
+                                else {
+                                    return Err(format!("Model parsing error: Transition {} not found.", current_transition.clone().unwrap()));
+                                }
+                        }
+                        else {
+                            return Err(format!("Model parsing error: Attempting to increase species that does not exist: {}", words[1]));
+                        }
+                    }
+                    else {
+                        return Err(format!("Model parsing error: keyword {} used before declaring a transition.", first_word));
+                    }
+                } else if rate_terms.contains(&first_word) {
+                    if current_transition.is_some() {
+                        match words.len() {
+                            2 => {
+                                let count: f64;
+                                let count_s = words[1].parse::<f64>();
+                                if count_s.is_ok() {
+                                    count = count_s.unwrap();
+                                }
+                                else {
+                                    return Err(format!("Model parsing error: Cannot parse into float: {}", words[1]));
+                                }
+                                if let Some(transition) = t
+                                    .iter_mut()
+                                    .find(|x| x.transition_name == current_transition.clone().unwrap()) { 
+                                        transition.transition_rate = count;
+                                }
+                                else {
+                                    return Err(format!("Model parsing error: Transition {} not found.", current_transition.clone().unwrap()));
+                                }
+                            }
+                            _ => {
+                                return Err(format!("Model parsing error: Unexpected number of words for rate term: {}", words.len()));
+                            }
+                        }
+                    }
+                    else {
+                        return Err(format!("Model parsing error: keyword {} used before declaring a transition.", first_word));
+                    }
+                } else if target_terms.contains(&first_word) {
+                    println!("Found target term: {}", first_word);
+                    // Handle target logic here
+                    p = words[1..].join(" ");
+                } else {
+                    return Err(format!("Unrecognized term: {}", first_word));
+                }
+            }
+        }
+
+        Ok(vas_model::Vas_Model {
+            variables: v,
+            transitions: t,
+            property: p,
+        })
+    } else {
+        Err(String::from("Model parsing error: line-by-line file parsing not Ok. Check your model file."))
+    }
+}

@@ -1,0 +1,12 @@
+var S1 init 100
+var S2 init 200
+var S3 init 300
+target S3 = 340
+transition R1
+	decrease S1 10
+	increase S2 3
+	const 0.4
+transition R2
+	decrease S1 1
+	increase S3 1
+	const 0.6

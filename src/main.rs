@@ -1,38 +1,14 @@
-mod parser;
-mod dependency;
+use model::parser::parse_model;
 
-// use clap::*;
-// use prusti_contracts::extern_spec;
-// 
-// #[derive(Debug, Clone)]
-// enum Method {
-//     Stamina,
-//     Wayfarer,
-// 	Ragtimer,
-// }
-// 
-// #[derive(Debug, Parser)]
-// #[command(version, about, long_about = None)]
-// struct Args {
-// 	/// Filename
-// 	#[arg(short, long)]
-// 	filename : String,
-// 
-// 	// Method of analysis to use
-// 	// #[arg(short, long)]
-// 	//method : Method,
-// }
-// 
-// #[extern_spec]
-// impl Parser {
-// 	#[trusted]
-// }
-// 
-// fn main() {
-// 	let args = Args::parse();
-// 	println!("Got filename {}", args.filename);
-// }
+mod model;
 
 fn main() {
-	let _x = 5;
+	if let Ok(test_vas)  = parse_model(String::from("models/toy.crn")) {
+		println!("{}", test_vas.to_string());
+		println!("worked");
+	}
+	else {
+		println!("failed");
+	}
+
 }
