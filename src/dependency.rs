@@ -20,10 +20,10 @@ impl<'a> GraphNode<'a> {
 	// #[pure]
 	#[requires(state.len() == self.transition.increment_vector.len())]
 	#[requires(state.len() == self.transition.decrement_vector.len())]
-	#[ensures(result <==>
-			  //forall(|i: usize| {
-		//i < state.len() ==> (state[i] >= self.transition.decrement_vector[i])
-	}))]
+	// #[ensures(result <==>
+	// 		  //forall(|i: usize| {
+	// 	//i < state.len() ==> (state[i] >= self.transition.decrement_vector[i])
+	// }))]
 	fn is_enabled(&self, state: &'a [u64]) -> bool {
 		(0..state.len()).try_fold(true, |_acc, i| {
 			body_invariant!(i < state.len());
