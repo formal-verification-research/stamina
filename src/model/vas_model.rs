@@ -73,10 +73,12 @@ pub(crate) struct VasModel {
 #[derive(Clone)]
 pub(crate) struct Variable {
 	pub(crate) variable_name: String,
-	pub(crate) count: u64,
+	pub(crate) count: i128,
 }
 
 pub(crate) struct Transition {
+	pub(crate) increment: Vec<Box<Variable>>,
+	pub(crate) decrement: Vec<Box<Variable>>,
 	pub(crate) increment_vector: Vec<Box<u64>>,
 	pub(crate) decrement_vector: Vec<Box<u64>>,
 	pub(crate) transition_name: String,

@@ -41,7 +41,7 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, String> {
 						4 => {
 							// Handle case with 4 words
 							if words[2] == "init" {
-								if let Ok(count) = words[3].parse::<u64>() {
+								if let Ok(count) = words[3].parse::<i128>() {
 									let variable_name = words[1].to_string();
 									v.push(Box::new(vas_model::Variable {
 										variable_name,
@@ -64,6 +64,8 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, String> {
 							let transition_name = words[1].to_string();
 							current_transition = Some(String::from(transition_name.clone()));
 							t.push(Box::new(vas_model::Transition {
+								increment: Vec::new(),
+								decrement: Vec::new(),
 								increment_vector: vec![Box::new(0); v.len()],
 								decrement_vector: vec![Box::new(0); v.len()],
 								transition_name: transition_name,
@@ -103,6 +105,10 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, String> {
 							if let Some(transition) = t
 								.iter_mut()
 								.find(|x| x.transition_name == current_transition.clone().unwrap()) { 
+									transition.decrement.push(Box::new(Variable {
+										variable_name: current_transition.clone().unwrap(),
+										count: (count as i128),
+									}));
 									transition.decrement_vector[index.unwrap()] = Box::new(count);
 								}
 								else {
@@ -127,7 +133,7 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, String> {
 							}
 							3 => {
 								species_name = String::from(words[1]);
-								let count_s = words[2].parse::<u64>();
+								let count_s = words[2].parse::<i128>();
 								if count_s.is_ok() {
 									count = count_s.unwrap();
 								}
@@ -145,7 +151,11 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, String> {
 							if let Some(transition) = t
 								.iter_mut()
 								.find(|x| x.transition_name == current_transition.clone().unwrap()) { 
-									transition.increment_vector[index.unwrap()] = Box::new(count);
+									transition.increment.push(Box::new(Variable {
+										variable_name: current_transition.clone().unwrap(),
+										count: (count as i128),
+									}));
+									transition.increment_vector[index.unwrap()] = Box::new(count as u64);
 								}
 								else {
 									return Err(format!("Model parsing error: Transition {} not found.", current_transition.clone().unwrap()));
