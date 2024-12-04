@@ -152,7 +152,7 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, String> {
 								.iter_mut()
 								.find(|x| x.transition_name == current_transition.clone().unwrap()) { 
 									transition.increment.push(Box::new(Variable {
-										variable_name: current_transition.clone().unwrap(),
+										variable_name: species_name,
 										count: (count as i128),
 									}));
 									transition.increment_vector[index.unwrap()] = Box::new(count as u64);
