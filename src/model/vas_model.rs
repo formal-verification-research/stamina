@@ -76,6 +76,7 @@ pub(crate) struct Variable {
 	pub(crate) count: i128,
 }
 
+#[derive(Clone)]
 pub(crate) struct Transition {
 	pub(crate) increment: Vec<Box<Variable>>,
 	pub(crate) decrement: Vec<Box<Variable>>,

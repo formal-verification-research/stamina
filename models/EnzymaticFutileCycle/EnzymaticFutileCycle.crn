@@ -1,0 +1,37 @@
+species S0 init 1
+species S1 init 50
+species S2 init 0
+species S3 init 1
+species S4 init 50
+species S5 init 0
+target S4 = 25
+reaction R0
+    consume S0
+    consume S1
+    produce S2
+    const 1.0
+reaction R1
+    consume S2
+    produce S1
+    produce S0
+    const 1.0
+reaction R2
+    consume S2
+    produce S0
+    produce S4
+    const 0.1
+reaction R3
+    consume S3
+    consume S4
+    produce S5
+    const 1.0
+reaction R4
+    consume S5
+    produce S3 
+    produce S4
+    const 1.0
+reaction R5
+    consume S5
+    produce S1
+    produce S3
+    const 0.1
