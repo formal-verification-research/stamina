@@ -9,13 +9,12 @@ use std::path::Path;
 
 fn main() {
 
-	let dir_path = Path::new("models");
 	let mut crn_files: Vec<String> = Vec::new();
 
+	// let dir_path = Path::new("models");
 	// for entry in fs::read_dir(dir_path).unwrap() {
     //     let entry = entry.unwrap();
     //     let path = entry.path();
-
     //     if path.is_dir() {
     //         for model_entry in fs::read_dir(&path).unwrap() {
     //             let model_entry = model_entry.unwrap();
@@ -31,6 +30,7 @@ fn main() {
 	// }
 
 	crn_files.push("ModifiedYeastPolarization/ModifiedYeastPolarization.crn".to_string());
+	crn_files.push("EnzymaticFutileCycle/EnzymaticFutileCycle.crn".to_string());
 
 	for m in crn_files {
 		println!("\n\n\nModel: models/{}",m);
@@ -40,7 +40,9 @@ fn main() {
 			println!("{}", model.to_string());
 			println!("parsing worked!");
 	
-			let _ = make_dependency_graph(&model);
+			let dg = make_dependency_graph(&model);
+			// dg.unwrap().pretty_print();
+			dg.unwrap().simple_print();
 	
 		}
 		else {

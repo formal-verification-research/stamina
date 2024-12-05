@@ -52,39 +52,34 @@ impl GraphNode {
 		println!("{}child init {}", spaces, child_init.iter().map(|c| format!("{}.{} ", c.variable_name, c.count)).collect::<String>());
 
 		let child_targets: Vec<Box<Variable>> = self.node_target.iter().filter_map(|x| {
-			let binding = Box::new(Variable { variable_name: x.variable_name.clone(), count: 0 });
+			let binding = Box::new(Variable { variable_name: "ignore_me".to_string(), count: 0 });
 			let reqd = if self.decrement {
-				let consumed_here = self.transition.decrement.iter().find(|inc| inc.variable_name == x.variable_name).unwrap_or(&binding);
+				let initial_value = child_init.iter().find(|init| init.variable_name == x.variable_name).map_or(0, |init| init.count);
+				let consumed_here = self.transition.decrement.iter().find(|inc: &&Box<Variable>|inc.variable_name == x.variable_name).unwrap_or(&binding);
 				println!("{}consumed_here {}.{}", spaces, consumed_here.variable_name, consumed_here.count);
-				- x.count + (consumed_here.count * self.executions as i128)
+				x.count + (consumed_here.count * self.executions as i128)
 			} else {
-				let produced_here = self.transition.increment.iter().find(|inc| inc.variable_name == x.variable_name).unwrap_or(&binding);
+				let initial_value = child_init.iter().find(|init| init.variable_name == x.variable_name).map_or(0, |init| init.count);
+				let produced_here: &Box<Variable> = self.transition.increment.iter().find(|inc| inc.variable_name == x.variable_name).unwrap_or(&binding);
 				println!("{}produced_here {}.{}", spaces, produced_here.variable_name, produced_here.count);
+				println!("{}initial_value {}", spaces, initial_value);
 				x.count - (produced_here.count * self.executions as i128)
 			};
-			if reqd > 0 {
+			if reqd != 0 {
+				println!("{}reqd {}", spaces, reqd);
 				Some(Box::new(Variable {
 					variable_name: x.variable_name.clone(),
 					count: reqd,
 				}))
-			} else {
+			}
+			else {
 				None
 			}
+			// if reqd != 0 {
+			// } else {
+			// 	None
+			// }
 		}).collect();
-		// 	// let child_val = child_init.iter().find(|ci| ci.variable_name == x.variable_name).unwrap().count;
-		// 	let binding = Box::new(Variable {variable_name:x.variable_name.clone(),count:0});
-   		// 	let produced_here = self.transition.increment.iter().find(|inc| inc.variable_name == x.variable_name).unwrap_or(&binding);
-		// 	println!("{}produced_here {}.{}",spaces,produced_here.variable_name,produced_here.count);
-		// 	let reqd = x.count - (produced_here.count * self.executions as i128);
-		// 	if reqd > 0 {
-		// 		Some(Box::new(Variable {
-		// 			variable_name: x.variable_name.clone(),
-		// 			count: reqd,
-		// 		}))
-		// 	} else {
-		// 		None
-		// 	}
-		// }).collect();
 
 		let negative_targets: Vec<Box<Variable>> = child_init.iter().filter_map(|ci| {
 			if ci.count < 0 {
@@ -103,35 +98,74 @@ impl GraphNode {
 		println!("{}child targets {}", spaces, all_targets.iter().map(|mm| format!("{}.{} ", mm.variable_name, mm.count)).collect::<String>());
 
 		for t in &vas.transitions {
-			if t.increment.iter().any(|i| all_targets.iter().any(|ct| ct.variable_name == i.variable_name)) {
-				let mut this_child_targets = all_targets.clone();
-				print!("{}{}: ", spaces, t.transition_name);
-
-				println!("this child targets {}", this_child_targets.iter().map(|mm| format!("{}.{} ", mm.variable_name, mm.count)).collect::<String>());
-
-				for x in &this_child_targets {
-					if t.increment.iter().any(|v| v.variable_name == x.variable_name) {
-						if self.parents.iter().all(|p| **p != t.transition_name) {
-							if let Some(increment_variable) = t.increment.iter().find(|v| v.variable_name == x.variable_name) {
-								let increment_count = increment_variable.count;
-								let executions: u64 = if increment_count > 0 {
-									(x.count / increment_count).try_into().unwrap()
-								} else {
-									0
-								};
-
-								let mut child = GraphNode {
-									transition: t.clone(),
-									children: Vec::new(),
-									parents: self.parents.clone(),
-									executions: executions,
-									enabled: this_child_targets.is_empty(),
-									node_init: child_init.clone(),
-									node_target: this_child_targets.clone(),
-									decrement: false
-								};
-								child.parents.push(Box::new(self.transition.transition_name.clone()));
-								self.children.push(Box::new(child));
+			if self.decrement {
+				if t.decrement.iter().any(|i| all_targets.iter().any(|ct| ct.variable_name == i.variable_name)) {
+					let mut this_child_targets = all_targets.clone();
+					print!("{}{}: ", spaces, t.transition_name);
+	
+					println!("this child targets {}", this_child_targets.iter().map(|mm| format!("{}.{} ", mm.variable_name, mm.count)).collect::<String>());
+	
+					for x in &this_child_targets {
+						if t.decrement.iter().any(|v| v.variable_name == x.variable_name) {
+							if self.parents.iter().all(|p| **p != t.transition_name) {
+								if let Some(decrement_variable) = t.decrement.iter().find(|v| v.variable_name == x.variable_name) {
+									let decrement_count = decrement_variable.count;
+									println!("{}decrement_count {}",spaces, decrement_count);
+									let executions: i128 = if decrement_count > 0 {
+										(x.count / decrement_count).try_into().unwrap()
+									} else {
+										0
+									};
+	
+									let mut child = GraphNode {
+										transition: t.clone(),
+										children: Vec::new(),
+										parents: self.parents.clone(),
+										executions: executions.abs().try_into().unwrap(),
+										enabled: this_child_targets.is_empty(),
+										node_init: child_init.clone(),
+										node_target: this_child_targets.clone(),
+										decrement: executions < 0
+									};
+									child.parents.push(Box::new(self.transition.transition_name.clone()));
+									self.children.push(Box::new(child));
+								}
+							}
+						}
+					}
+				}
+			}
+			else {
+				if t.increment.iter().any(|i| all_targets.iter().any(|ct| ct.variable_name == i.variable_name)) {
+					let mut this_child_targets = all_targets.clone();
+					print!("{}{}: ", spaces, t.transition_name);
+	
+					println!("this child targets {}", this_child_targets.iter().map(|mm| format!("{}.{} ", mm.variable_name, mm.count)).collect::<String>());
+	
+					for x in &this_child_targets {
+						if t.increment.iter().any(|v| v.variable_name == x.variable_name) {
+							if self.parents.iter().all(|p| **p != t.transition_name) {
+								if let Some(increment_variable) = t.increment.iter().find(|v| v.variable_name == x.variable_name) {
+									let increment_count = increment_variable.count;
+									let executions: i128 = if increment_count > 0 {
+										(x.count / increment_count).try_into().unwrap()
+									} else {
+										0
+									};
+	
+									let mut child = GraphNode {
+										transition: t.clone(),
+										children: Vec::new(),
+										parents: self.parents.clone(),
+										executions: executions.abs().try_into().unwrap(),
+										enabled: this_child_targets.is_empty(),
+										node_init: child_init.clone(),
+										node_target: this_child_targets.clone(),
+										decrement: executions < 0 
+									};
+									child.parents.push(Box::new(self.transition.transition_name.clone()));
+									self.children.push(Box::new(child));
+								}
 							}
 						}
 					}
@@ -140,6 +174,20 @@ impl GraphNode {
 		}
 
 		// self.enabled = all_targets.iter().all(|v| v.count >= 0);
+
+		let mut merged_children: Vec<Box<GraphNode>> = Vec::new();
+
+		for child in self.children.drain(..) {
+			if let Some(existing_child) = merged_children.iter_mut().find(|c| c.transition.transition_name == child.transition.transition_name) {
+				if child.executions > existing_child.executions {
+					*existing_child = child;
+				}
+			} else {
+				merged_children.push(child);
+			}
+		}
+
+		self.children = merged_children;
 
 		for child in &mut self.children {
 			let _ = child.rec_build_graph(vas, depth + 1);
@@ -254,20 +302,13 @@ pub fn make_dependency_graph(vas: &vas_model::VasModel) -> Result<DependencyGrap
 				executions: target_executions,
 				node_init: vas.variables.clone(),
 				node_target: {
-					vas.variables.iter().map(|x| 
-						if x.variable_name == vas.property.variable {
-							Box::new(Variable {
+							let mut targ = Vec::new();
+							targ.push(Box::new(Variable {
 								variable_name: vas.property.variable.clone(),
 								count: (vas.property.value as i128),
-							})
-						} else {
-							Box::new(Variable {
-								variable_name: vas.property.variable.clone(),
-								count: 0,
-							})
-						}).collect()
+							}));
+							targ
 					},
-				// vec![Box::new(vas.property.variable.clone())],
 				enabled: false,
 				decrement: match vas.property.operator {
 					vas_model::Operator::LessThan | vas_model::Operator::LessThanOrEqual => true,
@@ -277,25 +318,22 @@ pub fn make_dependency_graph(vas: &vas_model::VasModel) -> Result<DependencyGrap
 						initial_value > vas.property.value as i128
 					},
 				}
-				// {
-				// 	vas.variables.iter().map(|x|
-				// 		Box::new(x.count)
-				// 	).collect()
-				// },
-				// node_target: {
-				// 	vas.variables.iter().map(|x|
-				// 		Box::new(x.count)
-				// 	).collect()
-				// },
 			})
 		},
 	};
+
+	// handle the decrement case
+	if dependency_graph.root.decrement {
+		if let Some(first_target) = dependency_graph.root.node_target.first_mut() {
+			first_target.count = first_target.count - dependency_graph.root.node_init.iter().find(|x| x.variable_name == first_target.variable_name).unwrap().count;
+		}
+	}
 
 	println!("decrement? {}", dependency_graph.root.decrement);
 
 	let _ = dependency_graph.root.rec_build_graph(vas, 1);
 
-	// dependency_graph.pretty_print();
+	dependency_graph.pretty_print();
 
 	Ok(dependency_graph)
 
