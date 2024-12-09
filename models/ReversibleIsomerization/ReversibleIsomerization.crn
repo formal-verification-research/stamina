@@ -1,0 +1,7 @@
+species S0 init 100
+species S1 init 0
+target S1 = 30
+reaction R0
+    consume S0
+    produce S1
+    const 0.12
