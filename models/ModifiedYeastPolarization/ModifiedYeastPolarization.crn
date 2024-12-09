@@ -1,5 +1,5 @@
 species R init 50
-species L init 20
+species L init 2
 species RL init 0
 species G init 50
 species GA init 0
