@@ -1,7 +1,10 @@
+
+
 use std::str::FromStr;
 
 use super::*;
 use vas_model::*;
+use util::read_lines;
 
 const VARIABLE_TERMS : &[&str] = &["species", "variable", "var"];
 const TRANSITION_TERMS : &[&str] = &["reaction", "transition"];
@@ -10,9 +13,92 @@ const INCREASE_TERMS : &[&str] = &["produce", "increase", "increment"];
 const RATE_TERMS : &[&str] = &["rate", "const"];
 const TARGET_TERMS : &[&str] = &["target", "goal", "prop", "check"];
 
+#[derive(Copy, Clone, Debug)]
+enum ModelParseErrorType {
+	InvalidInitialVariableCount(String), // Variable name
+	InitUnspecified(String), // The initial value for a variable is unspecified
+	UnexpextedTokenError(String), // The token
+	ExpectedInteger(String), // We expected an integer, we got this
+	UnspecifiedTransitionError(String), // The name of the transition
+	UnspecifiedVariableError(String), // The name of the variable
+	GeneralParseError(String), // Description
+}
+
+impl ToString for ModelParseErrorType {
+	fn to_string(&self) -> String {
+	    match self {
+			Self::InvalidInitialVariableCount(count) => format!("Invalid initial count: `{}`.", count),
+			Self::InitUnspecified(var_name) => format!("The initial value for `{}` is unspecified.", var_name),
+			Self::UnexpextedTokenError(token) => format!("Unexpexted token: `{}`.", token),
+			Self::ExpectedInteger(value) => format!("Expected integer, got `{}`.", value),
+			Self::UnspecifiedTransitionError(transition) => format!("Unspecified transition: `{}`.", transition),
+			Self::UnspecifiedVariableError(var) => format!("Unspecified variable: `{}`", var),
+			Self::GeneralParseError(desc) => format!("General Parse Error: {}", desc),
+	        
+	    }
+	}
+}
+
+#[derive(Copy, Clone, Debug)]
+struct ModelParseError {
+	line: u32,
+	etype: ModelParseErrorType,
+}
+
+impl ModelParseError {
+	fn invalid_init(line: u32, count: &dyn ToString) -> Self {
+		Self {
+			line: line,
+			etype: ModelParseErrorType::InvalidInitialVariableCount(count.to_string()),
+		}
+	}
+
+	fn init_unspecified(line: u32, name: &dyn ToString) -> Self {
+		Self {
+			line: line,
+			etype: ModelParseErrorType::InitUnspecified(name.to_string()),
+		}
+	}
+
+	fn unexpected_token(line: u32, token: &dyn ToString) -> Self {
+		Self {
+			line: line,
+			etype: ModelParseErrorType::UnexpextedTokenError(token.to_string()),
+		}
+	}
+
+	fn expected_integer(line: u32, value: &dyn ToString) -> Self {
+		Self {
+			line: line,
+			etype: ModelParseErrorType::ExpectedInteger(value.to_string()),
+		}
+	}
+
+	fn unspecified_transition(line: u32, tname: &dyn ToString) -> {
+		Self {
+			line: line,
+			etype: ModelParseErrorType::UnspecifiedTransitionError(tname.to_string()),
+		}
+	}
+
+	fn unspecified_variable(line: u32, vname: &dyn ToString) -> {
+		Self {
+			line: line,
+			etype: ModelParseErrorType::UnspecifiedVariableError(vname.to_string()),
+		}
+	}
+
+	fn general(line: u32, desc: &dyn ToString) -> Self {
+		Self {
+			line: line,
+			etype: ModelParseErrorType::GeneralParseError(desc.to_string()),
+		}		
+	}
+}
+
 // TODO: Add a correct error type, potentially still with a message, or just print the error?
-pub fn parse_model(filename: String) -> Result<vas_model::VasModel, String> {
-	if let Ok(lines) = util::read_lines(filename) {
+pub fn parse_model(filename: String) -> Result<vas_model::VasModel, ModelParseError> {
+	if let Ok(lines) = read_lines(filename) {
 		let mut v: Vec<Box<vas_model::Variable>> = vec![];
 		let mut t: Vec<Box<vas_model::Transition>> = vec![];
 		let mut p: vas_model::Property = Property {
@@ -22,7 +108,7 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, String> {
 		};
 		let mut current_transition: Option<String> = None;
 
-		for line in lines.flatten() {
+		for (num, line) in lines.flatten().enumerate() {
 			// Split the line into words and convert to a slice
 			let words: &[&str] = &line.split_whitespace().collect::<Vec<&str>>()[..];
 
@@ -48,14 +134,14 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, String> {
 										count,
 									}));
 								} else {
-									return Err(format!("Model parsing error: Initial count is not a valid number: {}", words[3]));
+									return Err(ModelParseError::invalid_init(num, &words[3]));
 								}
 							} else {
-								return Err(format!("Model parsing error: Expected 'init' as the third word, found: {}", words[2]));
+								return Err(ModelParseError::init_unspecified(num, &words[1]));
 							}
 						}
 						_ => {
-							return Err(format!("Model parsing error: Unexpected number of words for variable term: {} words in term <{}>", words.len(), line));
+							return Err(ModelParseError::unexpected_token(num, &line));
 						}
 					}
 				} else if TRANSITION_TERMS.contains(&first_word) {
@@ -73,7 +159,7 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, String> {
 							}));
 						}
 						_ => {
-							return Err(format!("Model parsing error: Unexpected number of words for transition term: {} words in term <{}>", words.len(), line));
+							return Err(ModelParseError::unexpected_token(num, &line));
 						}
 					}
 				} else if DECREASE_TERMS.contains(&first_word) {
@@ -92,11 +178,11 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, String> {
 									count = count_s.unwrap();
 								}
 								else {
-									return Err(format!("Model parsing error: Cannot parse into int: {}", words[2]));
+									return Err(ModelParseError::expected_integer(num, &words[2]));
 								}
 							}
 							_ => {
-								return Err(format!("Model parsing error: Unexpected number of words for decrease term: {} words in term <{}>", words.len(), line));
+								return Err(ModelParseError::unexpected_token(num, &line));
 							}
 						}
 
@@ -112,15 +198,16 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, String> {
 									transition.decrement_vector[index.unwrap()] = Box::new(count);
 								}
 								else {
-									return Err(format!("Model parsing error: Transition {} not found.", current_transition.clone().unwrap()));
+									return Err(ModelParseError::unspecified_transition(num, &current_transition.unwrap()));
 								}
 						}
 						else {
-							return Err(format!("Model parsing error: Attempting to decrease species that does not exist: {}", words[1]));
+							return Err(ModelParseError::unspecified_variable(num, words[1]));
 						}
 					}
 					else {
-						return Err(format!("Model parsing error: keyword {} used before declaring a transition.", first_word));
+						return Err(ModelParseError::general(num, 
+							format!("Model parsing error: keyword {} used before declaring a transition.", first_word)));
 					}
 				} else if INCREASE_TERMS.contains(&first_word) {
 					if current_transition.is_some() {
