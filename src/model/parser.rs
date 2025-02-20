@@ -17,8 +17,9 @@ const TARGET_TERMS : &[&str] = &["target", "goal", "prop", "check"];
 enum ModelParseErrorType {
 	InvalidInitialVariableCount(String), // Variable name
 	InitUnspecified(String), // The initial value for a variable is unspecified
-	UnexpextedTokenError(String), // The token
+	UnexpextedTokenError(String), // A token is found we were not expecting
 	ExpectedInteger(String), // We expected an integer, we got this
+	ExpectedFloat(String), // We expected a float, we got this
 	UnspecifiedTransitionError(String), // The name of the transition
 	UnspecifiedVariableError(String), // The name of the variable
 	GeneralParseError(String), // Description
@@ -31,6 +32,7 @@ impl ToString for ModelParseErrorType {
 			Self::InitUnspecified(var_name) => format!("The initial value for `{}` is unspecified.", var_name),
 			Self::UnexpextedTokenError(token) => format!("Unexpexted token: `{}`.", token),
 			Self::ExpectedInteger(value) => format!("Expected integer, got `{}`.", value),
+			Self::ExpectedFloat(value) => format!("Expected float, got `{}`.", value),
 			Self::UnspecifiedTransitionError(transition) => format!("Unspecified transition: `{}`.", transition),
 			Self::UnspecifiedVariableError(var) => format!("Unspecified variable: `{}`", var),
 			Self::GeneralParseError(desc) => format!("General Parse Error: {}", desc),
@@ -74,14 +76,21 @@ impl ModelParseError {
 		}
 	}
 
-	fn unspecified_transition(line: u32, tname: &dyn ToString) -> {
+	fn expected_float(line: u32, value: &dyn ToString) -> Self {
+		Self {
+			line: line,
+			etype: ModelParseErrorType::ExpectedFloat(value.to_string()),
+		}
+	}
+
+	fn unspecified_transition(line: u32, tname: &dyn ToString) -> Self {
 		Self {
 			line: line,
 			etype: ModelParseErrorType::UnspecifiedTransitionError(tname.to_string()),
 		}
 	}
 
-	fn unspecified_variable(line: u32, vname: &dyn ToString) -> {
+	fn unspecified_variable(line: u32, vname: &dyn ToString) -> Self {
 		Self {
 			line: line,
 			etype: ModelParseErrorType::UnspecifiedVariableError(vname.to_string()),
@@ -225,11 +234,11 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, ModelParseEr
 									count = count_s.unwrap();
 								}
 								else {
-									return Err(format!("Model parsing error: Cannot parse into int: {}", words[2]));
+									return Err(ModelParseError::expected_integer(num, &words[2]));
 								}
 							}
 							_ => {
-								return Err(format!("Model parsing error: Unexpected number of words for increase term: {} words in term <{}>", words.len(), line));
+								return Err(ModelParseError::unexpected_token(num, &line));
 							}
 						}
 
@@ -245,15 +254,15 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, ModelParseEr
 									transition.increment_vector[index.unwrap()] = Box::new(count as u64);
 								}
 								else {
-									return Err(format!("Model parsing error: Transition {} not found.", current_transition.clone().unwrap()));
+									return Err(ModelParseError::unspecified_transition(num, &current_transition.unwrap()));
 								}
 						}
 						else {
-							return Err(format!("Model parsing error: Attempting to increase species that does not exist: {}", words[1]));
+							return Err(ModelParseError::unspecified_variable(num, &words[1]));
 						}
 					}
 					else {
-						return Err(format!("Model parsing error: keyword {} used before declaring a transition.", first_word));
+						return Err(ModelParseError::unexpected_token(num, first_word));
 					}
 				} else if RATE_TERMS.contains(&first_word) {
 					if current_transition.is_some() {
@@ -265,7 +274,7 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, ModelParseEr
 									count = count_s.unwrap();
 								}
 								else {
-									return Err(format!("Model parsing error: Cannot parse into float: {}", words[1]));
+									return Err(ModelParseError::expected_float(num, words[1]));
 								}
 								if let Some(transition) = t
 									.iter_mut()
@@ -273,16 +282,16 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, ModelParseEr
 										transition.transition_rate = count;
 								}
 								else {
-									return Err(format!("Model parsing error: Transition {} not found.", current_transition.clone().unwrap()));
+									return Err(ModelParseError(num, &current_transition.unwrap()));
 								}
 							}
 							_ => {
-								return Err(format!("Model parsing error: Unexpected number of words for rate term: {} words in term <{}>", words.len(), line));
+								return Err(ModelParseError::unexpected_token(num, &line));
 							}
 						}
 					}
 					else {
-						return Err(format!("Model parsing error: keyword {} used before declaring a transition.", first_word));
+						return Err(ModelParseError::unexpected_token(num, &first_word));
 					}
 				} else if TARGET_TERMS.contains(&first_word) {
 					println!("Found target term: {}", first_word);
@@ -309,11 +318,11 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, ModelParseEr
 							};
 						}
 						_ => {
-							return Err(format!("Model parsing error: Unexpected number of words for target term: {} words in term <{}>", words.len(), line));
+							return Err(ModelParseError::unexpected_token(num, &line));
 						}
 					}
 				} else {
-					return Err(format!("Unrecognized term: {}", first_word));
+					return Err(ModelParseError::unexpected_token(num, &first_word));
 				}
 			}
 		}
@@ -324,6 +333,6 @@ pub fn parse_model(filename: String) -> Result<vas_model::VasModel, ModelParseEr
 			property: p,
 		})
 	} else {
-		Err(String::from("Model parsing error: line-by-line file parsing not Ok. Check your model file."))
+		Err(ModelParseError::general(0, &"line-by-line file parsing not Ok. Check your model file."))
 	}
 }
