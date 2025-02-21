@@ -13,14 +13,7 @@ pub(crate) enum Operator {
 
 impl Display for Operator {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		let op_str = match self {
-			Operator::GreaterThan => ">",
-			Operator::LessThan => "<",
-			Operator::Equal => "==",
-			Operator::NotEqual => "!=",
-			Operator::GreaterThanOrEqual => ">=",
-			Operator::LessThanOrEqual => "<=",
-		};
+		let op_str = self.to_string();
 		write!(f, "{}", op_str)
 	}
 }
@@ -38,6 +31,19 @@ impl FromStr for Operator {
 			"<=" => Ok(Operator::LessThanOrEqual),
 			_ => Err("Invalid operator"),
 		}
+	}
+}
+
+impl ToString for Operator {
+	fn to_string(&self) -> String {
+		match self {
+			Operator::GreaterThan => ">",
+			Operator::LessThan => "<",
+			Operator::Equal => "==",
+			Operator::NotEqual => "!=",
+			Operator::GreaterThanOrEqual => ">=",
+			Operator::LessThanOrEqual => "<=",
+		}.to_string()
 	}
 }
 
@@ -80,14 +86,14 @@ pub(crate) struct Variable {
 pub(crate) struct Transition {
 	pub(crate) increment: Vec<Box<Variable>>,
 	pub(crate) decrement: Vec<Box<Variable>>,
-	pub(crate) increment_vector: Vec<Box<u64>>,
-	pub(crate) decrement_vector: Vec<Box<u64>>,
+	pub(crate) increment_vector: Vec<u64>,
+	pub(crate) decrement_vector: Vec<u64>,
 	pub(crate) transition_name: String,
 	pub(crate) transition_rate: f64,
 }
 
-impl VasModel {
-	pub fn to_string(&self) -> String {
+impl ToString for VasModel {
+	fn to_string(&self) -> String {
 		let mut result = String::new();
 
 		// Add the property
@@ -122,18 +128,4 @@ impl VasModel {
 		result
 	}
 }
-
-
-
-
-// impl Transition {
-//     fn is_catalyst(&self, species_name: String) -> bool {
-//         // TODO
-//         unimplemented!()
-//     }
-//     fn to_string(&self) -> String {
-//         self.transition_name.clone()
-//     }
-// }
-
 
