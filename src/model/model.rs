@@ -6,6 +6,12 @@ use evalexpr::*;
 pub(crate) trait Label: ToString + Clone {
 	type LabeledType;
 
+	/// Whether or not a label represents a subset of this label.
+	/// E.g., a label containing `"A > 5 & B < 3"` would be a subset
+	/// of the label `"A > 5"`.
+	fn contains(&self, label: &Self);
+	/// Composes two labels to create a label that represents both
+	fn compose(&self, label: &Self) -> Self;
 }
 
 /// A trait representing a labeled type
@@ -59,7 +65,7 @@ pub(crate) trait Transition: Labeled + Clone + PartialEq {
 	}
 
 	fn next(&self, state: &dyn StateType) -> Option<(RateOrProbabilityType, StateType)> {
-		if let Some(rate) = self.rate_at(state) {
+		if let Some(rate) = self.rate_probability_at(state) {
 			// If we can't unwrap the next_state the implementation of this
 			// trait is wrong (only should be none if this trait is not enabled
 			Some((rate, self.next_state(state).unwrap()))
@@ -69,6 +75,7 @@ pub(crate) trait Transition: Labeled + Clone + PartialEq {
 	}
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ModelType {
 	ContinuousTime,
 	DiscreteTime,
@@ -105,7 +112,7 @@ pub(crate) trait AbstractModel {
 	}
 }
 
-pub(crate) trait ExplicitModel {
+pub(crate) trait ExplicitModel: Default {
 	type StateType: State;
 	type TransitionType: Transition;
 	type MatrixType; // TODO: derive shit for this nonsense
@@ -123,6 +130,8 @@ pub(crate) trait ExplicitModel {
 	fn add_entry(&mut self, from_idx: usize, to_idx: usize, entry: TransitionType::RateOrProbabilityType);
 	/// Converts this model into a sparse matrix
 	fn to_matrix(&self) -> MatrixType;
+	/// Whether or not this model has not been expanded yet/is empty
+	fn empty(&self) -> bool;
 
 	/// Whether or not `state` is present in the model
 	fn has_state(&self, state: &dyn StateType) -> bool {

@@ -2,10 +2,14 @@ use crate::*;
 
 use model::*;
 
+/// A trait which must be implemented by any struct that
+/// builds a model (i.e., converts it from `AbstractModel` to
+/// `ExplicitModel`. The philosophy behind this trait is that
+/// a `Checker` will iteratively 
 pub(crate) trait Builder {
 	type AbstractModelType: AbstractModel;
 	type ExplicitModelType: ExplicitModel;
-	type ResultType: Clone + Copy + PartialEq;
+	type ResultType: Clone + Copy + PartialEq + Default;
 
 	/// Whether or not this model builder builds an abstracted model
 	fn is_abstracted(&self) -> bool;
@@ -18,7 +22,13 @@ pub(crate) trait Builder {
 	/// Whether or not we are finished or should continue. The reason that this takes 
 	/// a `&mut self` is many implementations may want to only have exactly one
 	/// iteration and keep an internal flag tripped after this function is called.
-	fn finished(&mut self, result: ResultType) -> bool;
+	fn finished(&mut self, result: &ResultType) -> bool;
+
+	/// Performs the next iteration of building the model
+	fn build(&mut self, explicit_model: &mut ExplicitModel);
+
+	/// Gets the abstract model that we're working with
+	fn get_abstract_model(&self) -> &AbstractModel;
 
 	// TODO
 }

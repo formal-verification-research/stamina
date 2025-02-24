@@ -20,6 +20,6 @@ pub(crate) fn error_and_exit(s: &str) {
 
 pub(crate) fn debug_message(s: &str) {
 	if cfg!(debug_assertions) {
-		eprintln!("{}", s);
+		eprintln!("[DEBUG MESSAGE] {}", s);
 	}
 }
