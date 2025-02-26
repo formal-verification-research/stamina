@@ -24,7 +24,7 @@ pub(crate) trait Labeled {
 	/// Whether or note this object has label `label`
 	fn has_label(&self, label: &dyn StateLabelType) -> bool;
 	/// The labels associated with this object
-	fn labels(&self) -> Iterator<LabelType>; 
+	fn labels(&self) -> Iterator<LabelType>;
 }
 
 /// A trait representing a state object. Generally these will need
@@ -33,22 +33,22 @@ pub(crate) trait Labeled {
 /// space's metadata (i.e., a variable ordering in the case of a VAS)
 pub(crate) trait State: evalexpr::Context + Labeled + Clone + PartialEq {
 	type VariableValueType: evalexpr::EvalexprInt;
-	type StateLabelType: Label;
-	
+	// type StateLabelType: Label;
+
 	// Functions for which no default implementation is provided
 	// and must be provided by derived types
 
 	/// Valuates the state by a certain variable name
 	fn valuate(&self, var_name: &str) -> VariableValueType;
-	
+
 }
 
 /// A trait representing a transition in a model
-pub(crate) trait Transition: Labeled + Clone + PartialEq {
+pub(crate) trait Transition: Clone + PartialEq {
 	type StateType: State;
 	type RateOrProbabilityType: EvalexprFloat;
-	type TransitionLabelType: Label;
-	
+	// type TransitionLabelType: Label;
+
 	// Functions for which no default implementation is provided
 	// and must be provided by derived types
 
@@ -87,16 +87,16 @@ pub(crate) trait AbstractModel {
 
 	// Functions for which no default implementation is provided
 	// and must be provided by derived types
-	
+
 	fn transitions(&self) -> Iterator<TransitionType>;
 	fn initial_states(&self) -> Iterator<StateType>;
 	/// The type of this model
 	fn model_type(&self) -> ModelType;
-	
+
 	// Functions for which we can provide a default implementation
 
 	/// Finds all next states for a certain state.
-	fn next_states(&self, state: &dyn StateType) 
+	fn next_states(&self, state: &dyn StateType)
 		-> Iterator<(TransitionType::RateOrProbabilityType, StateType)> {
 		self.transitions.filter_map(|t| t.next(state))
 	}

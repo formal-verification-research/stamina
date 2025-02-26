@@ -1,131 +1,78 @@
-use std::fmt::Display;
-use std::str::FromStr;
+use std::{collections::BTreeSet, iter::Map};
 
-#[derive(Clone)]
-pub(crate) enum Operator {
-	GreaterThan,
-	LessThan,
-	Equal,
-	NotEqual,
-	GreaterThanOrEqual,
-	LessThanOrEqual,
+use super::model::*;
+
+use nalgebra::{DVector, Matrix};
+
+struct StateLabel {
+	// TODO
 }
 
-impl Display for Operator {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		let op_str = self.to_string();
-		write!(f, "{}", op_str)
-	}
+struct VasState {
+	// The state values
+	vector: DVector<i64>,
+	// The labelset for this state
+	labels: Option<BTreeSet<StateLabel>>
 }
-impl FromStr for Operator {
-	type Err = &'static str;
 
-	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		match s {
-			">" => Ok(Operator::GreaterThan),
-			"<" => Ok(Operator::LessThan),
-			"=" => Ok(Operator::Equal),
-			"==" => Ok(Operator::Equal),
-			"!=" => Ok(Operator::NotEqual),
-			">=" => Ok(Operator::GreaterThanOrEqual),
-			"<=" => Ok(Operator::LessThanOrEqual),
-			_ => Err("Invalid operator"),
-		}
+impl State for VasState {
+	type VariableValueType = i64;
+	// type StateLabelType = StateLabel;
+
+	fn valuate(&self, var_name: &str) -> i64 {
+	    // TODO
 	}
 }
 
-impl ToString for Operator {
-	fn to_string(&self) -> String {
-		match self {
-			Operator::GreaterThan => ">",
-			Operator::LessThan => "<",
-			Operator::Equal => "==",
-			Operator::NotEqual => "!=",
-			Operator::GreaterThanOrEqual => ">=",
-			Operator::LessThanOrEqual => "<=",
-		}.to_string()
+struct VasTransition {
+	// The update vector
+	update_vector: DVector<i64>,
+	// The minimum elementwise count for a transition to be enabled
+	enabled_bounds: DVector<i64>,
+	// The rate constant used in CRNs
+	rate_const: f64,
+}
+
+impl Transition for VasTransition {
+	type StateType = VasState;
+	type RateOrProbabilityType = f64;
+
+	fn rate_probability_at(&self, state: VasState) -> Option<f64> {
+		self.rate_const * self.update_vector
+			.zip_fold(state.vector, 1.0, |(state_i, update_i), acc| {
+				if update_i <= 0.0 {
+					acc * state_i.powi(-update_i)
+				} else {
+					acc
+				}
+			})
+	}
+
+	fn next_state(&self, state: VasState) -> Option<StateType> {
+		// TODO
 	}
 }
 
-
-pub(crate) struct Property {
-	pub(crate) variable: String,
-	pub(crate) operator: Operator,
-	pub(crate) value: u64,
+/// The data for an abstract Vector Addition System
+struct AbstractVas {
+	init_states: Vec<VasState>,
+	trans: Vec<VasTransition>,
+	m_type: ModelType,
 }
 
-impl Display for Property {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{} {} {}", self.variable, self.operator, self.value)
+impl AbstractModel for AbstractVas {
+	type TransitionType = VasTransition;
+	type StateType = VasState;
+
+	fn transitions(&self) -> Iterator<VasTransition> {
+	    self.trans.iter()
+	}
+
+	fn initial_states(&self) -> Iterator<VasState> {
+	    self.init_states.iter()
+	}
+
+	fn model_type(&self) -> ModelType {
+		self.m_type
 	}
 }
-impl Clone for Property {
-	fn clone(&self) -> Self {
-		Property {
-			variable: self.variable.clone(),
-			operator: self.operator.clone(),
-			value: self.value,
-		}
-	}
-}
-
-pub(crate) struct VasModel {
-	// TODO: Might we want to use hashmaps instead? We can think about this later if we need an efficiency boost
-	pub(crate) variables: Vec<Box<Variable>>,
-	pub(crate) transitions: Vec<Box<Transition>>,
-	pub(crate) property: Property, 
-}
-
-#[derive(Clone)]
-pub(crate) struct Variable {
-	pub(crate) variable_name: String,
-	pub(crate) count: i128,
-}
-
-#[derive(Clone)]
-pub(crate) struct Transition {
-	pub(crate) increment: Vec<Box<Variable>>,
-	pub(crate) decrement: Vec<Box<Variable>>,
-	pub(crate) increment_vector: Vec<u64>,
-	pub(crate) decrement_vector: Vec<u64>,
-	pub(crate) transition_name: String,
-	pub(crate) transition_rate: f64,
-}
-
-impl ToString for VasModel {
-	fn to_string(&self) -> String {
-		let mut result = String::new();
-
-		// Add the property
-		result.push_str(&format!("Property: {}\n", self.property));
-
-		// Add variables
-		result.push_str("Variables:\n");
-		for variable in &self.variables {
-			result.push_str(&format!("  - Name: {}, Initial Count: {}\n", 
-				variable.variable_name, variable.count));
-		}
-
-		// Add transitions
-		result.push_str("Transitions:\n");
-		for transition in &self.transitions {
-			result.push_str(&format!("  - Name: {}, Rate: {}\n", 
-				transition.transition_name, transition.transition_rate));
-			result.push_str("    Increment Vector: [");
-			result.push_str(&transition.increment_vector.iter()
-				.map(|x| x.to_string())
-				.collect::<Vec<String>>()
-				.join(", "));
-			result.push_str("]\n");
-			result.push_str("    Decrement Vector: [");
-			result.push_str(&transition.decrement_vector.iter()
-				.map(|x| x.to_string())
-				.collect::<Vec<String>>()
-				.join(", "));
-			result.push_str("]\n");
-		}
-
-		result
-	}
-}
-
