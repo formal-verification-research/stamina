@@ -1,32 +1,8 @@
 use evalexpr::*;
 
+use super::property::*;
+
 // TODO: should we include the skeleton code for nondeterministic actions?
-
-/// A trait representing a label on a labeled type
-pub(crate) trait Label: ToString + Clone {
-	type LabeledType;
-
-	/// Whether or not a label represents a subset of this label.
-	/// E.g., a label containing `"A > 5 & B < 3"` would be a subset
-	/// of the label `"A > 5"`.
-	fn contains(&self, label: &Self);
-	/// Composes two labels to create a label that represents both
-	fn compose(&self, label: &Self) -> Self;
-}
-
-/// A trait representing a labeled type
-pub(crate) trait Labeled {
-	type LabelType: Label;
-
-	// Functions for which no default implementation is provided
-	// and must be provided by derived types
-
-	/// Whether or note this object has label `label`
-	fn has_label(&self, label: &dyn StateLabelType) -> bool;
-	/// The labels associated with this object
-	fn labels(&self) -> Iterator<LabelType>; 
-}
-
 /// A trait representing a state object. Generally these will need
 /// to have some global context so implementing structs are recommended
 /// to use lifetime parameters and contain a reference to the state
