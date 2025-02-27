@@ -24,7 +24,7 @@ pub(crate) trait Labeled {
 	/// Whether or note this object has label `label`
 	fn has_label(&self, label: &dyn StateLabelType) -> bool;
 	/// The labels associated with this object
-	fn labels(&self) -> Iterator<LabelType>; 
+	fn labels(&self) -> Iterator<LabelType>;
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -37,7 +37,7 @@ pub(crate) enum PropertyClass {
 
 #[derive(Debug)]
 pub(crate) enum Property {
-	/// Where the state formula holds for all 
+	/// Where the state formula holds for all
     Globally(StateFormula),
     Finally(StateFormula, Option<f64>), // Optional bound
 	Until(StateFormula, StateFormula, Option<f64>), // Optional bound

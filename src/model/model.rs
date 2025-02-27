@@ -1,6 +1,6 @@
 use evalexpr::*;
 
-use super::property::*;
+use crate::property::*;
 
 // TODO: should we include the skeleton code for nondeterministic actions?
 
@@ -66,7 +66,7 @@ pub(crate) trait AbstractModel {
 	// and must be provided by derived types
 
 	fn transitions(&self) -> Iterator<TransitionType>;
-	fn initial_states(&self) -> Iterator<StateType>;
+	fn initial_states(&self) -> Iterator<(StateType, usize)>;
 	/// The type of this model
 	fn model_type(&self) -> ModelType;
 
@@ -76,6 +76,12 @@ pub(crate) trait AbstractModel {
 	fn next_states(&self, state: &dyn StateType)
 		-> Iterator<(TransitionType::RateOrProbabilityType, StateType)> {
 		self.transitions.filter_map(|t| t.next(state))
+	}
+
+	/// Finds the exit rate (or exit probability) for a state. If a discrete time model,
+	/// this will always return `1.0` and can be used to check if implementations are correct.
+	fn exit_rate(&self, state: &dyn StateType) -> TransitionType::RateOrProbabilityType {
+		self.next_states(state).map(|(rate, _state)| rate).sum()
 	}
 
 	/// Only finds successors for transitions that pass a certain filter predicate `filter`.
@@ -99,6 +105,9 @@ pub(crate) trait ExplicitModel: Default {
 	/// Like `state_to_index` but if the state is not present adds it and
 	/// assigns it a new index
 	fn find_or_add_index(&mut self, state: &dyn StateType) -> usize;
+	/// Reserve an index in the explicit model (useful for artificially introduced absorbing
+	/// states). Returns whether or not the index was able to be reserved.
+	fn reserve_index(&mut self, index: usize) -> bool;
 	/// The number of states added to our model so far
 	fn state_count(&self) -> usize;
 	/// The type of this model
