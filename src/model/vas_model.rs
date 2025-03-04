@@ -1,8 +1,8 @@
-use std::{collections::BTreeSet, iter::Map};
+use std::collections::BTreeSet;
 
 use super::model::*;
 
-use nalgebra::{Matrix, SVector};
+use nalgebra::SVector;
 
 struct StateLabel {
 	// TODO
@@ -21,6 +21,7 @@ impl<const M: usize> State for VasState<M> {
 
 	fn valuate(&self, var_name: &str) -> i64 {
 	    // TODO
+		unimplemented!();
 	}
 }
 
@@ -32,12 +33,20 @@ pub(crate) struct VasTransition<const M: usize> {
 	enabled_bounds: SVector<i64, M>,
 	// The rate constant used in CRNs
 	rate_const: f64,
+	// An override function to find the rate probability
+	// (when this is not provided defaults to the implemenation in
+	// rate_probability_at). The override must be stored in static
+	// memory for now (may change this later).
+	custom_rate_fn: Option<&'static dyn Fn(&VasState<M>) -> f64>,
 }
 
 impl<const M: usize> Transition for VasTransition<M> {
 	type StateType = VasState<M>;
 	type RateOrProbabilityType = f64;
 
+	/// Check to see if our state is above every bound in the enabled
+	/// bound. We use try-fold to short circuit and return false if we
+	/// encounter at least one value that does not satisfy.
 	fn enabled(&self, state: &VasState<M>) -> bool {
 		self.enabled_bounds.
 			iter()
@@ -50,21 +59,23 @@ impl<const M: usize> Transition for VasTransition<M> {
 	}
 
 	fn rate_probability_at(&self, state: &VasState<M>) -> Option<f64> {
-		// Check to see if our state is above every bound in the enabled
-		// bound. We use try-fold to short circuit and return false if we
-		// encounter at least one value that does not satisfy.
+
 		let enabled = self.enabled(state);
 		if enabled {
-			// Compute the transition rate using the same equation that
-			// is used for the chemical kinetics equation
-			let rate = self.rate_const * self.update_vector
-			.zip_fold(&state.vector, 1.0, |(state_i, update_i), acc| {
-				if update_i <= 0.0 {
-					acc * state_i.powi(-update_i)
-				} else {
-					acc
-				}
-			});
+			let rate = if let Some(rate_fn) = self.custom_rate_fn {
+				rate_fn(state)
+			} else {
+				// Compute the transition rate using the same equation that
+				// is used for the chemical kinetics equation
+				self.rate_const * self.update_vector
+				.zip_fold(&state.vector, 1.0, |(state_i, update_i), acc| {
+					if update_i <= 0.0 {
+						acc * state_i.powi(-update_i)
+					} else {
+						acc
+					}
+				})
+			};
 			Some(rate)
 		} else {
 			None
