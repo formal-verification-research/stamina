@@ -1,1 +1,2 @@
-pub mod checker;
+pub(crate) mod checker;
+pub(crate) mod result;

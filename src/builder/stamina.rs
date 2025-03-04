@@ -54,11 +54,14 @@ pub(crate) struct StaminaBuilder<AbstractModelType, ExplicitModelType>
 
 impl StaminaBuilder<AbstractModelType, ExplicitModelType> {
 	type StateType = AbstractModelType::StateType;
-	fn id_to_state(&self, id: usize) -> StateType {
+	/// Maps a state ID to that state's valuation and probabilistic information
+	/// about it (i.e., what we currently think its reachability is).
+	fn id_to_state(&self, id: usize) -> (StateType, Arc<StateProbability>) {
 		// TODO
 		unimplemented!();
 	}
 
+	/// This 
 	fn reserve_state_index(&mut self, state: &StateType, index: usize) {
 		// TODO
 		unimplemented!();
@@ -96,7 +99,11 @@ impl<AbstractModelType, ExplicitModelType> Builder for StaminaBuilder<AbstractMo
 
 	fn finished(&mut self, result: &ResultType) -> bool {
 		match result {
-			RangeResult::NoResult => false,
+			RangeResult::NoResult => {
+				// TODO: other processing
+				// We're not done
+				false
+			},
 			Range(p_min, p_max) => {
 				if p_min > p_max {
 					panic!("Got invalid Pmin/Pmax pair! ({}/{})", p_min, p_max);
@@ -125,9 +132,11 @@ impl<AbstractModelType, ExplicitModelType> Builder for StaminaBuilder<AbstractMo
 				(state, self.find_or_create_sp(state))
 			})
 			.collect::<VecDeque<_>>();
+		// Explore until the queue is empty
 		while queue.len() > 0 {
 			let (cur_state, sp) = queue.pop_front();
-			// Optimization
+			// Optimization. If we can preterminate this state, then we don't need
+			// to explore its successors.
 			if self.can_preterminate(&cur_state) {
 				sp.terminal = true;
 				explicit_model.add_entry(sp.state_id, sp.state_id, 1.0);
