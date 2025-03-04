@@ -2,20 +2,20 @@ use std::{collections::BTreeSet, iter::Map};
 
 use super::model::*;
 
-use nalgebra::{DVector, Matrix};
+use nalgebra::{DVector, Matrix, SVector};
 
 struct StateLabel {
 	// TODO
 }
 
-struct VasState {
+pub(crate) struct VasState<const M: usize> {
 	// The state values
-	vector: DVector<i64>,
+	vector: SVector<i64, M>,
 	// The labelset for this state
 	labels: Option<BTreeSet<StateLabel>>
 }
 
-impl State for VasState {
+impl<const M: usize> State for VasState<M> {
 	type VariableValueType = i64;
 	// type StateLabelType = StateLabel;
 
@@ -24,26 +24,27 @@ impl State for VasState {
 	}
 }
 
-struct VasTransition {
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub(crate) struct VasTransition<const M: usize> {
 	// The update vector
-	update_vector: DVector<i64>,
+	update_vector: SVector<i64, M>,
 	// The minimum elementwise count for a transition to be enabled
-	enabled_bounds: DVector<i64>,
+	enabled_bounds: SVector<i64, M>,
 	// The rate constant used in CRNs
 	rate_const: f64,
 }
 
-impl Transition for VasTransition {
-	type StateType = VasState;
+impl<const M: usize> Transition for VasTransition<M> {
+	type StateType = VasState<M>;
 	type RateOrProbabilityType = f64;
 
 	fn rate_probability_at(&self, state: VasState) -> Option<f64> {
 		self.rate_const * self.update_vector
 			.zip_fold(state.vector, 1.0, |(state_i, update_i), acc| {
 				if update_i <= 0.0 {
-					acc * state_i.powi(-update_i)
+					Some(acc * state_i.powi(-update_i))
 				} else {
-					acc
+					Some(acc)
 				}
 			})
 	}
@@ -54,21 +55,21 @@ impl Transition for VasTransition {
 }
 
 /// The data for an abstract Vector Addition System
-struct AbstractVas {
-	init_states: Vec<VasState>,
-	trans: Vec<VasTransition>,
+pub(crate) struct AbstractVas<const M: usize> {
+	init_states: Vec<VasState<M>>,
+	trans: Vec<VasTransition<M>>,
 	m_type: ModelType,
 }
 
-impl AbstractModel for AbstractVas {
-	type TransitionType = VasTransition;
-	type StateType = VasState;
+impl<const M: usize> AbstractModel for AbstractVas<M> {
+	type TransitionType = VasTransition<M>;
+	type StateType = VasState<M>;
 
-	fn transitions(&self) -> Iterator<VasTransition> {
+	fn transitions(&self) -> Iterator<VasTransition<M>> {
 	    self.trans.iter()
 	}
 
-	fn initial_states(&self) -> Iterator<VasState> {
+	fn initial_states(&self) -> Iterator<VasState<M>> {
 	    self.init_states.iter()
 	}
 
