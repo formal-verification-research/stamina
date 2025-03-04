@@ -2,7 +2,7 @@ use std::{collections::BTreeSet, iter::Map};
 
 use super::model::*;
 
-use nalgebra::{DVector, Matrix, SVector};
+use nalgebra::{Matrix, SVector};
 
 struct StateLabel {
 	// TODO
@@ -38,19 +38,48 @@ impl<const M: usize> Transition for VasTransition<M> {
 	type StateType = VasState<M>;
 	type RateOrProbabilityType = f64;
 
-	fn rate_probability_at(&self, state: VasState) -> Option<f64> {
-		self.rate_const * self.update_vector
-			.zip_fold(state.vector, 1.0, |(state_i, update_i), acc| {
-				if update_i <= 0.0 {
-					Some(acc * state_i.powi(-update_i))
-				} else {
-					Some(acc)
-				}
-			})
+	fn enabled(&self, state: &VasState<M>) -> bool {
+		self.enabled_bounds.
+			iter()
+			.zip(state)
+			.try_fold(true,
+				|(bound, state_val)|
+				if state_val >= bound { Some(true) } else { None }
+			).is_some()
+
 	}
 
-	fn next_state(&self, state: VasState) -> Option<StateType> {
-		// TODO
+	fn rate_probability_at(&self, state: &VasState<M>) -> Option<f64> {
+		// Check to see if our state is above every bound in the enabled
+		// bound. We use try-fold to short circuit and return false if we
+		// encounter at least one value that does not satisfy.
+		let enabled = self.enabled(state);
+		if enabled {
+			// Compute the transition rate using the same equation that
+			// is used for the chemical kinetics equation
+			let rate = self.rate_const * self.update_vector
+			.zip_fold(&state.vector, 1.0, |(state_i, update_i), acc| {
+				if update_i <= 0.0 {
+					acc * state_i.powi(-update_i)
+				} else {
+					acc
+				}
+			});
+			Some(rate)
+		} else {
+			None
+		}
+
+
+	}
+
+	fn next_state(&self, state: &VasState) -> Option<StateType> {
+		let enabled = self.enabled(state);
+		if enabled {
+			state + self.update_vector
+		} else {
+			None
+		}
 	}
 }
 
@@ -65,11 +94,11 @@ impl<const M: usize> AbstractModel for AbstractVas<M> {
 	type TransitionType = VasTransition<M>;
 	type StateType = VasState<M>;
 
-	fn transitions(&self) -> Iterator<VasTransition<M>> {
+	fn transitions(&self) -> impl Iterator<Item=VasTransition<M>> {
 	    self.trans.iter()
 	}
 
-	fn initial_states(&self) -> Iterator<VasState<M>> {
+	fn initial_states(&self) -> impl Iterator<Item=VasState<M>> {
 	    self.init_states.iter()
 	}
 

@@ -65,8 +65,8 @@ pub(crate) trait AbstractModel {
 	// Functions for which no default implementation is provided
 	// and must be provided by derived types
 
-	fn transitions(&self) -> Iterator<TransitionType>;
-	fn initial_states(&self) -> Iterator<(StateType, usize)>;
+	fn transitions(&self) -> impl Iterator<Item=TransitionType>;
+	fn initial_states(&self) -> impl Iterator<Item=(StateType, usize)>;
 	/// The type of this model
 	fn model_type(&self) -> ModelType;
 
