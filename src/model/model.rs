@@ -37,6 +37,9 @@ pub(crate) trait Transition: Clone + PartialEq {
 
 	// Functions for which we can provide a default implementation
 
+	/// Whether or not the transition is enabled to occur at `state`. It is recommended
+	/// that implementing structs do NOT use the default implementation which just checks
+	/// if `next_state(state)` returns a valid value.
 	fn enabled(&self, state: &dyn StateType) -> bool {
 		self.next_state(state).is_some()
 	}
