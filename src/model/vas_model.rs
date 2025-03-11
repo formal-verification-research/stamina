@@ -40,6 +40,19 @@ pub(crate) struct VasTransition<const M: usize> {
 	custom_rate_fn: Option<&'static dyn Fn(&VasState<M>) -> f64>,
 }
 
+impl<const M: usize> VasTransition<M> {
+	fn set_vectors(&mut self, increment: Box<[u64]>, decrement: Box<[u64]>) {
+		self.update_vector = increment - decrement;
+		self.enabled_bounds = decrement;
+	}
+	fn set_rate(&mut self, rate: f64) {
+		self.rate_const = rate;
+	}
+	fn set_custom_rate_fn(&mut self, rate_fn: &'static dyn Fn(&VasState<M>) -> f64) {
+		self.custom_rate_fn = Some(rate_fn);
+	}
+}
+
 impl<const M: usize> Transition for VasTransition<M> {
 	type StateType = VasState<M>;
 	type RateOrProbabilityType = f64;
@@ -84,7 +97,7 @@ impl<const M: usize> Transition for VasTransition<M> {
 
 	}
 
-	fn next_state(&self, state: &VasState) -> Option<StateType> {
+	fn next_state(&self, state: &VasState) -> Option<Self::StateType> {
 		let enabled = self.enabled(state);
 		if enabled {
 			state + self.update_vector
@@ -96,6 +109,7 @@ impl<const M: usize> Transition for VasTransition<M> {
 
 /// The data for an abstract Vector Addition System
 pub(crate) struct AbstractVas<const M: usize> {
+	variable_names: [String; M],
 	init_states: Vec<VasState<M>>,
 	trans: Vec<VasTransition<M>>,
 	m_type: ModelType,

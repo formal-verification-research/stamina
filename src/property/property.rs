@@ -1,6 +1,6 @@
 use evalexpr::*;
 
-use std::fmt::Display;
+use std::fmt::{Display, Error, Formatter};
 
 /// A trait representing a label on a labeled type
 pub(crate) trait Label: ToString + Clone {
@@ -22,9 +22,9 @@ pub(crate) trait Labeled {
 	// and must be provided by derived types
 
 	/// Whether or note this object has label `label`
-	fn has_label(&self, label: &dyn StateLabelType) -> bool;
+	fn has_label(&self, label: &Self::LabelType) -> bool;
 	/// The labels associated with this object
-	fn labels(&self) -> Iterator<LabelType>;
+	fn labels(&self) -> impl Iterator<Item = &Self::LabelType>;
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -58,18 +58,26 @@ pub(crate) enum PropertyQuery {
 	// fn property_class(&self) -> PropertyClass;
 // }
 
+#[derive(Clone)]
 pub(crate) enum StateFormula {
 	StateLabel(String),
-	Expression(evalexpr::Expression)
+	Expression(Box<crate::property::property::StateFormula>)
 }
 
 impl Label for StateFormula {
+	type LabeledType = StateFormula;
+	fn contains(&self, label: &Self) {
+		todo!()
+	}
 
+	fn compose(&self, label: &Self) -> Self {
+		todo!()
+	}
 }
 
 impl Display for StateFormula {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-		// TODO
+		todo!()
 	}
 }
 

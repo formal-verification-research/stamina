@@ -1,9 +1,12 @@
 mod model;
 mod dependency;
 mod logging;
+mod parser;
+mod property;
+mod util;
 
-use model::parser::parse_model;
-use dependency::graph::make_dependency_graph;
+// use crate::parser;
+// use dependency::graph::make_dependency_graph;
 use logging::logging::*;
 
 use std::fs;
@@ -36,15 +39,16 @@ fn main() {
 
 	for m in crn_files {
 		message(&format!("Model: models/{}", m));
-		let parsed_model = parse_model(format!("models/{}",m));
+		let parser = parser::parser::Parser::new();
+		let parsed_model= parser.parse(format!("models/{}",m));
 		if parsed_model.is_ok() {
 			let model = parsed_model.unwrap();
 			println!("{}", model.to_string());
 			println!("parsing worked!");
 	
-			let dg = make_dependency_graph(&model);
-			// dg.unwrap().pretty_print();
-			dg.unwrap().simple_print();
+			// let dg = make_dependency_graph(&model);
+			// // dg.unwrap().pretty_print();
+			// dg.unwrap().simple_print();
 	
 		}
 		else {
