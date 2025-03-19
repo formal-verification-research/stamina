@@ -8,5 +8,6 @@ description = "PRobabilistic Research and Analysis of C(RN|TMC) (and VAS) Tool I
 clap = { version = "4.5.21", features = ["derive"] }
 evalexpr = "12.0.2"
 nalgebra = "0.33.2"
+num = "0.4.3"
 prusti-contracts = "0.2.0"
 # serde = { version = "1.0.215", features = ["derive"] }

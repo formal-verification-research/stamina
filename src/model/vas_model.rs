@@ -2,20 +2,20 @@ use std::collections::BTreeSet;
 
 use super::model::*;
 
-use nalgebra::SVector;
+use nalgebra::DVector;
 
 struct StateLabel {
 	// TODO
 }
 
-pub(crate) struct VasState<const M: usize> {
+pub(crate) struct VasState {
 	// The state values
-	vector: SVector<i64, M>,
+	vector: DVector<i64>,
 	// The labelset for this state
 	labels: Option<BTreeSet<StateLabel>>
 }
 
-impl<const M: usize> State for VasState<M> {
+impl State for VasState {
 	type VariableValueType = i64;
 	// type StateLabelType = StateLabel;
 
@@ -25,42 +25,49 @@ impl<const M: usize> State for VasState<M> {
 	}
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub(crate) struct VasTransition<const M: usize> {
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct VasTransition {
 	// The update vector
-	update_vector: SVector<i64, M>,
+	update_vector: DVector<i64>,
 	// The minimum elementwise count for a transition to be enabled
-	enabled_bounds: SVector<i64, M>,
+	enabled_bounds: DVector<i64>,
 	// The rate constant used in CRNs
 	rate_const: f64,
 	// An override function to find the rate probability
 	// (when this is not provided defaults to the implemenation in
 	// rate_probability_at). The override must be stored in static
 	// memory for now (may change this later).
-	custom_rate_fn: Option<&'static dyn Fn(&VasState<M>) -> f64>,
+	custom_rate_fn: Option<&'static dyn Fn(&VasState) -> f64>,
 }
 
-impl<const M: usize> VasTransition<M> {
-	fn set_vectors(&mut self, increment: Box<[u64]>, decrement: Box<[u64]>) {
-		self.update_vector = increment - decrement;
-		self.enabled_bounds = decrement;
-	}
-	fn set_rate(&mut self, rate: f64) {
-		self.rate_const = rate;
-	}
-	fn set_custom_rate_fn(&mut self, rate_fn: &'static dyn Fn(&VasState<M>) -> f64) {
+impl VasTransition {
+	// pub fn set_vectors(&mut self, increment: Box<[u64]>, decrement: Box<[u64]>) {
+	// 	self.update_vector = increment - decrement;
+	// 	self.enabled_bounds = decrement;
+	// }
+	// pub fn set_rate(&mut self, rate: f64) {
+	// 	self.rate_const = rate;
+	// }
+	pub fn set_custom_rate_fn(&mut self, rate_fn: &'static dyn Fn(&VasState) -> f64) {
 		self.custom_rate_fn = Some(rate_fn);
 	}
+	pub fn new(increment: Box<[u64]>, decrement: Box<[u64]>, rate_const: f64) -> Self {
+		Self { 
+			update_vector: DVector::from(increment) - DVector::from(decrement), 
+			enabled_bounds: DVector::from(decrement), 
+			rate_const, 
+			custom_rate_fn: None }
+	}
 }
 
-impl<const M: usize> Transition for VasTransition<M> {
-	type StateType = VasState<M>;
+impl Transition for VasTransition {
+	type StateType = VasState;
 	type RateOrProbabilityType = f64;
 
 	/// Check to see if our state is above every bound in the enabled
 	/// bound. We use try-fold to short circuit and return false if we
 	/// encounter at least one value that does not satisfy.
-	fn enabled(&self, state: &VasState<M>) -> bool {
+	fn enabled(&self, state: &VasState) -> bool {
 		self.enabled_bounds.
 			iter()
 			.zip(state)
@@ -71,7 +78,7 @@ impl<const M: usize> Transition for VasTransition<M> {
 
 	}
 
-	fn rate_probability_at(&self, state: &VasState<M>) -> Option<f64> {
+	fn rate_probability_at(&self, state: &VasState) -> Option<f64> {
 
 		let enabled = self.enabled(state);
 		if enabled {
@@ -108,22 +115,22 @@ impl<const M: usize> Transition for VasTransition<M> {
 }
 
 /// The data for an abstract Vector Addition System
-pub(crate) struct AbstractVas<const M: usize> {
-	variable_names: [String; M],
-	init_states: Vec<VasState<M>>,
-	trans: Vec<VasTransition<M>>,
+pub(crate) struct AbstractVas {
+	variable_names: Box<[String]>,
+	init_states: Vec<VasState>,
+	trans: Vec<VasTransition>,
 	m_type: ModelType,
 }
 
-impl<const M: usize> AbstractModel for AbstractVas<M> {
-	type TransitionType = VasTransition<M>;
-	type StateType = VasState<M>;
+impl AbstractModel for AbstractVas {
+	type TransitionType = VasTransition;
+	type StateType = VasState;
 
-	fn transitions(&self) -> impl Iterator<Item=VasTransition<M>> {
+	fn transitions(&self) -> impl Iterator<Item=VasTransition> {
 	    self.trans.iter()
 	}
 
-	fn initial_states(&self) -> impl Iterator<Item=VasState<M>> {
+	fn initial_states(&self) -> impl Iterator<Item=VasState> {
 	    self.init_states.iter()
 	}
 

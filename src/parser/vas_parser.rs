@@ -8,6 +8,7 @@ use super::*;
 // use vas_model::*;
 // use util::read_lines;
 
+
 const VARIABLE_TERMS : &[&str] = &["species", "variable", "var"];
 const INITIAL_TERMS : &[&str] = &["initial", "init"];
 const TRANSITION_TERMS : &[&str] = &["reaction", "transition"];
@@ -332,14 +333,18 @@ pub fn parse_model(filename: String) -> Result<AbstractModel, ModelParseError> {
 
 	// Convert the temporary variables and transitions into the final model
 	let mut final_variables: Box<[String]> = vec!["".to_string(); variables.len()].into_boxed_slice();
-	let mut final_transitions: Vec<VasTransition> = vec![];
+	let mut final_transitions: Vec<dyn crate::model::model::Transition> = vec![];
 
 	for v in variables {
 		final_variables[v.variable_id] = v.variable_name;
 	}
 
 	for t in transitions {
-		let final_transition = VasTransition::new();
+		let final_transition = VasTransition::new(
+			t.increment,
+			t.decrement,
+			t.transition_rate
+		);
 		final_transition.set_vectors(t.increment, t.decrement);
 		final_transition.set_rate(t.rate);
 	}
