@@ -1,139 +1,306 @@
-use std::fmt::Display;
-use std::str::FromStr;
+use std::{collections::BTreeSet, fmt};
 
-#[derive(Clone)]
-pub(crate) enum Operator {
-	GreaterThan,
-	LessThan,
-	Equal,
-	NotEqual,
-	GreaterThanOrEqual,
-	LessThanOrEqual,
+use crate::{parser::vas_file_reader, property::property};
+
+use super::model::*;
+
+use nalgebra::DVector;
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct StateLabel {
+	// Add fields as needed
+}
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct VasState {
+	// The state values
+	vector: DVector<i64>,
+	// The labelset for this state
+	labels: Option<BTreeSet<property::StateFormula>>,
 }
 
-impl Display for Operator {
+impl VasState {
+	// TODO: Maybe this shouldn't be none labels, or have an init label?
+	pub fn new(vector: DVector<i64>) -> Self {
+		Self { 
+			vector, 
+			labels: None,
+		}
+	}
+}
+
+impl property::Labeled for VasState {
+	
+	type LabelType = property::StateFormula;
+
+	fn labels(&self) -> impl Iterator<Item = &property::StateFormula> {
+		self.labels
+			.as_ref()
+			.map(|labels| labels.iter())
+			.into_iter()
+			.flatten()
+	}
+		
+	fn has_label(&self, label: &Self::LabelType) -> bool {
+		self.labels
+			.as_ref()
+			.map_or(false, |labels| labels.contains(label))
+	}
+}
+
+impl evalexpr::Context for VasState {
+	type NumericTypes = evalexpr::DefaultNumericTypes; // Use the default numeric types provided by evalexpr
+
+	fn get_value(&self, identifier: &str) -> Option<&evalexpr::Value<Self::NumericTypes>> {
+		todo!()
+	}
+
+	fn call_function(
+		&self,
+		identifier: &str,
+		argument: &evalexpr::Value<Self::NumericTypes>,
+	) -> evalexpr::error::EvalexprResultValue<Self::NumericTypes> {
+		todo!()
+	}
+
+	fn are_builtin_functions_disabled(&self) -> bool {
+		todo!()
+	}
+
+	fn set_builtin_functions_disabled(
+		&mut self,
+		disabled: bool,
+	) -> evalexpr::EvalexprResult<(), Self::NumericTypes> {
+		todo!()
+	}
+	// Implement required methods for evalexpr::Context
+}
+
+
+impl State for VasState {
+	type VariableValueType = u64; 
+
+	fn valuate(&self, var_name: &str) -> Self::VariableValueType {
+		todo!()
+	}
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct VasTransition {
+	transition_id: usize,
+	transition_name: String,
+	// The update vector
+	update_vector: DVector<i128>,
+	// The minimum elementwise count for a transition to be enabled
+	enabled_bounds: DVector<u64>,
+	// The rate constant used in CRNs
+	rate_const: f64,
+	// An override function to find the rate probability
+	// (when this is not provided defaults to the implemenation in
+	// rate_probability_at). The override must be stored in static
+	// memory for now (may change this later).
+	custom_rate_fn: Option<CustomRateFn>,
+}
+
+#[derive(Clone)]
+pub(crate) struct CustomRateFn(std::sync::Arc<dyn Fn(&VasState) -> f64 + Send + Sync + 'static>);
+
+impl PartialEq for CustomRateFn {
+	fn eq(&self, _: &Self) -> bool {
+		false // Custom equality logic can be implemented if needed
+	}
+}
+
+impl std::fmt::Debug for CustomRateFn {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		let op_str = match self {
-			Operator::GreaterThan => ">",
-			Operator::LessThan => "<",
-			Operator::Equal => "==",
-			Operator::NotEqual => "!=",
-			Operator::GreaterThanOrEqual => ">=",
-			Operator::LessThanOrEqual => "<=",
-		};
-		write!(f, "{}", op_str)
-	}
-}
-impl FromStr for Operator {
-	type Err = &'static str;
-
-	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		match s {
-			">" => Ok(Operator::GreaterThan),
-			"<" => Ok(Operator::LessThan),
-			"=" => Ok(Operator::Equal),
-			"==" => Ok(Operator::Equal),
-			"!=" => Ok(Operator::NotEqual),
-			">=" => Ok(Operator::GreaterThanOrEqual),
-			"<=" => Ok(Operator::LessThanOrEqual),
-			_ => Err("Invalid operator"),
-		}
+		f.write_str("CustomRateFn")
 	}
 }
 
-
-pub(crate) struct Property {
-	pub(crate) variable: String,
-	pub(crate) operator: Operator,
-	pub(crate) value: u64,
-}
-
-impl Display for Property {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{} {} {}", self.variable, self.operator, self.value)
-	}
-}
-impl Clone for Property {
-	fn clone(&self) -> Self {
-		Property {
-			variable: self.variable.clone(),
-			operator: self.operator.clone(),
-			value: self.value,
-		}
+impl CustomRateFn {
+	fn set_custom_rate_fn(&mut self, rate_fn: std::sync::Arc<dyn Fn(&VasState) -> f64 + Send + Sync + 'static>) {
+		self.0 = rate_fn;
 	}
 }
 
-pub(crate) struct VasModel {
-	// TODO: Might we want to use hashmaps instead? We can think about this later if we need an efficiency boost
-	pub(crate) variables: Vec<Box<Variable>>,
-	pub(crate) transitions: Vec<Box<Transition>>,
-	pub(crate) property: Property, 
+impl VasTransition {
+	// pub fn set_vectors(&mut self, increment: Box<[u64]>, decrement: Box<[u64]>) {
+	// 	self.update_vector = increment - decrement;
+	// 	self.enabled_bounds = decrement;
+	// }
+	// pub fn set_rate(&mut self, rate: f64) {
+	// 	self.rate_const = rate;
+	// }
+	pub fn set_custom_rate_fn(&mut self, rate_fn: std::sync::Arc<dyn Fn(&VasState) -> f64 + Send + Sync + 'static>) {
+		self.custom_rate_fn = Some(CustomRateFn(rate_fn));
+	}
+	pub fn new(transition_id: usize, transition_name: String, increment: Box<[u64]>, decrement: Box<[u64]>, rate_const: f64) -> Self {
+		Self { 
+			transition_id,
+			transition_name,
+			// update_vector: DVector::from_data(increment) - DVector::from_data(decrement), 
+			update_vector: DVector::from_iterator(
+				increment.len(),
+				increment.iter().zip(decrement.iter()).map(|(inc, dec)| *inc as i128 - *dec as i128),
+			),
+			enabled_bounds: DVector::from_iterator(
+				decrement.len(),
+				decrement.iter().map(|(dec)| *dec as u64),
+			),
+			rate_const, 
+			custom_rate_fn: None }
+	}
 }
 
-#[derive(Clone)]
-pub(crate) struct Variable {
-	pub(crate) variable_name: String,
-	pub(crate) count: i128,
-}
+impl Transition for VasTransition {
+	type StateType = VasState;
+	type RateOrProbabilityType = f64;
 
-#[derive(Clone)]
-pub(crate) struct Transition {
-	pub(crate) increment: Vec<Box<Variable>>,
-	pub(crate) decrement: Vec<Box<Variable>>,
-	pub(crate) increment_vector: Vec<Box<u64>>,
-	pub(crate) decrement_vector: Vec<Box<u64>>,
-	pub(crate) transition_name: String,
-	pub(crate) transition_rate: f64,
-}
+	/// Check to see if our state is above every bound in the enabled
+	/// bound. We use try-fold to short circuit and return false if we
+	/// encounter at least one value that does not satisfy.
+	fn enabled(&self, state: &VasState) -> bool {
+		self.enabled_bounds
+			.iter()
+			.zip(state.vector.iter())
+			.try_fold(true, |_, (bound, state_val)| {
+				if *state_val >= *bound as i64 { Some(true) } else { None }
+			})
+			.is_some()
 
-impl VasModel {
-	pub fn to_string(&self) -> String {
-		let mut result = String::new();
+	}
 
-		// Add the property
-		result.push_str(&format!("Property: {}\n", self.property));
+	fn rate_probability_at(&self, state: &VasState) -> Option<f64> {
 
-		// Add variables
-		result.push_str("Variables:\n");
-		for variable in &self.variables {
-			result.push_str(&format!("  - Name: {}, Initial Count: {}\n", 
-				variable.variable_name, variable.count));
+		let enabled = self.enabled(state);
+		if enabled {
+			let rate = if let Some(rate_fn) = &self.custom_rate_fn {
+				(rate_fn.0)(state)
+			} else {
+				// Compute the transition rate using the same equation that
+				// is used for the chemical kinetics equation
+				self.rate_const * self.update_vector
+				.zip_fold(&state.vector, 1.0, |acc, state_i, update_i| {
+					if (update_i as f64) <= 0.0 {
+						acc * (state_i as f64).powf(-update_i as f64)
+					} else {
+						acc
+					}
+				})
+			};
+			Some(rate)
+		} else {
+			None
 		}
 
-		// Add transitions
-		result.push_str("Transitions:\n");
-		for transition in &self.transitions {
-			result.push_str(&format!("  - Name: {}, Rate: {}\n", 
-				transition.transition_name, transition.transition_rate));
-			result.push_str("    Increment Vector: [");
-			result.push_str(&transition.increment_vector.iter()
-				.map(|x| x.to_string())
-				.collect::<Vec<String>>()
-				.join(", "));
-			result.push_str("]\n");
-			result.push_str("    Decrement Vector: [");
-			result.push_str(&transition.decrement_vector.iter()
-				.map(|x| x.to_string())
-				.collect::<Vec<String>>()
-				.join(", "));
-			result.push_str("]\n");
-		}
 
-		result
+	}
+
+	fn next_state(&self, state: &VasState) -> Option<Self::StateType> {
+		let enabled = self.enabled(state);
+		if enabled {
+			Some(VasState {
+				vector: &state.vector + &self.update_vector.map(|val| val as i64),
+				labels: state.labels.clone(),
+			})
+		} else {
+			None
+		}
+	}
+	
+	fn next(&self, state: &Self::StateType) -> Option<(Self::RateOrProbabilityType, Self::StateType)> {
+				if let Some(rate) = self.rate_probability_at(state) {
+					// If we can't unwrap the next_state the implementation of this
+					// trait is wrong (only should be none if this trait is not enabled
+					Some((rate, self.next_state(state).unwrap()))
+				} else {
+					None
+				}
+			}
+}
+
+/// The data for an abstract Vector Addition System
+pub(crate) struct AbstractVas {
+	variable_names: Box<[String]>,
+	initial_states: Vec<VasState>,
+	transitions: Vec<VasTransition>,
+	m_type: ModelType,
+}
+
+impl AbstractModel for AbstractVas {
+	type TransitionType = VasTransition;
+	type StateType = VasState;
+
+	fn transitions(&self) -> impl Iterator<Item=VasTransition> {
+		self.transitions.iter().cloned()
+	}
+
+	fn initial_states(&self) -> impl Iterator<Item=(VasState, usize)> {
+		self.initial_states.iter().cloned().enumerate().map(|(i, state)| (state, i))
+	}
+
+	fn model_type(&self) -> ModelType {
+		self.m_type
 	}
 }
 
+// TODO: May need to allow discrete/continuous time models
+// for now we will just use continuous time models
+impl AbstractVas {
+	pub fn new(variable_names: Box<[String]>, initial_states: Vec<VasState>, transitions: Vec<VasTransition>) -> Self {
+		Self { 
+			variable_names,
+			initial_states, 
+			transitions, 
+			m_type: ModelType::ContinuousTime,
+		}
+	}
 
+	pub fn from_file(filename: &str) -> Result<Self, String> {
+		let model = vas_file_reader::build_model(filename);
+		match model {
+			Ok(model) => Ok(model),
+			Err(err) => Err(err.to_string()),
+		}
+	}
 
+	pub fn debug_print(&self) {
+		println!("VasModel:");
+		println!("Variables: {:?}", self.variable_names);
+		println!("Initial States: {:?}", self.initial_states);
+		println!("Transitions: {:?}", self.transitions);
+	}
 
-// impl Transition {
-//     fn is_catalyst(&self, species_name: String) -> bool {
-//         // TODO
-//         unimplemented!()
-//     }
-//     fn to_string(&self) -> String {
-//         self.transition_name.clone()
-//     }
-// }
+	pub fn nice_print(&self) -> String {
+		let mut output = String::new();
+		
+		output.push_str("==========================================\n");
+		output.push_str("              BEGIN VAS MODEL             \n");
+		output.push_str("==========================================\n");
+		
+		output.push_str("Variables:\n");
+		self.variable_names.iter().for_each(|name| output.push_str(&format!("\t{}", name)));
+		output.push_str("\n");
 
+		output.push_str("Initial States:\n");
+		for state in self.initial_states.clone() {
+			state.vector.iter().for_each(|name| output.push_str(&format!("\t{}", name)));
+		}
+		output.push_str("\n");
 
+		output.push_str("Transitions:\n");
+		for transition in self.transitions.clone() {
+			output.push_str(&format!("\t{}\t{}\n", transition.transition_id, transition.transition_name));
+			output.push_str("\t\tUpdate:\t[");
+			transition.update_vector.iter().for_each(|name| output.push_str(&format!("\t{}", name)));
+			output.push_str("]\n\t\tEnable:\t[");
+			transition.enabled_bounds.iter().for_each(|name| output.push_str(&format!("\t{}", name)));
+			output.push_str(&format!("]\n\t\tRate:\t{}\n", transition.rate_const));
+		}
+
+		output.push_str("==========================================\n");
+		output.push_str("               END VAS MODEL              \n");
+		output.push_str("==========================================\n");
+
+		output
+	}
+}
