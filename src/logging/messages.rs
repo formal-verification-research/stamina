@@ -1,6 +1,5 @@
 use std::process::exit;
 
-
 pub(crate) fn message(s: &str) {
 	eprintln!("[MESSAGE] {}", s);
 }

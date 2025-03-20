@@ -1,10 +1,10 @@
 use std::{collections::BTreeSet, fmt};
 
-use crate::{parser::vas_file_reader, property::property};
-
-use super::model::*;
+use crate::{parser::vas_file_reader, property::property, validator::vas_validator::validate_vas};
 
 use nalgebra::DVector;
+
+use super::model::{AbstractModel, ModelType, State, Transition};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct StateLabel {
@@ -13,7 +13,7 @@ struct StateLabel {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct VasState {
 	// The state values
-	vector: DVector<i64>,
+	pub vector: DVector<i64>,
 	// The labelset for this state
 	labels: Option<BTreeSet<property::StateFormula>>,
 }
@@ -86,19 +86,19 @@ impl State for VasState {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct VasTransition {
-	transition_id: usize,
-	transition_name: String,
+	pub transition_id: usize,
+	pub transition_name: String,
 	// The update vector
-	update_vector: DVector<i128>,
+	pub update_vector: DVector<i128>,
 	// The minimum elementwise count for a transition to be enabled
-	enabled_bounds: DVector<u64>,
+	pub enabled_bounds: DVector<u64>,
 	// The rate constant used in CRNs
-	rate_const: f64,
+	pub rate_const: f64,
 	// An override function to find the rate probability
 	// (when this is not provided defaults to the implemenation in
 	// rate_probability_at). The override must be stored in static
 	// memory for now (may change this later).
-	custom_rate_fn: Option<CustomRateFn>,
+	pub custom_rate_fn: Option<CustomRateFn>,
 }
 
 #[derive(Clone)]
@@ -219,11 +219,11 @@ impl Transition for VasTransition {
 }
 
 /// The data for an abstract Vector Addition System
-pub(crate) struct AbstractVas {
-	variable_names: Box<[String]>,
-	initial_states: Vec<VasState>,
-	transitions: Vec<VasTransition>,
-	m_type: ModelType,
+pub struct AbstractVas {
+	pub variable_names: Box<[String]>,
+	pub initial_states: Vec<VasState>,
+	pub transitions: Vec<VasTransition>,
+	pub m_type: ModelType,
 }
 
 impl AbstractModel for AbstractVas {
@@ -243,6 +243,39 @@ impl AbstractModel for AbstractVas {
 	}
 }
 
+pub enum AllowedRelation {
+	Equal,
+	LessThan,
+	GreaterThan,
+}
+
+impl fmt::Display for AllowedRelation {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		let relation_str = match self {
+			AllowedRelation::Equal => "=",
+			AllowedRelation::LessThan => "<",
+			AllowedRelation::GreaterThan => ">",
+		};
+		write!(f, "{}", relation_str)
+	}
+}
+// TODO: Temporarily created a property for VAS only. Eventually need to integrate with property.
+pub struct VasProperty {
+	pub variable_name: String,
+	pub variable_id: usize,
+	pub relation: AllowedRelation,
+	pub value: u64,
+}
+
+impl VasProperty {
+	pub fn new(variable_name: String, variable_id: usize, relation: AllowedRelation, value: u64) -> Self {
+		Self { variable_name, variable_id, relation, value }
+	}
+	pub fn nice_print(&self) -> String {
+		format!("Property: {}({}) {} {}", self.variable_name, self.variable_id, self.relation, self.value)
+	}
+}
+
 // TODO: May need to allow discrete/continuous time models
 // for now we will just use continuous time models
 impl AbstractVas {
@@ -255,12 +288,23 @@ impl AbstractVas {
 		}
 	}
 
-	pub fn from_file(filename: &str) -> Result<Self, String> {
-		let model = vas_file_reader::build_model(filename);
-		match model {
-			Ok(model) => Ok(model),
-			Err(err) => Err(err.to_string()),
+	pub fn from_file(filename: &str) -> Result<(Self,VasProperty), String> {
+		match vas_file_reader::build_model(filename) {
+			Ok((model, property)) => {
+				println!("Parsing gave OK result");
+				Ok((model, property))
+			}
+			Err(err) => {
+				println!("ERROR DURING PARSING:");
+				println!("{}", err.to_string());
+				Err(err.to_string())
+			},
 		}
+	}
+
+	pub fn validate_model(&self, property: VasProperty) -> Result<String, String> {
+		let result = validate_vas(self, &property);
+		result
 	}
 
 	pub fn debug_print(&self) {
@@ -292,9 +336,9 @@ impl AbstractVas {
 			output.push_str(&format!("\t{}\t{}\n", transition.transition_id, transition.transition_name));
 			output.push_str("\t\tUpdate:\t[");
 			transition.update_vector.iter().for_each(|name| output.push_str(&format!("\t{}", name)));
-			output.push_str("]\n\t\tEnable:\t[");
+			output.push_str("\t]\n\t\tEnable:\t[");
 			transition.enabled_bounds.iter().for_each(|name| output.push_str(&format!("\t{}", name)));
-			output.push_str(&format!("]\n\t\tRate:\t{}\n", transition.rate_const));
+			output.push_str(&format!("\t]\n\t\tRate:\t{}\n", transition.rate_const));
 		}
 
 		output.push_str("==========================================\n");

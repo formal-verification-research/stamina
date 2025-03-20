@@ -4,10 +4,9 @@ mod logging;
 mod parser;
 mod property;
 mod util;
+mod validator;
 
-// use crate::parser;
-// use dependency::graph::make_dependency_graph;
-use logging::logging::*;
+use logging::messages::message;
 use model::vas_model::AbstractVas;
 
 use std::fs;
@@ -17,6 +16,7 @@ fn main() {
 
 	let mut crn_files: Vec<String> = Vec::new();
 
+	// For now, read all the crn files in the models directory
 	let dir_path = Path::new("models");
 	for entry in fs::read_dir(dir_path).unwrap() {
 		let entry = entry.unwrap();
@@ -43,10 +43,12 @@ fn main() {
 		let parsed_model = AbstractVas::from_file(&format!("models/{}", m));
 
 		if parsed_model.is_ok() {
-			let model = parsed_model.unwrap();
+			let (model,property) = parsed_model.unwrap();
 			// println!("{:?}", model.debug_print());
 			println!("MODEL PARSED\n\n");
 			println!("{}", model.nice_print());
+			println!("{}", property.nice_print());
+			println!("{}", model.validate_model(property).unwrap());
 	
 			// let dg = make_dependency_graph(&model);
 			// // dg.unwrap().pretty_print();

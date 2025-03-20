@@ -2,7 +2,7 @@ use std::fmt;
 
 use nalgebra::DVector;
 
-use crate::{model::{model::AbstractModel, vas_model::{AbstractVas, VasState, VasTransition}}, util::util::read_lines};
+use crate::{model::{model::AbstractModel, vas_model::{AbstractVas, AllowedRelation, VasProperty, VasState, VasTransition}}, util::util::read_lines};
 
 const VARIABLE_TERMS : &[&str] = &["species", "variable", "var"];
 const INITIAL_TERMS : &[&str] = &["initial", "init"];
@@ -127,7 +127,7 @@ impl ModelParseError {
 	}
 }
 
-fn get_variable_id(v: Box<[String]>, name: &str) -> Option<usize> {
+fn get_variable_id(v: &[String], name: &str) -> Option<usize> {
 	v.iter().position(|r| r == name)
 }
 
@@ -169,7 +169,7 @@ fn build_variables(raw_data: Vec<(usize, String)>) -> Result<(Box<[String]>, Box
 }
 
 // Build the transition objects
-fn build_transitions(raw_data: Vec<Vec<(usize, std::string::String)>>, variable_names: Box<[String]>) -> Result<Vec<<AbstractVas as AbstractModel>::TransitionType>, ModelParseError> {
+fn build_transitions(raw_data: Vec<Vec<(usize, std::string::String)>>, variable_names: &Box<[String]>) -> Result<Vec<<AbstractVas as AbstractModel>::TransitionType>, ModelParseError> {
 	
 	let mut transitions = Vec::<<AbstractVas as AbstractModel>::TransitionType>::new();
 	let num_variables = variable_names.len();
@@ -200,10 +200,15 @@ fn build_transitions(raw_data: Vec<Vec<(usize, std::string::String)>>, variable_
 					}
 					3 => {
 						variable_name = words[1].to_string();
-						if let Ok(count) = words[2].parse::<u64>() {
-							decrease_count = count;
+						if let Ok(count) = words[2].parse::<i128>() {
+							if count < 0 {
+								// TODO: This error, and presumably others, just cause a stack overflow. Need to fix this.
+								return Err(ModelParseError::unexpected_token(line.0.try_into().unwrap(), &line.1));
+							} else {
+								decrease_count = count as u64
+							};
 						} else {
-							return Err(ModelParseError::unexpected_token(line.0.try_into().unwrap(), &words[2]));
+							return Err(ModelParseError::unexpected_token(line.0.try_into().unwrap(), &line.1));
 						}
 					}
 					_ => {
@@ -211,7 +216,7 @@ fn build_transitions(raw_data: Vec<Vec<(usize, std::string::String)>>, variable_
 					}
 				}
 				// update the transition
-				if let Some(index) = get_variable_id(variable_names.clone(), &variable_name) {
+				if let Some(index) = get_variable_id(&variable_names, &variable_name) {
 					if decrement[index] != 0 {
 						return Err(ModelParseError::general(line.0.try_into().unwrap(), &format!("Model parsing error: variable {} decreases by multiple declared values in the same transition.", variable_name)));
 					}
@@ -229,10 +234,14 @@ fn build_transitions(raw_data: Vec<Vec<(usize, std::string::String)>>, variable_
 					}
 					3 => {
 						variable_name = words[1].to_string();
-						if let Ok(count) = words[2].parse::<u64>() {
-							increase_count = count;
+						if let Ok(count) = words[2].parse::<i128>() {
+							increase_count = if count < 0 {
+								return Err(ModelParseError::unexpected_token(line.0.try_into().unwrap(), &line.1));
+							} else {
+								count as u64
+							};
 						} else {
-							return Err(ModelParseError::unexpected_token(line.0.try_into().unwrap(), &words[2]));
+							return Err(ModelParseError::unexpected_token(line.0.try_into().unwrap(), &line.1));
 						}
 					}
 					_ => {
@@ -240,7 +249,7 @@ fn build_transitions(raw_data: Vec<Vec<(usize, std::string::String)>>, variable_
 					}
 				}
 				// update the transition
-				if let Some(index) = get_variable_id(variable_names.clone(), &variable_name) {
+				if let Some(index) = get_variable_id(&variable_names.clone(), &variable_name) {
 					if increment[index] != 0 {
 						return Err(ModelParseError::general(line.0.try_into().unwrap(), &format!("Model parsing error: variable {} increases by multiple declared values in the same transition.", variable_name)));
 					}
@@ -280,7 +289,50 @@ fn build_transitions(raw_data: Vec<Vec<(usize, std::string::String)>>, variable_
 	Ok(transitions)
 }
 
-pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
+fn build_property(raw_data: Vec<(usize, String)>, variable_names: Box<[String]>) -> Result<VasProperty, ModelParseError> {
+	if raw_data.len() != 1 {
+		return Err(ModelParseError::general(0, &"Property parsing error: property must be a single line for now."));	
+	} else {
+
+		let line_number = raw_data[0].0;
+		let data = raw_data[0].1.clone();
+		let words: &[&str] = &data.split_whitespace().collect::<Vec<&str>>()[..];
+		
+		let variable_name;
+		let variable_id;
+		let relation: AllowedRelation;
+		let value;
+
+		if words.len() != 4 {
+			return Err(ModelParseError::unexpected_token(line_number.try_into().unwrap(), &data));
+		} else {
+			variable_name = words[1].to_string();
+			relation = match words[2] {
+				"==" => AllowedRelation::Equal,
+				"=" => AllowedRelation::Equal,
+				"<" => AllowedRelation::LessThan,
+				">" => AllowedRelation::GreaterThan,
+				_ => {
+					return Err(ModelParseError::unexpected_token(line_number.try_into().unwrap(), &data));
+				}
+			};
+			if let Ok(count) = words[3].parse::<u64>() {
+				value = count;
+			} else {
+				return Err(ModelParseError::expected_integer(line_number.try_into().unwrap(), &words[3]));
+			}
+		}
+		variable_id = match get_variable_id(&variable_names.clone(), &variable_name) {
+			Some(id) => id,
+			None => {
+				return Err(ModelParseError::unspecified_variable(line_number.try_into().unwrap(), &variable_name));
+			}
+		};
+		Ok(VasProperty::new(variable_name, variable_id, relation, value))
+	}
+}
+
+pub fn build_model(filename: &str) -> Result<(AbstractVas, VasProperty), ModelParseError> {
 	
 	// Initialize everything
 	let lines = read_lines(&filename).map_err(|_| ModelParseError::general(0, &"line-by-line file parsing not Ok. Check your model file."))?;
@@ -321,18 +373,31 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 			current_transition.push((num, line));
 		} else if TARGET_TERMS.contains(first_word) {
 			property_lines.push((num, line));
-		} 
+		} else if line != "" {
+			return Err(ModelParseError::unexpected_token(num.try_into().unwrap(), &line));
+		}
 		// TODO: Implement better error handling at initial parse.
 	}
+	transition_lines.push(current_transition);
 	
 	// Parse the variables and initial states
-	let (variable_names, initial_states) = build_variables(variable_lines)?;
+	let (variable_names, initial_states) = match build_variables(variable_lines) {
+		Ok(result) => result,
+		Err(e) => return Err(e),
+	};
 
 	// Read the property
-	let _property = String::from("NO PROPERTY PARSING IMPLEMENTED YET");
+	let property = build_property(property_lines, variable_names.clone())?;
 
 	// Read the transitions
-	let transitions = build_transitions(transition_lines, variable_names.clone())?;
+	let transitions = match build_transitions(transition_lines, &variable_names) {
+		Ok(result) => result,
+		Err(e) => {
+			println!("ERROR DURING TRANSITION PARSING:\n{}", e.to_string());
+			println!("HERE");
+			return Err(e);
+		}
+	};
 
 	// Return the model
 	let model = AbstractVas::new(
@@ -341,6 +406,6 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 		transitions,
 	);
 
-	Ok(model)
+	Ok((model, property))
 
 }
