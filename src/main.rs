@@ -8,6 +8,7 @@ mod util;
 // use crate::parser;
 // use dependency::graph::make_dependency_graph;
 use logging::logging::*;
+use model::vas_model::AbstractVas;
 
 use std::fs;
 use std::path::Path;
@@ -39,12 +40,13 @@ fn main() {
 
 	for m in crn_files {
 		message(&format!("Model: models/{}", m));
-		let parser = parser::parser::Parser::new();
-		let parsed_model= parser.parse(format!("models/{}",m));
+		let parsed_model = AbstractVas::from_file(&format!("models/{}", m));
+
 		if parsed_model.is_ok() {
 			let model = parsed_model.unwrap();
-			println!("{}", model.to_string());
-			println!("parsing worked!");
+			// println!("{:?}", model.debug_print());
+			println!("MODEL PARSED\n\n");
+			println!("{}", model.nice_print());
 	
 			// let dg = make_dependency_graph(&model);
 			// // dg.unwrap().pretty_print();

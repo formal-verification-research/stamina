@@ -58,7 +58,7 @@ pub(crate) enum PropertyQuery {
 	// fn property_class(&self) -> PropertyClass;
 // }
 
-#[derive(Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 pub(crate) enum StateFormula {
 	StateLabel(String),
 	Expression(Box<crate::property::property::StateFormula>)

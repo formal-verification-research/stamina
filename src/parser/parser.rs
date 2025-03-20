@@ -28,15 +28,15 @@ impl fmt::Display for dyn ModelParseError {
 }
 
 pub(crate) trait Parser {
-	type ModelType: AbstractModel;
-	type ParserErrorType: ModelParseError;
+	type ModelType: AbstractModel + Into<ModelType>;
+	type ParserErrorType: ModelParseError + fmt::Debug;
 
 	fn parse(filename: &str) -> Result<Self::ModelType, Self::ParserErrorType>;
 
 	fn parse_or_panic(filename: &str) -> ModelType {
-		let model = Parser::parse(filename);
+		let model = Self::parse(filename);
 		match model {
-			Ok(model) => { return model; },
+			Ok(model) => { return model.into(); },
 			Err(parse_error) => { panic!("{parse_error:?}"); },
 		};
 	}

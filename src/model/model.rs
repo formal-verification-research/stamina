@@ -76,27 +76,28 @@ pub(crate) trait AbstractModel {
 
 	// Functions for which we can provide a default implementation
 
-	/// Finds all next states for a certain state.
-	fn next_states(&self, state: &Self::StateType)
-		-> impl Iterator<Item=(<Self::TransitionType as Transition>::RateOrProbabilityType, <<Self as AbstractModel>::TransitionType as Transition>::StateType)> {
-		self.transitions().filter_map(|t| t.next(state))
-	}
+	// /// Finds all next states for a certain state.
+	// fn next_states(&self, state: &Self::StateType)
+	// 	-> impl Iterator<Item=(<Self::TransitionType as Transition>::RateOrProbabilityType, <<Self as AbstractModel>::TransitionType as Transition>::StateType)> {
+	// 	self.transitions().filter_map(|t| t.next(state))
+	// }
 
-	/// Finds the exit rate (or exit probability) for a state. If a discrete time model,
-	/// this will always return `1.0` and can be used to check if implementations are correct.
-	fn exit_rate(&self, state: &Self::StateType) -> <Self::TransitionType as Transition>::RateOrProbabilityType {
-		self.next_states(state).map(|(rate, _state)| rate).sum()
-	}
+	// /// Finds the exit rate (or exit probability) for a state. If a discrete time model,
+	// /// this will always return `1.0` and can be used to check if implementations are correct.
+	// fn exit_rate(&self, state: &Self::StateType) -> <Self::TransitionType as Transition>::RateOrProbabilityType {
+	// 	self.next_states(state).map(|(rate, _state)| rate).sum()
+	// }
 
-	/// Only finds successors for transitions that pass a certain filter predicate `filter`.
-	/// This is useful in Wayfarer/ISR, as well as pancake abstraction.
-	fn next_filtered(&self, state: &Self::StateType, filter: &dyn Fn(Self::TransitionType) -> bool)
-		-> impl Iterator<Item=(<Self::TransitionType as Transition>::RateOrProbabilityType, Self::StateType)> {
+	// /// Only finds successors for transitions that pass a certain filter predicate `filter`.
+	// /// This is useful in Wayfarer/ISR, as well as pancake abstraction.
+	// fn next_filtered(&self, state: &Self::StateType, filter: &dyn Fn(Self::TransitionType) -> bool)
+		// -> impl Iterator<Item=(<Self::TransitionType as Transition>::RateOrProbabilityType, Self::StateType)> {
 
-		self.transitions()
-			.filter(filter) // This filter call applies our filter function
-			.filter_map(|t| t.next(state)) // and this one filters enabledness
-	}
+		// self.transitions()
+		// 	.filter(filter) // This filter call applies our filter function
+		// 	.filter_map(|t| t.next(state)) // and this one filters enabledness
+		// unimplemented!();
+	// }
 }
 
 pub(crate) trait ExplicitModel: Default {
