@@ -72,56 +72,56 @@ impl ModelParseError {
 
 	fn invalid_init(line: u32, count: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::InvalidInitialVariableCount(count.to_string()),
 		}
 	}
 
 	fn init_unspecified(line: u32, name: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::InitUnspecified(name.to_string()),
 		}
 	}
 
 	fn unexpected_token(line: u32, token: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::UnexpextedTokenError(token.to_string()),
 		}
 	}
 
 	fn expected_integer(line: u32, value: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::ExpectedInteger(value.to_string()),
 		}
 	}
 
 	fn expected_float(line: u32, value: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::ExpectedFloat(value.to_string()),
 		}
 	}
 
 	fn unspecified_transition(line: u32, tname: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::UnspecifiedTransitionError(tname.to_string()),
 		}
 	}
 
 	fn unspecified_variable(line: u32, vname: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::UnspecifiedVariableError(vname.to_string()),
 		}
 	}
 
 	fn general(line: u32, desc: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::GeneralParseError(desc.to_string()),
 		}		
 	}
