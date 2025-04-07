@@ -1,3 +1,5 @@
+use creusot_contracts::*;
+
 use crate::*;
 
 use builder::*;

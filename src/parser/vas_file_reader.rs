@@ -1,5 +1,6 @@
 use std::fmt;
 
+use creusot_contracts::trusted;
 use nalgebra::DVector;
 
 use crate::{model::{model::AbstractModel, vas_model::{AbstractVas, AllowedRelation, VasProperty, VasState, VasTransition}}, util::util::read_lines};
@@ -12,6 +13,7 @@ const INCREASE_TERMS : &[&str] = &["produce", "increase", "increment"];
 const RATE_TERMS : &[&str] = &["rate", "const"];
 const TARGET_TERMS : &[&str] = &["target", "goal", "prop", "check"];
 
+#[trusted]
 #[derive(Clone, Debug)]
 enum ModelParseErrorType {
 	InvalidInitialVariableCount(String), // Variable name
@@ -23,8 +25,9 @@ enum ModelParseErrorType {
 	UnspecifiedVariableError(String), // The name of the variable
 	GeneralParseError(String), // Description
 }
-
+#[trusted]
 impl ToString for ModelParseErrorType {
+	#[trusted]
 	fn to_string(&self) -> String {
 	    match self {
 			Self::InvalidInitialVariableCount(count) => format!("Invalid initial count: `{}`.", count),
@@ -39,14 +42,15 @@ impl ToString for ModelParseErrorType {
 	    }
 	}
 }
-
+#[trusted]
 #[derive(Clone, Debug)]
 pub struct ModelParseError {
 	line: u32,
 	etype: ModelParseErrorType,
 }
-
+#[trusted]
 impl fmt::Display for ModelParseError {
+	#[trusted]
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		let (line_num, line_content) = self.line();
 		let col = self.column();
@@ -60,65 +64,67 @@ impl fmt::Display for ModelParseError {
 		write!(f, "[Parse Error] Error in model parsing. Unable to parse model!\n{}: {}\n{}\n{}", line_num, line_content, marker, err_str)
 	}
 }
-
+#[trusted]
 impl ModelParseError {
 
+	#[trusted]
 	fn line(&self) -> (u32, String) {
 		(self.line, self.etype.to_string())
 	}
+	#[trusted]
 	fn column(&self) -> Option<u32> {
 		None
 	}
-
+	#[trusted]
 	fn invalid_init(line: u32, count: &dyn ToString) -> Self {
 		Self {
 			line: line,
 			etype: ModelParseErrorType::InvalidInitialVariableCount(count.to_string()),
 		}
 	}
-
+	#[trusted]
 	fn init_unspecified(line: u32, name: &dyn ToString) -> Self {
 		Self {
 			line: line,
 			etype: ModelParseErrorType::InitUnspecified(name.to_string()),
 		}
 	}
-
+	#[trusted]
 	fn unexpected_token(line: u32, token: &dyn ToString) -> Self {
 		Self {
 			line: line,
 			etype: ModelParseErrorType::UnexpextedTokenError(token.to_string()),
 		}
 	}
-
+	#[trusted]
 	fn expected_integer(line: u32, value: &dyn ToString) -> Self {
 		Self {
 			line: line,
 			etype: ModelParseErrorType::ExpectedInteger(value.to_string()),
 		}
 	}
-
+	#[trusted]
 	fn expected_float(line: u32, value: &dyn ToString) -> Self {
 		Self {
 			line: line,
 			etype: ModelParseErrorType::ExpectedFloat(value.to_string()),
 		}
 	}
-
+	#[trusted]
 	fn unspecified_transition(line: u32, tname: &dyn ToString) -> Self {
 		Self {
 			line: line,
 			etype: ModelParseErrorType::UnspecifiedTransitionError(tname.to_string()),
 		}
 	}
-
+	#[trusted]
 	fn unspecified_variable(line: u32, vname: &dyn ToString) -> Self {
 		Self {
 			line: line,
 			etype: ModelParseErrorType::UnspecifiedVariableError(vname.to_string()),
 		}
 	}
-
+	#[trusted]
 	fn general(line: u32, desc: &dyn ToString) -> Self {
 		Self {
 			line: line,
@@ -126,11 +132,12 @@ impl ModelParseError {
 		}		
 	}
 }
-
+#[trusted]
 fn get_variable_id(v: &[String], name: &str) -> Option<usize> {
 	v.iter().position(|r| r == name)
 }
 
+#[trusted]
 // Build two variable objects (names and initial values)
 fn build_variables(raw_data: Vec<(usize, String)>) -> Result<(Box<[String]>, Box<[u64]>), ModelParseError> {
 	let mut variable_names = Vec::<String>::new();
@@ -169,6 +176,7 @@ fn build_variables(raw_data: Vec<(usize, String)>) -> Result<(Box<[String]>, Box
 }
 
 // Build the transition objects
+#[trusted]
 fn build_transitions(raw_data: Vec<Vec<(usize, std::string::String)>>, variable_names: &Box<[String]>) -> Result<Vec<<AbstractVas as AbstractModel>::TransitionType>, ModelParseError> {
 	
 	let mut transitions = Vec::<<AbstractVas as AbstractModel>::TransitionType>::new();
@@ -289,6 +297,7 @@ fn build_transitions(raw_data: Vec<Vec<(usize, std::string::String)>>, variable_
 	Ok(transitions)
 }
 
+#[trusted]
 fn build_property(raw_data: Vec<(usize, String)>, variable_names: Box<[String]>) -> Result<VasProperty, ModelParseError> {
 	if raw_data.len() != 1 {
 		return Err(ModelParseError::general(0, &"Property parsing error: property must be a single line for now."));	
@@ -332,6 +341,7 @@ fn build_property(raw_data: Vec<(usize, String)>, variable_names: Box<[String]>)
 	}
 }
 
+#[trusted]
 pub fn build_model(filename: &str) -> Result<(AbstractVas, VasProperty), ModelParseError> {
 	
 	// Initialize everything

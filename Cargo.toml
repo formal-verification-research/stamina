@@ -10,5 +10,9 @@ colored = "3.0.0"
 evalexpr = "12.0.2"
 nalgebra = "0.33.2"
 num = "0.4.3"
-prusti-contracts = "0.2.0"
+creusot-contracts = { path = "/home/landon/creusot/creusot-contracts"}
+# prusti-contracts = "0.2.0"
 # serde = { version = "1.0.215", features = ["derive"] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(creusot)'] }

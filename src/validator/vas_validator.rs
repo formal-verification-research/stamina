@@ -1,6 +1,10 @@
+use creusot_contracts::*;
+
 use crate::model::vas_model::{AbstractVas, VasProperty, VasTransition};
 use colored::{ColoredString, Colorize};
+use ::std::collections::HashMap;
 
+#[trusted]
 fn check_variable_names(variable_names: &Box<[String]>) -> Vec<String> {
     let mut errors = Vec::new();
     let empty_variable_names = variable_names.iter().filter(|name| name.is_empty()).count();
@@ -16,7 +20,7 @@ fn check_variable_names(variable_names: &Box<[String]>) -> Vec<String> {
             empty_variable_names, unnamed_indices
         ));
     }
-    let mut name_counts = std::collections::HashMap::new();
+    let mut name_counts = HashMap::new();
     for name in variable_names.iter() {
         *name_counts.entry(name).or_insert(0) += 1;
     }
@@ -31,6 +35,7 @@ fn check_variable_names(variable_names: &Box<[String]>) -> Vec<String> {
     errors
 }
 
+#[trusted]
 fn initial_state_neq_target(initial_state: Box<[u64]>, property: &VasProperty) -> Vec<String> {
     let mut errors = Vec::new();
     if initial_state[property.variable_id] == property.value {
@@ -42,6 +47,7 @@ fn initial_state_neq_target(initial_state: Box<[u64]>, property: &VasProperty) -
     errors
 }
 
+#[trusted]
 // TODO: To check the SCK assumption, I think we actually need the increment/decrement vectors
 fn check_sck_assumption(transitions: Vec<VasTransition>) -> Vec<String> {
     let mut errors = Vec::new();
@@ -65,6 +71,7 @@ fn check_sck_assumption(transitions: Vec<VasTransition>) -> Vec<String> {
     errors
 }
 
+#[trusted]
 fn check_rate_constant(transitions: Vec<VasTransition>) -> Vec<String> {
     let mut errors = Vec::new();
     for transition in transitions {
@@ -79,7 +86,7 @@ fn check_rate_constant(transitions: Vec<VasTransition>) -> Vec<String> {
     errors
 }
 
-
+#[trusted]
 pub fn write_outcome(test_name: &str, errors: Vec<String>) -> String {
     let fail = "FAIL".red();
     let pass = "PASS".green();
@@ -100,6 +107,7 @@ pub fn write_outcome(test_name: &str, errors: Vec<String>) -> String {
     result
 }
 
+#[trusted]
 pub fn validate_vas(model: &AbstractVas, property: &VasProperty) -> Result<String, String> {
 
     let mut result = String::new();
@@ -124,7 +132,7 @@ pub fn validate_vas(model: &AbstractVas, property: &VasProperty) -> Result<Strin
     Ok(result)
 }
 
-
+#[trusted]
 pub fn validate_vas_property(property: VasProperty) -> Result<String, String> {
     // Implement the validation logic for the VAS property
     Ok("Property validation successful".to_string())

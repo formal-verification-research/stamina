@@ -1,9 +1,12 @@
 use std::fmt;
 
+use creusot_contracts::trusted;
+
 use crate::model::model::ModelType;
 use crate::model::*;
 use crate::parser::parser::model::AbstractModel;
 
+#[trusted]
 pub(crate) trait ModelParseError: ToString {
 	/// The line number where the error occurred
 	fn line(&self) -> (u64, String);
@@ -12,7 +15,9 @@ pub(crate) trait ModelParseError: ToString {
 }
 
 /// A wrapper type for ModelParseError to implement fmt::Display
+#[trusted]
 impl fmt::Display for dyn ModelParseError {
+	#[trusted]
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		let (line_num, line_content) = self.line();
 		let col = self.column();
@@ -27,12 +32,15 @@ impl fmt::Display for dyn ModelParseError {
 	}
 }
 
+#[trusted]
 pub(crate) trait Parser {
 	type ModelType: AbstractModel + Into<ModelType>;
 	type ParserErrorType: ModelParseError + fmt::Debug;
 
+	#[trusted]
 	fn parse(filename: &str) -> Result<Self::ModelType, Self::ParserErrorType>;
 
+	#[trusted]
 	fn parse_or_panic(filename: &str) -> ModelType {
 		let model = Self::parse(filename);
 		match model {
