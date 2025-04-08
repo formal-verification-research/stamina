@@ -1,3 +1,5 @@
 target/
 Cargo.lock
 old_code/
+verif/
+rustc-ice*.txt
