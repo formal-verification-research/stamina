@@ -6,7 +6,7 @@ mod property;
 mod util;
 
 // use crate::parser;
-// use dependency::graph::make_dependency_graph;
+use dependency::graph::make_dependency_graph;
 use logging::logging::*;
 use model::vas_model::AbstractVas;
 
@@ -14,9 +14,10 @@ use std::fs;
 use std::path::Path;
 
 fn main() {
-
+	
+	
 	let mut crn_files: Vec<String> = Vec::new();
-
+	
 	let dir_path = Path::new("models");
 	for entry in fs::read_dir(dir_path).unwrap() {
 		let entry = entry.unwrap();
@@ -25,7 +26,7 @@ fn main() {
 			for model_entry in fs::read_dir(&path).unwrap() {
 				let model_entry = model_entry.unwrap();
 				let model_path = model_entry.path();
-
+				
 				if model_path.is_file() && model_path.extension().unwrap().to_str().unwrap() == "crn" {
 					let model_name = model_path.file_stem().unwrap().to_str().unwrap();
 					let folder_name = path.file_name().unwrap().to_str().unwrap();
@@ -34,23 +35,26 @@ fn main() {
 			}
 		}
 	}
-
+	
 	// crn_files.push("ModifiedYeastPolarization/ModifiedYeastPolarization.crn".to_string());
 	// crn_files.push("EnzymaticFutileCycle/EnzymaticFutileCycle.crn".to_string());
-
+	
 	for m in crn_files {
 		message(&format!("Model: models/{}", m));
 		let parsed_model = AbstractVas::from_file(&format!("models/{}", m));
-
+		
 		if parsed_model.is_ok() {
 			let model = parsed_model.unwrap();
 			// println!("{:?}", model.debug_print());
 			println!("MODEL PARSED\n\n");
 			println!("{}", model.nice_print());
-	
-			// let dg = make_dependency_graph(&model);
-			// // dg.unwrap().pretty_print();
-			// dg.unwrap().simple_print();
+			
+			let dg = make_dependency_graph(&model);
+			// dg.unwrap().pretty_print();
+			dg.unwrap().simple_print(&model);
+
+			// Run BMC to get bounds
+
 	
 		}
 		else {

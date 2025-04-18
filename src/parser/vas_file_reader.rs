@@ -2,7 +2,7 @@ use std::fmt;
 
 use nalgebra::DVector;
 
-use crate::{model::{model::AbstractModel, vas_model::{AbstractVas, VasState, VasTransition}}, util::util::read_lines};
+use crate::{model::{model::AbstractModel, vas_model::{AbstractVas, VasProperty, VasState, VasTransition}}, property, util::util::read_lines};
 
 const VARIABLE_TERMS : &[&str] = &["species", "variable", "var"];
 const INITIAL_TERMS : &[&str] = &["initial", "init"];
@@ -280,6 +280,35 @@ fn build_transitions(raw_data: Vec<Vec<(usize, std::string::String)>>, variable_
 	Ok(transitions)
 }
 
+fn build_property(raw_data: Vec<(usize, String)>, variable_names: Box<[String]>) -> Result<VasProperty, ModelParseError> {
+	if raw_data.len() != 1 {
+		return Err(ModelParseError::general(0, &"Model parsing error: property must be a single line."));
+	}
+	let words: &[&str] = &raw_data[0].1.split_whitespace().collect::<Vec<&str>>()[..];
+	let variable_name = words.get(1).unwrap_or(&"");
+	let variable_index = get_variable_id(variable_names.clone(), variable_name);
+	if variable_index.is_none() {
+		return Err(ModelParseError::unspecified_variable(raw_data[0].0.try_into().unwrap(), &variable_name));
+	}
+	let variable_index = variable_index.unwrap();
+	let target_value = if words.len() == 4 {
+		if let Ok(value) = words[3].parse::<i128>() {
+			value
+		} else {
+			return Err(ModelParseError::expected_integer(raw_data[0].0.try_into().unwrap(), &words[2]));
+		}
+	} else {
+		return Err(ModelParseError::unexpected_token(raw_data[0].0.try_into().unwrap(), &raw_data[0].1));
+	};
+
+	let property = VasProperty {
+		variable_index,
+		target_value,
+	};
+
+	Ok(property)
+}
+
 pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 	
 	// Initialize everything
@@ -325,11 +354,13 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 		// TODO: Implement better error handling at initial parse.
 	}
 	
+	transition_lines.push(current_transition);
+	
 	// Parse the variables and initial states
 	let (variable_names, initial_states) = build_variables(variable_lines)?;
 
 	// Read the property
-	let _property = String::from("NO PROPERTY PARSING IMPLEMENTED YET");
+	let target = build_property(property_lines, variable_names.clone())?;
 
 	// Read the transitions
 	let transitions = build_transitions(transition_lines, variable_names.clone())?;
@@ -339,6 +370,7 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 		variable_names,
 		vec![VasState::new(DVector::from_vec(initial_states.iter().map(|&x| x as i64).collect()))],
 		transitions,
+		target
 	);
 
 	Ok(model)
