@@ -258,7 +258,7 @@ fn property_sat(prop: &VasProperty, state: &VasState) -> Result<bool,String>{
     return Ok(false);
 }
 
-pub fn make_dependency_graph(vas: &vas_model::AbstractVas) -> Result<DependencyGraph, String> {
+pub fn make_dependency_graph(vas: &vas_model::AbstractVas) -> Result<Option<DependencyGraph>, String> {
 
 	debug_println(format!("Building a dependency graph."));
 
@@ -329,7 +329,7 @@ pub fn make_dependency_graph(vas: &vas_model::AbstractVas) -> Result<DependencyG
 		dependency_graph.pretty_print(vas);
 	}
 
-	Ok(dependency_graph)
+	Ok(Some(dependency_graph))
 
 }
 

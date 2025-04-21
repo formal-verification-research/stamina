@@ -9,6 +9,7 @@ clap = { version = "4.5.21", features = ["derive"] }
 evalexpr = "12.0.2"
 nalgebra = "0.33.2"
 num = "0.4.3"
+z3 = "0.12.1"
 # prusti-contracts = "0.2.0"
 # yices2 = "0.1.4"
 # yices2 = { version = "2.6.4-patch.1" }
