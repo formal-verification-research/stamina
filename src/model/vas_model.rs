@@ -225,6 +225,7 @@ pub struct VasProperty {
 }
 
 /// The data for an abstract Vector Addition System
+#[derive(Clone)]
 pub(crate) struct AbstractVas {
 	pub(crate) variable_names: Box<[String]>,
 	pub(crate) initial_states: Vec<VasState>,

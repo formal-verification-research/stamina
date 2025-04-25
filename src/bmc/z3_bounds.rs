@@ -1,67 +1,7 @@
 use std::collections::HashMap;
 use z3::{ast::{self, Ast}, Config, Context, SatResult, Solver};
 
-use crate::AbstractVas;
-
-pub struct Unroller<'ctx> {
-    state_vars: HashMap<String, ast::BV<'ctx>>,
-    next_vars: HashMap<String, ast::BV<'ctx>>,
-    var_cache: HashMap<(String, u32), ast::BV<'ctx>>,
-    time_cache: Vec<HashMap<ast::BV<'ctx>, ast::BV<'ctx>>>,
-}
-
-impl<'ctx> Unroller<'ctx> {
-    pub fn new(
-        state_vars: HashMap<String, ast::BV<'ctx>>,
-        next_vars: HashMap<String, ast::BV<'ctx>>,
-    ) -> Self {
-        Self {
-            state_vars,
-            next_vars,
-            var_cache: HashMap::new(),
-            time_cache: Vec::new(),
-        }
-    }
-
-    pub fn at_time<T>(&mut self, term: &T, k: u32) -> T
-    where
-        T: Ast<'ctx> + Clone,
-    {
-        let cache = self.get_cache_at_time(k);
-        term.substitute(
-            &cache.iter().map(|(k, v)| (k, v)).collect::<Vec<_>>()
-        )
-    }
-
-    pub fn get_var(&mut self, v: &ast::BV<'ctx>, k: u32) -> ast::BV<'ctx> {
-        let key = (v.to_string(), k);
-        if let Some(var) = self.var_cache.get(&key) {
-            return var.clone();
-        }
-
-        let v_k = ast::BV::new_const(v.get_ctx(), format!("{}@{}", v.to_string(), k), v.get_size());
-        self.var_cache.insert(key, v_k.clone());
-        v_k
-    }
-
-    fn get_cache_at_time(&mut self, k: u32) -> &HashMap<ast::BV<'ctx>, ast::BV<'ctx>> {
-        assert!(k >= 0);
-        while self.time_cache.len() <= k as usize {
-            let mut cache = HashMap::new();
-            let t = self.time_cache.len() as u32;
-
-            for (s, state_var) in self.state_vars.clone() {
-                let s_t = self.get_var(&state_var, t);
-                let n_t = self.get_var(&state_var, t + 1);
-                cache.insert(state_var.clone(), s_t);
-                cache.insert(self.next_vars[&s].clone(), n_t);
-            }
-
-            self.time_cache.push(cache);
-        }
-        &self.time_cache[k as usize]
-    }
-}
+use crate::{model::{self, vas_model}, AbstractVas};
 
 pub fn get_bounds(model: AbstractVas, bits: u32) {
     println!("{}", "=".repeat(80));
@@ -146,6 +86,12 @@ pub fn get_bounds(model: AbstractVas, bits: u32) {
                 next_var,
                 &state_var.bvadd(&ast::BV::from_i64(&ctx, (*update).try_into().unwrap(), bits)),
                 )
+            } else if *update < 0 {
+                // Update Vector
+                ast::Ast::_eq(
+                next_var,
+                &state_var.bvsub(&ast::BV::from_i64(&ctx, (-*update).try_into().unwrap(), bits)),
+                )
             } else {
                 ast::Ast::_eq(
                 next_var,
@@ -158,7 +104,7 @@ pub fn get_bounds(model: AbstractVas, bits: u32) {
         
         // Combine all constraints for this transition
         let current_transition_formula = ast::Bool::and(&ctx, &current_transition_constraints.iter().collect::<Vec<_>>());
-        // println!("Transition formula:\n{:?}", current_transition_formula);
+        println!("Transition formula:\n{:?}", current_transition_formula);
 
         transition_constraints.push(current_transition_formula);
             
@@ -182,8 +128,8 @@ pub fn get_bounds(model: AbstractVas, bits: u32) {
     // Create a Z3 solver
     let solver = Solver::new(&ctx);
 
-    println!("Initial formula:");
-    println!("{:?}", formula);
+    // println!("Initial formula:");
+    // println!("{:?}", formula);
     
     // Assert the initial formula
     solver.assert(&formula);
@@ -237,8 +183,9 @@ pub fn get_bounds(model: AbstractVas, bits: u32) {
 
     }
 
-    println!("Final formula:");
-    println!("{:?}", formula);
+    let sat_model = solver.get_model();
+    println!("Satisfying Model:");
+    println!("{:?}", sat_model);
 
     println!();
     println!("{}", "-".repeat(80));
@@ -270,163 +217,190 @@ pub fn get_bounds(model: AbstractVas, bits: u32) {
     for s in vars.iter() {
         let state_var = &state_vars[s];
         let mut min_bound = 0;
-        let mut bound = 0;
         let mut max_bound = (1 << bits) - 1;
+        let mut bound = 0;
 
-        println!("Checking upper bound for {}", s);
+        println!("Checking loose upper bound for {}", s);
 
         loop {
+            // println!("{}-{}-{}", min_bound, bound, max_bound);
             solver.reset();
-            let bound_formula = &unroller.at_time(&state_var.bvuge(&ast::BV::from_i64(&ctx, bound, bits)), k);
-            // println!("Bound formula: {:?}", bound_formula);
+            let bound_formula = &unroller.at_all_times_or(&state_var.bvuge(&ast::BV::from_i64(&ctx, bound, bits)), k);
+            // println!("Bound formula:\n{:?}", bound_formula);
             let combined_formula = ast::Bool::and(&ctx, &[bound_formula, &formula]);
-            // println!("combined formula: {:?}", combined_formula);
+            // println!("Combined formula:\n{:?}", combined_formula);
             solver.assert(&combined_formula);
             status = solver.check();
-            
+
             if status == SatResult::Sat {
+                // println!("   SAT");
                 if bound >= max_bound {
-                    ub_loose.insert(s.clone(), bound);
-                    let assignment = solver.get_model();
-                    println!("Assignment: {:?}", assignment);
                     break;
                 }
                 min_bound = bound;
                 bound = bound + ((max_bound - bound + 1) / 2);
-                println!("FOUND SAT {}", bound);
-            } else if status == SatResult::Unsat {
-                // println!("FOUND UNSAT");
-                if bound >= max_bound {
-                    ub_loose.insert(s.clone(), bound - 1);
-                    let assignment = solver.get_model();
-                    println!("Assignment: {:?}", assignment);
-                    break;
-                } else {
-                    max_bound = bound;
-                    if bound == (1 << bits) - 1 {
-                        bound = (1 << bits) - 2;
-                    } else {
-                        bound = bound - ((bound - min_bound + 1) / 2);
-                    }
-                }
             } else {
-                println!("THIS SHOULDN'T HAVE HAPPENED");
-                break;
+                // println!("   UNSAT");
+                if bound >= max_bound {
+                    bound -= 1;
+                }
+                max_bound = bound;
+                if bound == (1 << bits) - 1 {
+                    bound -= 1;
+                } else {
+                    bound = bound - ((bound - min_bound) / 2);
+                }
+
             }
-            solver.pop(1);
         }
+        ub_loose.insert(s.clone(), bound);
         println!("{} loose upper bound is: {}", s, ub_loose[s]);
-        // break;
     }
     
     // Step 2: Tightest upper bounds
     for s in vars.iter() {
         let state_var = &state_vars[s];
+        let state_var_index = model.variable_names.iter().position(|x| x == s).unwrap();
+        let mut min_bound = model.initial_states[0].vector[state_var_index];
         let mut max_bound = (1 << bits) - 1;
-        let mut bound = max_bound;
-        let mut min_bound = 0;
+        let mut bound = (1 << bits) - 1;
 
         println!("Checking tight upper bound for {}", s);
 
         loop {
+            // println!("{}-{}-{}", min_bound, bound, max_bound);
             solver.reset();
-            let bound_formula = &unroller.at_time(&state_var.bvule(&ast::BV::from_i64(&ctx, bound, bits)), k);
+            let bound_formula = &unroller.at_all_times_and(&state_var.bvule(&ast::BV::from_i64(&ctx, bound, bits)), k);
+            // println!("Bound formula:\n{:?}", bound_formula);
             let combined_formula = ast::Bool::and(&ctx, &[bound_formula, &formula]);
+            // println!("Combined formula:\n{:?}", combined_formula);
             solver.assert(&combined_formula);
             status = solver.check();
 
             if status == SatResult::Sat {
+                // println!("   SAT");
                 if bound <= min_bound {
-                    ub_tight.insert(s.clone(), bound);
                     break;
                 }
                 max_bound = bound;
                 if bound == 1 {
                     bound = 0;
                 } else {
-                    bound = bound - ((bound - min_bound) / 2);
-                }
-            } else if status == SatResult::Unsat {
-                if bound <= min_bound {
-                    ub_tight.insert(s.clone(), bound + 1);
-                    break;
-                } else {
-                    min_bound = bound;
-                    bound = bound + ((max_bound - bound) / 2);
+                    bound = bound - ((bound - min_bound + 1) / 2);
                 }
             } else {
-                println!("THIS SHOULDN'T HAVE HAPPENED");
-                break;
+                // println!("   UNSAT");
+                if bound <= min_bound {
+                    bound += 1;
+                    break;
+                }
+                min_bound = bound;
+                bound = bound + ((max_bound - bound) / 2);
             }
         }
+        ub_tight.insert(s.clone(), bound);
         println!("{} tight upper bound is: {}", s, ub_tight[s]);
     }
 
     // Step 3: Loosest lower bounds
     for s in vars.iter() {
         let state_var = &state_vars[s];
+        let state_var_index = model.variable_names.iter().position(|x| x == s).unwrap();
         let mut min_bound = 0;
-        let mut bound = 0;
-        let mut max_bound = ub_loose[s];
-
-        println!("Checking lower bound for {}", s);
-
+        let mut max_bound = model.initial_states[0].vector[state_var_index];
+        let mut bound = model.initial_states[0].vector[state_var_index];
+        
+        println!("Checking loose lower bound for {}", s);
+        
         loop {
+            if max_bound == 0 {
+                bound = 0;
+                break;
+            }
+            // println!("{}-{}-{}", min_bound, bound, max_bound);
             solver.reset();
-            let bound_formula = &unroller.at_time(&state_var.bvule(&ast::BV::from_i64(&ctx, bound, bits)), k);
+            let bound_formula = &unroller.at_all_times_or(&state_var.bvule(&ast::BV::from_i64(&ctx, bound, bits)), k);
+            // println!("Bound formula:\n{:?}", bound_formula);
             let combined_formula = ast::Bool::and(&ctx, &[bound_formula, &formula]);
+            // println!("Combined formula:\n{:?}", combined_formula);
             solver.assert(&combined_formula);
             status = solver.check();
 
             if status == SatResult::Sat {
+                // println!("   SAT");
                 if bound <= min_bound {
-                    lb_loose.insert(s.clone(), bound);
                     break;
                 }
                 max_bound = bound;
-                bound = bound - ((bound - min_bound + 1) / 2);
-            } else if status == SatResult::Unsat {
-                if bound <= min_bound {
-                    lb_loose.insert(s.clone(), bound + 1);
-                    break;
+                if bound == 1 {
+                    bound = 0;
                 } else {
-                    min_bound = bound;
-                    bound = bound + ((max_bound - bound + 1) / 2);
+                    bound = bound - ((bound - min_bound + 1) / 2);
                 }
             } else {
-                println!("THIS SHOULDN'T HAVE HAPPENED");
-                break;
+                // println!("   UNSAT");
+                if bound <= min_bound {
+                    bound += 1;
+                    break;
+                }
+                min_bound = bound;
+                bound = bound + ((max_bound - bound) / 2);
             }
         }
+        lb_loose.insert(s.clone(), bound);
         println!("{} loose lower bound is: {}", s, lb_loose[s]);
     }
 
     // Step 4: Tightest lower bounds
     for s in vars.iter() {
         let state_var = &state_vars[s];
-        let mut bound = lb_loose[s];
-
+        let state_var_index = model.variable_names.iter().position(|x| x == s).unwrap();
+        let mut min_bound = 0;
+        let mut max_bound = model.initial_states[0].vector[state_var_index];
+        let mut bound = 0;
+        
         println!("Checking tight lower bound for {}", s);
-
+        
         loop {
+            if max_bound == 0 {
+                bound = 0;
+                break;
+            }
+            // println!("{}-{}-{}", min_bound, bound, max_bound);
             solver.reset();
-            let bound_formula = &unroller.at_time(&state_var._eq(&ast::BV::from_i64(&ctx, bound, bits)), k);
+            let bound_formula = &unroller.at_all_times_and(&state_var.bvuge(&ast::BV::from_i64(&ctx, bound, bits)), k);
+            // println!("Bound formula:\n{:?}", bound_formula);
             let combined_formula = ast::Bool::and(&ctx, &[bound_formula, &formula]);
+            // println!("Combined formula:\n{:?}", combined_formula);
             solver.assert(&combined_formula);
             status = solver.check();
 
             if status == SatResult::Sat {
-                lb_tight.insert(s.clone(), bound);
-                break;
-            } else {
-                if bound == (1 << bits) - 1 {
+                // println!("   SAT");
+                if bound >= max_bound {
                     break;
                 }
-                bound += 1;
+                min_bound = bound;
+                bound = bound + ((max_bound - bound + 1) / 2);
+            } else {
+                // println!("   UNSAT");
+                if bound >= max_bound {
+                    bound -= 1;
+                    break;
+                }
+                max_bound = bound;
+                if bound == (1 << bits) - 1 {
+                    bound -= 1;
+                } else {
+                    bound = bound - ((bound - min_bound) / 2);
+                }
             }
         }
+        lb_tight.insert(s.clone(), bound);
         println!("{} tight lower bound is: {}", s, lb_tight[s]);
     }
+
+
 
     // Print summary
     println!("{}", "=".repeat(80));
@@ -441,7 +415,7 @@ pub fn get_bounds(model: AbstractVas, bits: u32) {
             lb_loose[s],
             lb_tight[s],
             ub_loose[s],
-            ub_tight[s]
+            ub_tight[s],
         );
     }
     println!("{}", "=".repeat(80));

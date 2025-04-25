@@ -4,9 +4,9 @@ use crate::{model::vas_model::{self, VasProperty, VasState, VasTransition}, Abst
 use std::io::{self, Write};
 
 fn debug_println(s: String) {
-	if cfg!(debug_assertions) {
-		println!("{}", s);
-	}
+	// if cfg!(debug_assertions) {
+	// 	println!("{}", s);
+	// }
 }
 
 #[derive(Clone)]
@@ -21,6 +21,7 @@ struct GraphNode {
 	decrement: bool,
 }
 
+#[derive(Clone)]
 pub(crate) struct DependencyGraph {
 	root: Box<GraphNode>,
 }
@@ -58,8 +59,6 @@ impl GraphNode {
 			let reqd = if self.decrement {
                 let initial_value = child_init.vector.get(prop.variable_index).unwrap();
                 let consumed_here = 0 - self.transition.update_vector.get(prop.variable_index).unwrap();
-                // let initial_value = child_init.vector.iter().find(|init| init.variable_name == x.variable_name).map_or(0, |init| init.count);
-				// let consumed_here = self.transition.decrement.iter().find(|inc: &&Box<Variable>|inc.variable_name == x.variable_name).unwrap_or(&binding);
 				debug_println(format!("{}consumed_here {}.{}", spaces, vas.variable_names.get(prop.variable_index).unwrap(), consumed_here));
 				debug_println(format!("{}initial_value {}", spaces, initial_value));
 				prop.target_value + (consumed_here * self.executions as i128)
@@ -80,10 +79,6 @@ impl GraphNode {
 			else {
 				None
 			}
-			// if reqd != 0 {
-			// } else {
-			// 	None
-			// }
 		}).collect();
 
 		let mut negative_targets: Vec<VasProperty> = Vec::new();
@@ -96,18 +91,6 @@ impl GraphNode {
                 });
             }
         }
-        //  = child_init.vector.iter().filter_map(|ci| {
-		// 	if *ci < 0 {
-		// 		debug_println(format!("{}negative_target {}.{}", spaces, vas.variable_names.get(prop.variable_index).unwrap(), ci));
-		// 		Some(Box::new(Variable {
-		// 			variable_name: ci.variable_name.clone(),
-		// 			count: -ci.count,
-		// 		}))
-		// 	} else {
-		// 		None
-		// 	}
-		// }).collect();
-
 		let mut all_targets = child_targets;
 		all_targets.extend(negative_targets);
 
@@ -151,55 +134,7 @@ impl GraphNode {
                         // ));
                         continue;
                     }
-	
-					// update the child targets and executions
 
-
-                    
-					// if target.target_value > 0 {
-					// 	debug_println(format!("{}Target count is positive", spaces));
-					// 	let trans_increment = trans.update_vector.clone() - trans.enabled_bounds.map(|v| v as i128);
-                    //     if trans_increment.iter().enumerate().any(|(i, _)| all_targets.iter().any(|ct| ct.variable_index == i)) {
-                    //         debug_println(format!("{}Transition {} has increment affecting target", spaces, trans.transition_name));
-                    //         this_child_targets.push(VasProperty {
-                    //             variable_index: target.variable_index,
-                    //             target_value: target.target_value,
-                    //         });
-                    //         if let Some(increment_value) = trans_increment.get(target.variable_index) {
-                    //             let increment_count = *increment_value;
-                    //             executions = if increment_count > 0 {
-                    //                 (target.target_value / increment_count).try_into().unwrap()
-                    //             } else {
-                    //                 0
-                    //             };
-                    //             debug_println(format!("{}Executions calculated: {}", spaces, executions));
-                    //         }
-					// 	}
-					// 	else {
-					// 		continue;
-					// 	}
-					// } else {
-					// 	debug_println(format!("{}Target count is non-positive", spaces));
-                    //     if trans.update_vector.iter().enumerate().any(|(i, _)| all_targets.iter().any(|ct| ct.variable_index == i)) {
-                    //         debug_println(format!("{}Transition {} has decrement affecting target", spaces, trans.transition_name));
-                    //         this_child_targets.push(VasProperty {
-                    //             variable_index: target.variable_index,
-                    //             target_value: target.target_value,
-                    //         });
-                    //         if let Some(decrement_value) = trans.update_vector.get(target.variable_index) {
-                    //             let decrement_count = *decrement_value;
-                    //             executions = if decrement_count < 0 {
-                    //                 (target.target_value / decrement_count.abs()).try_into().unwrap()
-                    //             } else {
-                    //                 0
-                    //             };
-                    //             debug_println(format!("{}Executions calculated: {}", spaces, executions));
-                    //         }
-					// 	}
-					// 	else {
-					// 		continue;
-					// 	}
-					// }
                     if executions > 0 {
                         let mut child = GraphNode {
                             transition: trans.clone(),
@@ -247,14 +182,12 @@ impl GraphNode {
 }
 
 fn property_sat(prop: &VasProperty, state: &VasState) -> Result<bool,String>{
-	for i in 0..state.vector.len() {
-        if state.vector[i] < 0 {
-            return Err(format!("Error: Negative value in state vector at index {}: {}", i, state.vector[i]));
-        }
-        if state.vector[i] as i128 == prop.target_value {
-            return Ok(true);
-        }
-    };
+	if state.vector.len() < prop.variable_index {
+		return Err(format!("Error: Index out of bounds for state vector: {} >= {}", prop.variable_index, state.vector.len()));
+	}
+	if state.vector[prop.variable_index] as i128 == prop.target_value {
+		return Ok(true);
+	}
     return Ok(false);
 }
 
@@ -273,6 +206,7 @@ pub fn make_dependency_graph(vas: &vas_model::AbstractVas) -> Result<Option<Depe
 	}
 
 	// figure out the executions on the artificial root node
+
 
     let target_variable = vas.target.variable_index;
     let initial_value = vas.initial_states[0].vector[target_variable];
@@ -325,9 +259,9 @@ pub fn make_dependency_graph(vas: &vas_model::AbstractVas) -> Result<Option<Depe
 
 	let _ = dependency_graph.root.rec_build_graph(vas, 1);
 
-	if cfg!(debug_assertions) {
-		dependency_graph.pretty_print(vas);
-	}
+	// if cfg!(debug_assertions) {
+	// 	dependency_graph.pretty_print(vas);
+	// }
 
 	Ok(Some(dependency_graph))
 
@@ -364,15 +298,18 @@ impl DependencyGraph {
 		print_node(vas, &self.root, 0);
 	}
     pub fn simple_print(&self, vas: &AbstractVas) {
+		println!("===================");
+		println!("Dependency Graph");
         fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize) {
-            let indent = " ".repeat(depth * 2);
+			let indent = " ".repeat(depth * 2);
             println!("{}Node: {} (Executions: {})", indent, node.transition.transition_name, node.executions);
             for child in &node.children {
-                print_node(vas, child, depth + 1);
+				print_node(vas, child, depth + 1);
             }
         }
-
         print_node(vas, &self.root, 0);
+		println!("===================\n");
+		
     }
     pub fn vec_transitions(&self) -> Vec<VasTransition> {
         fn collect_transitions(node: &GraphNode, transitions: &mut Vec<VasTransition>) {
@@ -385,4 +322,18 @@ impl DependencyGraph {
         collect_transitions(&self.root, &mut transitions);
         transitions
     }
+
+	pub fn get_transitions(&self) -> Vec<VasTransition> {
+		let mut transitions = Vec::new();
+		fn traverse(node: &GraphNode, transitions: &mut Vec<VasTransition>) {
+			if node.transition.transition_name != "ARTIFICIAL" {
+				transitions.push(node.transition.clone());
+			}
+			for child in &node.children {
+			traverse(child, transitions);
+			}
+		}
+		traverse(&self.root, &mut transitions);
+		transitions
+	}
 }
