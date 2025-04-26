@@ -1,4 +1,4 @@
-use creusot_contracts::*;
+use metaverify::*;
 #[trusted]
 pub(crate) enum ModelCheckingResult {
 	NoResult, // checking has not yet been performed or was unable to occur

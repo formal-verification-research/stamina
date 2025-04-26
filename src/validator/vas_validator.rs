@@ -1,4 +1,4 @@
-use creusot_contracts::*;
+use metaverify::*;
 
 use crate::model::vas_model::{AbstractVas, VasProperty, VasTransition};
 use colored::{ColoredString, Colorize};

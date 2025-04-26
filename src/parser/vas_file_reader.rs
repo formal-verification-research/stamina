@@ -1,6 +1,6 @@
 use std::fmt;
 
-use creusot_contracts::trusted;
+use metaverify::trusted;
 use nalgebra::DVector;
 
 use crate::{model::{model::AbstractModel, vas_model::{AbstractVas, AllowedRelation, VasProperty, VasState, VasTransition}}, util::util::read_lines};

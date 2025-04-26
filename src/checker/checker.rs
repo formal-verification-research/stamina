@@ -1,4 +1,4 @@
-use creusot_contracts::*;
+use metaverify::*;
 
 use crate::*;
 

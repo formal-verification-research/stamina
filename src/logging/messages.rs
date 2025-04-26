@@ -1,6 +1,6 @@
 use std::process::exit;
 
-use creusot_contracts::trusted;
+use metaverify::trusted;
 
 #[trusted]
 pub(crate) fn message(s: &str) {

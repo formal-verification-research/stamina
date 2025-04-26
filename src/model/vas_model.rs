@@ -2,7 +2,7 @@ use std::{collections::BTreeSet, fmt};
 
 use crate::{parser::vas_file_reader, property::property, validator::vas_validator::validate_vas};
 
-use creusot_contracts::trusted;
+use metaverify::trusted;
 use nalgebra::DVector;
 
 use super::model::{AbstractModel, ModelType, State, Transition};

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use creusot_contracts::trusted;
+use metaverify::trusted;
 
 use crate::model::model::ModelType;
 use crate::model::*;

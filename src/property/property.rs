@@ -1,4 +1,4 @@
-use creusot_contracts::trusted;
+use metaverify::trusted;
 use evalexpr::*;
 
 use std::fmt::{Display, Error, Formatter};

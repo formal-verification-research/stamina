@@ -1,4 +1,4 @@
-use creusot_contracts::trusted;
+use metaverify::trusted;
 
 use crate::model::vas_model::AbstractVas;
 
