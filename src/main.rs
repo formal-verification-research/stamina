@@ -4,6 +4,7 @@ mod logging;
 mod parser;
 mod property;
 mod util;
+
 mod bmc;
 
 use bmc::formula::{print_satisfying_model, print_z3_encoding};
@@ -24,7 +25,6 @@ fn main() {
 	
 	
 	let mut crn_files: Vec<String> = Vec::new();
-	
 	let dir_path = Path::new("models");
 	for entry in fs::read_dir(dir_path).unwrap() {
 		let entry = entry.unwrap();
@@ -53,7 +53,7 @@ fn main() {
 		let parsed_model = AbstractVas::from_file(&format!("models/{}", m));
 		
 		if parsed_model.is_ok() {
-			let model = parsed_model.unwrap();
+			let (model,property) = parsed_model.unwrap();
 			// println!("{:?}", model.debug_print());
 			println!("MODEL PARSED\n\n");
 			println!("{}", model.nice_print());
@@ -114,8 +114,6 @@ fn main() {
 			// print_satisfying_model(model.clone(), bits, steps);
 			
 			
-
-		
 		}
 		else {
 			println!("parsing failed");
