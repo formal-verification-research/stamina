@@ -303,7 +303,7 @@ fn build_property(raw_data: Vec<(usize, String)>, variable_names: Box<[String]>)
 	}
 	let words: &[&str] = &raw_data[0].1.split_whitespace().collect::<Vec<&str>>()[..];
 	let variable_name = words.get(1).unwrap_or(&"");
-	let variable_index = get_variable_id(variable_names.clone(), variable_name);
+	let variable_index = get_variable_id(&*variable_names, variable_name);
 	if variable_index.is_none() {
 		return Err(ModelParseError::unspecified_variable(raw_data[0].0.try_into().unwrap(), &variable_name));
 	}

@@ -295,26 +295,6 @@ impl fmt::Display for AllowedRelation {
 		write!(f, "{}", relation_str)
 	}
 }
-#[trusted]
-// TODO: Temporarily created a property for VAS only. Eventually need to integrate with property.
-pub struct VasProperty {
-	pub variable_name: String,
-	pub variable_id: usize,
-	pub relation: AllowedRelation,
-	pub value: u64,
-}
-#[trusted]
-impl VasProperty {
-	#[trusted]
-	pub fn new(variable_name: String, variable_id: usize, relation: AllowedRelation, value: u64) -> Self {
-		Self { variable_name, variable_id, relation, value }
-	}
-	#[trusted]
-	pub fn nice_print(&self) -> String {
-		format!("Property: {}({}) {} {}", self.variable_name, self.variable_id, self.relation, self.value)
-	}
-}
-
 // TODO: May need to allow discrete/continuous time models
 // for now we will just use continuous time models
 #[trusted]
