@@ -41,7 +41,7 @@ fn initial_state_neq_target(initial_state: Box<[u64]>, property: &VasProperty) -
     if initial_state[property.variable_index] as i128 == property.target_value {
         errors.push(format!(
             "Initial state [ {} ] satisfies target with value {}",
-            initial_state.iter().map(|x| format!("{}", x)).collect::<Vec<String>>().join(" "), property.value
+            initial_state.iter().map(|x| format!("{}", x)).collect::<Vec<String>>().join(" "), property.target_value
         ));
     }
     errors
