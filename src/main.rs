@@ -53,7 +53,7 @@ fn main() {
 		let parsed_model = AbstractVas::from_file(&format!("models/{}", m));
 		
 		if parsed_model.is_ok() {
-			let (model,property) = parsed_model.unwrap();
+			let model = parsed_model.unwrap();
 			// println!("{:?}", model.debug_print());
 			println!("MODEL PARSED\n\n");
 			println!("{}", model.nice_print());

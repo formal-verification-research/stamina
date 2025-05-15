@@ -373,9 +373,7 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 		// TODO: Implement better error handling at initial parse.
 	}
 	transition_lines.push(current_transition);
-	
-	transition_lines.push(current_transition);
-	
+		
 	// Parse the variables and initial states
 	let (variable_names, initial_states) = match build_variables(variable_lines) {
 		Ok(result) => result,
@@ -403,6 +401,6 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 		target
 	);
 
-	Ok((model, property))
+	Ok(model)
 
 }

@@ -309,11 +309,11 @@ impl AbstractVas {
 		}
 	}
 	#[trusted]
-	pub fn from_file(filename: &str) -> Result<(Self,VasProperty), String> {
+	pub fn from_file(filename: &str) -> Result<Self, String> {
 		match vas_file_reader::build_model(filename) {
-			Ok((model, property)) => {
+			Ok(model) => {
 				println!("Parsing gave OK result");
-				Ok((model, property))
+				Ok(model)
 			}
 			Err(err) => {
 				println!("ERROR DURING PARSING:");
