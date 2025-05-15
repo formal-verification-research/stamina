@@ -16,7 +16,7 @@ struct StateLabel {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct VasState {
 	// The state values
-	pub vector: DVector<i64>,
+	pub(crate) vector: DVector<i64>,
 	// The labelset for this state
 	labels: Option<BTreeSet<property::StateFormula>>,
 }
@@ -99,19 +99,19 @@ impl State for VasState {
 #[trusted]
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct VasTransition {
-	pub transition_id: usize,
-	pub transition_name: String,
+	pub(crate) transition_id: usize,
+	pub(crate) transition_name: String,
 	// The update vector
-	pub update_vector: DVector<i128>,
+	pub(crate) update_vector: DVector<i128>,
 	// The minimum elementwise count for a transition to be enabled
-	pub enabled_bounds: DVector<u64>,
+	pub(crate) enabled_bounds: DVector<u64>,
 	// The rate constant used in CRNs
-	pub rate_const: f64,
+	pub(crate) rate_const: f64,
 	// An override function to find the rate probability
 	// (when this is not provided defaults to the implemenation in
 	// rate_probability_at). The override must be stored in static
 	// memory for now (may change this later).
-	pub custom_rate_fn: Option<CustomRateFn>,
+	pub(crate) custom_rate_fn: Option<CustomRateFn>,
 }
 
 #[trusted]
@@ -241,13 +241,20 @@ impl Transition for VasTransition {
 			}
 }
 
+#[derive(Clone, Debug)]
+pub struct VasProperty {
+	pub(crate) variable_index: usize,
+	pub(crate) target_value: i128,
+}
+
 /// The data for an abstract Vector Addition System
-#[trusted]
-pub struct AbstractVas {
-	pub variable_names: Box<[String]>,
-	pub initial_states: Vec<VasState>,
-	pub transitions: Vec<VasTransition>,
-	pub m_type: ModelType,
+#[derive(Clone)]
+pub(crate) struct AbstractVas {
+	pub(crate) variable_names: Box<[String]>,
+	pub(crate) initial_states: Vec<VasState>,
+	pub(crate) transitions: Vec<VasTransition>,
+	pub(crate) m_type: ModelType,
+	pub(crate) target: VasProperty,
 }
 
 #[trusted]
@@ -312,13 +319,13 @@ impl VasProperty {
 // for now we will just use continuous time models
 #[trusted]
 impl AbstractVas {
-	#[trusted]
-	pub fn new(variable_names: Box<[String]>, initial_states: Vec<VasState>, transitions: Vec<VasTransition>) -> Self {
+	pub fn new(variable_names: Box<[String]>, initial_states: Vec<VasState>, transitions: Vec<VasTransition>, target: VasProperty) -> Self {
 		Self { 
 			variable_names,
 			initial_states, 
 			transitions, 
 			m_type: ModelType::ContinuousTime,
+			target
 		}
 	}
 	#[trusted]
@@ -374,6 +381,16 @@ impl AbstractVas {
 			transition.enabled_bounds.iter().for_each(|name| output.push_str(&format!("\t{}", name)));
 			output.push_str(&format!("\t]\n\t\tRate:\t{}\n", transition.rate_const));
 		}
+
+		output.push_str("Target:\n");
+		output.push_str(&format!(
+			"\tVariable: {}\n",
+			self.variable_names
+				.get(self.target.variable_index)
+				.map(|s| s.as_str())
+				.unwrap_or("Unknown")
+		));
+		output.push_str(&format!("\tTarget Value: {}\n", self.target.target_value));
 
 		output.push_str("==========================================\n");
 		output.push_str("               END VAS MODEL              \n");

@@ -1,0 +1,1572 @@
+
+████████████████████████████████████████████████████████████████████████████████
+
+Model: models/ReversibleIsomerization/ReversibleIsomerization.crn
+MODEL PARSED
+
+
+==========================================
+              BEGIN VAS MODEL             
+==========================================
+Variables:
+	S0	S1
+Initial States:
+	100	0
+Transitions:
+	0	R0
+		Update:	[	-1	1]
+		Enable:	[	1	0]
+		Rate:	0.12
+Target:
+	Variable: S1
+	Target Value: 30
+==========================================
+               END VAS MODEL              
+==========================================
+
+===================
+Dependency Graph
+Node: ARTIFICIAL (Executions: 30)
+  Node: R0 (Executions: 30)
+===================
+
+S0: used by transition R0
+S1: used by transition R0
+==========================================
+              BEGIN VAS MODEL             
+==========================================
+Variables:
+	S0	S1
+Initial States:
+	100	0
+Transitions:
+	0	R0
+		Update:	[	-1	1]
+		Enable:	[	1	0]
+		Rate:	0.12
+Target:
+	Variable: S1
+	Target Value: 30
+==========================================
+               END VAS MODEL              
+==========================================
+
+================================================================================
+VAS Variable Bound Calculator
+================================================================================
+================================================================================
+Z3 Encoder for VAS
+================================================================================
+Using 8-bit vectors
+Encoded initial state
+Encoded transition R0
+Target variable: 1
+Target value: 30
+Vars: ["S0", "S1"]
+Encoded target state
+Completed BMC encoding.
+================================================================================
+Bounded Model Checking to 6000 steps
+================================================================================
+-- TIME   0 --
+-- TIME   1 --
+-- TIME   2 --
+-- TIME   3 --
+-- TIME   4 --
+-- TIME   5 --
+-- TIME   6 --
+-- TIME   7 --
+-- TIME   8 --
+-- TIME   9 --
+-- TIME  10 --
+-- TIME  11 --
+-- TIME  12 --
+-- TIME  13 --
+-- TIME  14 --
+-- TIME  15 --
+-- TIME  16 --
+-- TIME  17 --
+-- TIME  18 --
+-- TIME  19 --
+-- TIME  20 --
+-- TIME  21 --
+-- TIME  22 --
+-- TIME  23 --
+-- TIME  24 --
+-- TIME  25 --
+-- TIME  26 --
+-- TIME  27 --
+-- TIME  28 --
+-- TIME  29 --
+-- TIME  30 --
+Final steps: 30
+Checking loose upper bound for S0
+S0 loose upper bound is: 100
+Checking loose upper bound for S1
+S1 loose upper bound is: 30
+Checking tight upper bound for S0
+S0 tight upper bound is: 100
+Checking tight upper bound for S1
+S1 tight upper bound is: 30
+Checking loose lower bound for S0
+S0 loose lower bound is: 70
+Checking loose lower bound for S1
+S1 loose lower bound is: 0
+Checking tight lower bound for S0
+S0 tight lower bound is: 70
+Checking tight lower bound for S1
+S1 tight lower bound is: 0
+================================================================================
+Summary of Bounds
+================================================================================
+Variable             LB Loose   LB Tight   UB Loose   UB Tight  
+--------------------------------------------------------------------------------
+S0                   70         70         100        100       
+S1                   0          0          30         30        
+================================================================================
+get_bounds completed successfully
+Time taken by get_bounds on regular model: 329.665223ms
+================================================================================
+VAS Variable Bound Calculator
+================================================================================
+================================================================================
+Z3 Encoder for VAS
+================================================================================
+Using 8-bit vectors
+Encoded initial state
+Encoded transition R0
+Target variable: 1
+Target value: 30
+Vars: ["S0", "S1"]
+Encoded target state
+Completed BMC encoding.
+================================================================================
+Bounded Model Checking to 6000 steps
+================================================================================
+-- TIME   0 --
+-- TIME   1 --
+-- TIME   2 --
+-- TIME   3 --
+-- TIME   4 --
+-- TIME   5 --
+-- TIME   6 --
+-- TIME   7 --
+-- TIME   8 --
+-- TIME   9 --
+-- TIME  10 --
+-- TIME  11 --
+-- TIME  12 --
+-- TIME  13 --
+-- TIME  14 --
+-- TIME  15 --
+-- TIME  16 --
+-- TIME  17 --
+-- TIME  18 --
+-- TIME  19 --
+-- TIME  20 --
+-- TIME  21 --
+-- TIME  22 --
+-- TIME  23 --
+-- TIME  24 --
+-- TIME  25 --
+-- TIME  26 --
+-- TIME  27 --
+-- TIME  28 --
+-- TIME  29 --
+-- TIME  30 --
+Final steps: 30
+Checking loose upper bound for S0
+S0 loose upper bound is: 100
+Checking loose upper bound for S1
+S1 loose upper bound is: 30
+Checking tight upper bound for S0
+S0 tight upper bound is: 100
+Checking tight upper bound for S1
+S1 tight upper bound is: 30
+Checking loose lower bound for S0
+S0 loose lower bound is: 70
+Checking loose lower bound for S1
+S1 loose lower bound is: 0
+Checking tight lower bound for S0
+S0 tight lower bound is: 70
+Checking tight lower bound for S1
+S1 tight lower bound is: 0
+================================================================================
+Summary of Bounds
+================================================================================
+Variable             LB Loose   LB Tight   UB Loose   UB Tight  
+--------------------------------------------------------------------------------
+S0                   70         70         100        100       
+S1                   0          0          30         30        
+================================================================================
+get_bounds completed successfully
+Time taken by get_bounds on trimmed model: 327.680784ms
+
+████████████████████████████████████████████████████████████████████████████████
+
+
+████████████████████████████████████████████████████████████████████████████████
+
+Model: models/ModifiedYeastPolarization/ModifiedYeastPolarization.crn
+MODEL PARSED
+
+
+==========================================
+              BEGIN VAS MODEL             
+==========================================
+Variables:
+	R	L	RL	G	GA	GBG	GD
+Initial States:
+	50	2	0	50	0	0	0
+Transitions:
+	0	R1
+		Update:	[	1	0	0	0	0	0	0]
+		Enable:	[	0	0	0	0	0	0	0]
+		Rate:	0.0038
+	1	R2
+		Update:	[	-1	0	0	0	0	0	0]
+		Enable:	[	1	0	0	0	0	0	0]
+		Rate:	0.0004
+	2	R3
+		Update:	[	-1	0	1	0	0	0	0]
+		Enable:	[	1	1	0	0	0	0	0]
+		Rate:	0.042
+	3	R4
+		Update:	[	1	0	-1	0	0	0	0]
+		Enable:	[	0	0	1	0	0	0	0]
+		Rate:	0.01
+	4	R5
+		Update:	[	0	0	-1	-1	1	1	0]
+		Enable:	[	0	0	1	1	0	0	0]
+		Rate:	0.011
+	5	R6
+		Update:	[	0	0	0	0	-1	0	1]
+		Enable:	[	0	0	0	0	1	0	0]
+		Rate:	0.1
+	6	R7
+		Update:	[	0	0	0	1	0	-1	-1]
+		Enable:	[	0	0	0	0	0	1	1]
+		Rate:	1050
+	7	R8
+		Update:	[	0	0	1	0	0	0	0]
+		Enable:	[	0	0	0	0	0	0	0]
+		Rate:	3.21
+Target:
+	Variable: GBG
+	Target Value: 50
+==========================================
+               END VAS MODEL              
+==========================================
+
+===================
+Dependency Graph
+Node: ARTIFICIAL (Executions: 50)
+  Node: R5 (Executions: 50)
+    Node: R3 (Executions: 50)
+    Node: R8 (Executions: 50)
+===================
+
+R: used by transition R3
+L: used by transition R3
+RL: used by transition R5
+G: used by transition R5
+GA: used by transition R5
+GBG: used by transition R5
+GD: unused
+==========================================
+              BEGIN VAS MODEL             
+==========================================
+Variables:
+	R	L	RL	G	GA	GBG
+Initial States:
+	50	2	0	50	0	0
+Transitions:
+	4	R5
+		Update:	[	0	0	-1	-1	1	1]
+		Enable:	[	0	0	1	1	0	0]
+		Rate:	0.011
+	2	R3
+		Update:	[	-1	0	1	0	0	0]
+		Enable:	[	1	1	0	0	0	0]
+		Rate:	0.042
+	7	R8
+		Update:	[	0	0	1	0	0	0]
+		Enable:	[	0	0	0	0	0	0]
+		Rate:	3.21
+Target:
+	Variable: GBG
+	Target Value: 50
+==========================================
+               END VAS MODEL              
+==========================================
+
+================================================================================
+VAS Variable Bound Calculator
+================================================================================
+================================================================================
+Z3 Encoder for VAS
+================================================================================
+Using 8-bit vectors
+Encoded initial state
+Encoded transition R1
+Encoded transition R2
+Encoded transition R3
+Encoded transition R4
+Encoded transition R5
+Encoded transition R6
+Encoded transition R7
+Encoded transition R8
+Target variable: 5
+Target value: 50
+Vars: ["R", "L", "RL", "G", "GA", "GBG", "GD"]
+Encoded target state
+Completed BMC encoding.
+================================================================================
+Bounded Model Checking to 6000 steps
+================================================================================
+-- TIME   0 --
+-- TIME   1 --
+-- TIME   2 --
+-- TIME   3 --
+-- TIME   4 --
+-- TIME   5 --
+-- TIME   6 --
+-- TIME   7 --
+-- TIME   8 --
+-- TIME   9 --
+-- TIME  10 --
+-- TIME  11 --
+-- TIME  12 --
+-- TIME  13 --
+-- TIME  14 --
+-- TIME  15 --
+-- TIME  16 --
+-- TIME  17 --
+-- TIME  18 --
+-- TIME  19 --
+-- TIME  20 --
+-- TIME  21 --
+-- TIME  22 --
+-- TIME  23 --
+-- TIME  24 --
+-- TIME  25 --
+-- TIME  26 --
+-- TIME  27 --
+-- TIME  28 --
+-- TIME  29 --
+-- TIME  30 --
+-- TIME  31 --
+-- TIME  32 --
+-- TIME  33 --
+-- TIME  34 --
+-- TIME  35 --
+-- TIME  36 --
+-- TIME  37 --
+-- TIME  38 --
+-- TIME  39 --
+-- TIME  40 --
+-- TIME  41 --
+-- TIME  42 --
+-- TIME  43 --
+-- TIME  44 --
+-- TIME  45 --
+-- TIME  46 --
+-- TIME  47 --
+-- TIME  48 --
+-- TIME  49 --
+-- TIME  50 --
+-- TIME  51 --
+-- TIME  52 --
+-- TIME  53 --
+-- TIME  54 --
+-- TIME  55 --
+-- TIME  56 --
+-- TIME  57 --
+-- TIME  58 --
+-- TIME  59 --
+-- TIME  60 --
+-- TIME  61 --
+-- TIME  62 --
+-- TIME  63 --
+-- TIME  64 --
+-- TIME  65 --
+-- TIME  66 --
+-- TIME  67 --
+-- TIME  68 --
+-- TIME  69 --
+-- TIME  70 --
+-- TIME  71 --
+-- TIME  72 --
+-- TIME  73 --
+-- TIME  74 --
+-- TIME  75 --
+-- TIME  76 --
+-- TIME  77 --
+-- TIME  78 --
+-- TIME  79 --
+-- TIME  80 --
+-- TIME  81 --
+-- TIME  82 --
+-- TIME  83 --
+-- TIME  84 --
+-- TIME  85 --
+-- TIME  86 --
+-- TIME  87 --
+-- TIME  88 --
+-- TIME  89 --
+-- TIME  90 --
+-- TIME  91 --
+-- TIME  92 --
+-- TIME  93 --
+-- TIME  94 --
+-- TIME  95 --
+-- TIME  96 --
+-- TIME  97 --
+-- TIME  98 --
+-- TIME  99 --
+-- TIME 100 --
+get_bounds timed out after 10 minutes
+Time taken by get_bounds on regular model: 600.000124358s
+================================================================================
+VAS Variable Bound Calculator
+================================================================================
+================================================================================
+Z3 Encoder for VAS
+================================================================================
+Using 8-bit vectors
+Encoded initial state
+Encoded transition R5
+Encoded transition R3
+Encoded transition R8
+Target variable: 5
+Target value: 50
+Vars: ["R", "L", "RL", "G", "GA", "GBG"]
+Encoded target state
+Completed BMC encoding.
+================================================================================
+Bounded Model Checking to 6000 steps
+================================================================================
+-- TIME   0 --
+-- TIME   1 --
+-- TIME   2 --
+-- TIME   3 --
+-- TIME   4 --
+-- TIME   5 --
+-- TIME   6 --
+-- TIME   7 --
+-- TIME   8 --
+-- TIME   9 --
+-- TIME  10 --
+-- TIME  11 --
+-- TIME  12 --
+-- TIME  13 --
+-- TIME  14 --
+-- TIME  15 --
+-- TIME  16 --
+-- TIME  17 --
+-- TIME  18 --
+-- TIME  19 --
+-- TIME  20 --
+-- TIME  21 --
+-- TIME  22 --
+-- TIME  23 --
+-- TIME  24 --
+-- TIME  25 --
+-- TIME  26 --
+-- TIME  27 --
+-- TIME  28 --
+-- TIME  29 --
+-- TIME  30 --
+-- TIME  31 --
+-- TIME  32 --
+-- TIME  33 --
+-- TIME  34 --
+-- TIME  35 --
+-- TIME  36 --
+-- TIME  37 --
+-- TIME  38 --
+-- TIME  39 --
+-- TIME  40 --
+-- TIME  41 --
+-- TIME  42 --
+-- TIME  43 --
+-- TIME  44 --
+-- TIME  45 --
+-- TIME  46 --
+-- TIME  47 --
+-- TIME  48 --
+-- TIME  49 --
+-- TIME  50 --
+-- TIME  51 --
+-- TIME  52 --
+-- TIME  53 --
+-- TIME  54 --
+-- TIME  55 --
+-- TIME  56 --
+-- TIME  57 --
+-- TIME  58 --
+-- TIME  59 --
+-- TIME  60 --
+-- TIME  61 --
+-- TIME  62 --
+-- TIME  63 --
+-- TIME  64 --
+-- TIME  65 --
+-- TIME  66 --
+-- TIME  67 --
+-- TIME  68 --
+-- TIME  69 --
+-- TIME  70 --
+-- TIME  71 --
+-- TIME  72 --
+-- TIME  73 --
+Final steps: 100
+Checking loose upper bound for R
+-- TIME  74 --
+-- TIME  75 --
+-- TIME  76 --
+-- TIME  77 --
+-- TIME  78 --
+-- TIME  79 --
+-- TIME  80 --
+-- TIME  81 --
+-- TIME  82 --
+-- TIME  83 --
+-- TIME  84 --
+-- TIME  85 --
+-- TIME  86 --
+-- TIME  87 --
+-- TIME  88 --
+-- TIME  89 --
+-- TIME  90 --
+-- TIME  91 --
+-- TIME  92 --
+-- TIME  93 --
+-- TIME  94 --
+-- TIME  95 --
+-- TIME  96 --
+-- TIME  97 --
+-- TIME  98 --
+-- TIME  99 --
+-- TIME 100 --
+Final steps: 100
+Checking loose upper bound for R
+R loose upper bound is: 50
+Checking loose upper bound for L
+L loose upper bound is: 2
+Checking loose upper bound for RL
+RL loose upper bound is: 50
+Checking loose upper bound for G
+G loose upper bound is: 50
+Checking loose upper bound for GA
+GA loose upper bound is: 50
+Checking loose upper bound for GBG
+GBG loose upper bound is: 50
+Checking tight upper bound for R
+R tight upper bound is: 50
+Checking tight upper bound for L
+L tight upper bound is: 2
+Checking tight upper bound for RL
+RL tight upper bound is: 1
+Checking tight upper bound for G
+G tight upper bound is: 50
+Checking tight upper bound for GA
+GA tight upper bound is: 50
+Checking tight upper bound for GBG
+GBG tight upper bound is: 50
+Checking loose lower bound for R
+R loose lower bound is: 0
+Checking loose lower bound for L
+L loose lower bound is: 2
+Checking loose lower bound for RL
+RL loose lower bound is: 0
+Checking loose lower bound for G
+G loose lower bound is: 0
+Checking loose lower bound for GA
+GA loose lower bound is: 0
+Checking loose lower bound for GBG
+GBG loose lower bound is: 0
+Checking tight lower bound for R
+R tight lower bound is: 50
+Checking tight lower bound for L
+L tight lower bound is: 2
+Checking tight lower bound for RL
+RL tight lower bound is: 0
+Checking tight lower bound for G
+G tight lower bound is: 0
+Checking tight lower bound for GA
+GA tight lower bound is: 0
+Checking tight lower bound for GBG
+GBG tight lower bound is: 0
+================================================================================
+Summary of Bounds
+================================================================================
+Variable             LB Loose   LB Tight   UB Loose   UB Tight  
+--------------------------------------------------------------------------------
+R                    0          50         50         50        
+L                    2          2          2          2         
+RL                   0          0          50         1         
+G                    0          0          50         50        
+GA                   0          0          50         50        
+GBG                  0          0          50         50        
+================================================================================
+get_bounds completed successfully
+Time taken by get_bounds on trimmed model: 436.228682537s
+
+████████████████████████████████████████████████████████████████████████████████
+
+
+████████████████████████████████████████████████████████████████████████████████
+
+Model: models/EnzymaticFutileCycle/EnzymaticFutileCycle.crn
+MODEL PARSED
+
+
+==========================================
+              BEGIN VAS MODEL             
+==========================================
+Variables:
+	S0	S1	S2	S3	S4	S5
+Initial States:
+	1	50	0	1	50	0
+Transitions:
+	0	R0
+		Update:	[	-1	-1	1	0	0	0]
+		Enable:	[	1	1	0	0	0	0]
+		Rate:	1
+	1	R1
+		Update:	[	1	1	-1	0	0	0]
+		Enable:	[	0	0	1	0	0	0]
+		Rate:	1
+	2	R2
+		Update:	[	1	0	-1	0	1	0]
+		Enable:	[	0	0	1	0	0	0]
+		Rate:	0.1
+	3	R3
+		Update:	[	0	0	0	-1	-1	1]
+		Enable:	[	0	0	0	1	1	0]
+		Rate:	1
+	4	R4
+		Update:	[	0	0	0	1	1	-1]
+		Enable:	[	0	0	0	0	0	1]
+		Rate:	1
+	5	R5
+		Update:	[	0	1	0	1	0	-1]
+		Enable:	[	0	0	0	0	0	1]
+		Rate:	0.1
+Target:
+	Variable: S4
+	Target Value: 25
+==========================================
+               END VAS MODEL              
+==========================================
+
+===================
+Dependency Graph
+Node: ARTIFICIAL (Executions: 25)
+  Node: R3 (Executions: 25)
+    Node: R4 (Executions: 24)
+    Node: R5 (Executions: 24)
+===================
+
+S0: unused
+S1: used by transition R5
+S2: unused
+S3: used by transition R3
+S4: used by transition R3
+S5: used by transition R3
+==========================================
+              BEGIN VAS MODEL             
+==========================================
+Variables:
+	S1	S3	S4	S5
+Initial States:
+	50	1	50	0
+Transitions:
+	3	R3
+		Update:	[	0	-1	-1	1]
+		Enable:	[	0	1	1	0]
+		Rate:	1
+	4	R4
+		Update:	[	0	1	1	-1]
+		Enable:	[	0	0	0	1]
+		Rate:	1
+	5	R5
+		Update:	[	1	1	0	-1]
+		Enable:	[	0	0	0	1]
+		Rate:	0.1
+Target:
+	Variable: S4
+	Target Value: 25
+==========================================
+               END VAS MODEL              
+==========================================
+
+================================================================================
+VAS Variable Bound Calculator
+================================================================================
+================================================================================
+Z3 Encoder for VAS
+================================================================================
+Using 8-bit vectors
+Encoded initial state
+Encoded transition R0
+Encoded transition R1
+Encoded transition R2
+Encoded transition R3
+Encoded transition R4
+Encoded transition R5
+Target variable: 4
+Target value: 25
+Vars: ["S0", "S1", "S2", "S3", "S4", "S5"]
+Encoded target state
+Completed BMC encoding.
+================================================================================
+Bounded Model Checking to 6000 steps
+================================================================================
+-- TIME   0 --
+-- TIME   1 --
+-- TIME   2 --
+-- TIME   3 --
+-- TIME   4 --
+-- TIME   5 --
+-- TIME   6 --
+-- TIME   7 --
+-- TIME   8 --
+-- TIME   9 --
+-- TIME  10 --
+-- TIME  11 --
+-- TIME  12 --
+-- TIME  13 --
+-- TIME  14 --
+-- TIME  15 --
+-- TIME  16 --
+-- TIME  17 --
+-- TIME  18 --
+-- TIME  19 --
+-- TIME  20 --
+-- TIME  21 --
+-- TIME  22 --
+-- TIME  23 --
+-- TIME  24 --
+-- TIME  25 --
+-- TIME  26 --
+-- TIME  27 --
+-- TIME  28 --
+-- TIME  29 --
+-- TIME  30 --
+-- TIME  31 --
+-- TIME  32 --
+-- TIME  33 --
+-- TIME  34 --
+-- TIME  35 --
+-- TIME  36 --
+-- TIME  37 --
+-- TIME  38 --
+-- TIME  39 --
+-- TIME  40 --
+-- TIME  41 --
+-- TIME  42 --
+-- TIME  43 --
+-- TIME  44 --
+-- TIME  45 --
+-- TIME  46 --
+-- TIME  47 --
+-- TIME  48 --
+-- TIME  49 --
+Final steps: 49
+Checking loose upper bound for S0
+S0 loose upper bound is: 1
+Checking loose upper bound for S1
+S1 loose upper bound is: 74
+Checking loose upper bound for S2
+S2 loose upper bound is: 0
+Checking loose upper bound for S3
+S3 loose upper bound is: 1
+Checking loose upper bound for S4
+S4 loose upper bound is: 50
+Checking loose upper bound for S5
+S5 loose upper bound is: 1
+Checking tight upper bound for S0
+S0 tight upper bound is: 1
+Checking tight upper bound for S1
+get_bounds timed out after 10 minutes
+Time taken by get_bounds on regular model: 600.000132576s
+================================================================================
+VAS Variable Bound Calculator
+================================================================================
+================================================================================
+Z3 Encoder for VAS
+================================================================================
+Using 8-bit vectors
+Encoded initial state
+Encoded transition R3
+Encoded transition R4
+Encoded transition R5
+Target variable: 2
+Target value: 25
+Vars: ["S1", "S3", "S4", "S5"]
+Encoded target state
+Completed BMC encoding.
+================================================================================
+Bounded Model Checking to 6000 steps
+================================================================================
+-- TIME   0 --
+-- TIME   1 --
+-- TIME   2 --
+-- TIME   3 --
+-- TIME   4 --
+-- TIME   5 --
+-- TIME   6 --
+-- TIME   7 --
+-- TIME   8 --
+-- TIME   9 --
+-- TIME  10 --
+-- TIME  11 --
+-- TIME  12 --
+-- TIME  13 --
+-- TIME  14 --
+-- TIME  15 --
+-- TIME  16 --
+-- TIME  17 --
+-- TIME  18 --
+-- TIME  19 --
+-- TIME  20 --
+-- TIME  21 --
+-- TIME  22 --
+-- TIME  23 --
+-- TIME  24 --
+-- TIME  25 --
+-- TIME  26 --
+-- TIME  27 --
+-- TIME  28 --
+-- TIME  29 --
+-- TIME  30 --
+-- TIME  31 --
+-- TIME  32 --
+-- TIME  33 --
+-- TIME  34 --
+-- TIME  35 --
+-- TIME  36 --
+-- TIME  37 --
+-- TIME  38 --
+-- TIME  39 --
+-- TIME  40 --
+-- TIME  41 --
+-- TIME  42 --
+-- TIME  43 --
+-- TIME  44 --
+-- TIME  45 --
+-- TIME  46 --
+-- TIME  47 --
+-- TIME  48 --
+-- TIME  49 --
+Final steps: 49
+Checking loose upper bound for S1
+S1 loose upper bound is: 74
+Checking loose upper bound for S3
+S3 loose upper bound is: 1
+Checking loose upper bound for S4
+S1 tight upper bound is: 74
+Checking tight upper bound for S2
+S4 loose upper bound is: 50
+Checking loose upper bound for S5
+S5 loose upper bound is: 1
+Checking tight upper bound for S1
+S1 tight upper bound is: 74
+Checking tight upper bound for S3
+S3 tight upper bound is: 1
+Checking tight upper bound for S4
+S4 tight upper bound is: 50
+Checking tight upper bound for S5
+S5 tight upper bound is: 1
+Checking loose lower bound for S1
+S1 loose lower bound is: 50
+Checking loose lower bound for S3
+S3 loose lower bound is: 0
+Checking loose lower bound for S4
+S4 loose lower bound is: 25
+Checking loose lower bound for S5
+S5 loose lower bound is: 0
+Checking tight lower bound for S1
+S1 tight lower bound is: 50
+Checking tight lower bound for S3
+S3 tight lower bound is: 0
+Checking tight lower bound for S4
+S4 tight lower bound is: 25
+Checking tight lower bound for S5
+S5 tight lower bound is: 0
+================================================================================
+Summary of Bounds
+================================================================================
+Variable             LB Loose   LB Tight   UB Loose   UB Tight  
+--------------------------------------------------------------------------------
+S1                   50         50         74         74        
+S3                   0          0          1          1         
+S4                   25         25         50         50        
+S5                   0          0          1          1         
+================================================================================
+get_bounds completed successfully
+Time taken by get_bounds on trimmed model: 28.391028901s
+
+████████████████████████████████████████████████████████████████████████████████
+
+
+████████████████████████████████████████████████████████████████████████████████
+
+Model: models/SingleSpeciesProductionDegradation/SingleSpeciesProductionDegradation.crn
+MODEL PARSED
+
+
+==========================================
+              BEGIN VAS MODEL             
+==========================================
+Variables:
+	S0	S1
+Initial States:
+	1	40
+Transitions:
+	0	R0
+		Update:	[	0	1]
+		Enable:	[	1	0]
+		Rate:	1
+	1	R1
+		Update:	[	0	-1]
+		Enable:	[	0	1]
+		Rate:	0.025
+Target:
+	Variable: S1
+	Target Value: 80
+==========================================
+               END VAS MODEL              
+==========================================
+
+===================
+Dependency Graph
+Node: ARTIFICIAL (Executions: 40)
+  Node: R0 (Executions: 40)
+===================
+
+S0: used by transition R0
+S1: used by transition R0
+==========================================
+              BEGIN VAS MODEL             
+==========================================
+Variables:
+	S0	S1
+Initial States:
+	1	40
+Transitions:
+	0	R0
+		Update:	[	0	1]
+		Enable:	[	1	0]
+		Rate:	1
+Target:
+	Variable: S1
+	Target Value: 80
+==========================================
+               END VAS MODEL              
+==========================================
+
+================================================================================
+VAS Variable Bound Calculator
+================================================================================
+================================================================================
+Z3 Encoder for VAS
+================================================================================
+Using 8-bit vectors
+Encoded initial state
+Encoded transition R0
+Encoded transition R1
+Target variable: 1
+Target value: 80
+Vars: ["S0", "S1"]
+Encoded target state
+Completed BMC encoding.
+================================================================================
+Bounded Model Checking to 6000 steps
+================================================================================
+-- TIME   0 --
+-- TIME   1 --
+-- TIME   2 --
+-- TIME   3 --
+-- TIME   4 --
+-- TIME   5 --
+-- TIME   6 --
+-- TIME   7 --
+-- TIME   8 --
+-- TIME   9 --
+-- TIME  10 --
+-- TIME  11 --
+-- TIME  12 --
+-- TIME  13 --
+-- TIME  14 --
+-- TIME  15 --
+-- TIME  16 --
+-- TIME  17 --
+-- TIME  18 --
+-- TIME  19 --
+-- TIME  20 --
+-- TIME  21 --
+-- TIME  22 --
+-- TIME  23 --
+-- TIME  24 --
+-- TIME  25 --
+-- TIME  26 --
+-- TIME  27 --
+-- TIME  28 --
+-- TIME  29 --
+-- TIME  30 --
+-- TIME  31 --
+-- TIME  32 --
+-- TIME  33 --
+-- TIME  34 --
+-- TIME  35 --
+-- TIME  36 --
+-- TIME  37 --
+-- TIME  38 --
+-- TIME  39 --
+-- TIME  40 --
+Final steps: 40
+Checking loose upper bound for S0
+S0 loose upper bound is: 1
+Checking loose upper bound for S1
+S1 loose upper bound is: 80
+Checking tight upper bound for S0
+S0 tight upper bound is: 1
+Checking tight upper bound for S1
+S1 tight upper bound is: 80
+Checking loose lower bound for S0
+S0 loose lower bound is: 1
+Checking loose lower bound for S1
+S1 loose lower bound is: 40
+Checking tight lower bound for S0
+S0 tight lower bound is: 1
+Checking tight lower bound for S1
+S1 tight lower bound is: 40
+================================================================================
+Summary of Bounds
+================================================================================
+Variable             LB Loose   LB Tight   UB Loose   UB Tight  
+--------------------------------------------------------------------------------
+S0                   1          1          1          1         
+S1                   40         40         80         80        
+================================================================================
+get_bounds completed successfully
+Time taken by get_bounds on regular model: 2.785524163s
+================================================================================
+VAS Variable Bound Calculator
+================================================================================
+================================================================================
+Z3 Encoder for VAS
+================================================================================
+Using 8-bit vectors
+Encoded initial state
+Encoded transition R0
+Target variable: 1
+Target value: 80
+Vars: ["S0", "S1"]
+Encoded target state
+Completed BMC encoding.
+================================================================================
+Bounded Model Checking to 6000 steps
+================================================================================
+-- TIME   0 --
+-- TIME   1 --
+-- TIME   2 --
+-- TIME   3 --
+-- TIME   4 --
+-- TIME   5 --
+-- TIME   6 --
+-- TIME   7 --
+-- TIME   8 --
+-- TIME   9 --
+-- TIME  10 --
+-- TIME  11 --
+-- TIME  12 --
+-- TIME  13 --
+-- TIME  14 --
+-- TIME  15 --
+-- TIME  16 --
+-- TIME  17 --
+-- TIME  18 --
+-- TIME  19 --
+-- TIME  20 --
+-- TIME  21 --
+-- TIME  22 --
+-- TIME  23 --
+-- TIME  24 --
+-- TIME  25 --
+-- TIME  26 --
+-- TIME  27 --
+-- TIME  28 --
+-- TIME  29 --
+-- TIME  30 --
+-- TIME  31 --
+-- TIME  32 --
+-- TIME  33 --
+-- TIME  34 --
+-- TIME  35 --
+-- TIME  36 --
+-- TIME  37 --
+-- TIME  38 --
+-- TIME  39 --
+-- TIME  40 --
+Final steps: 40
+Checking loose upper bound for S0
+S0 loose upper bound is: 1
+Checking loose upper bound for S1
+S1 loose upper bound is: 80
+Checking tight upper bound for S0
+S0 tight upper bound is: 1
+Checking tight upper bound for S1
+S1 tight upper bound is: 80
+Checking loose lower bound for S0
+S0 loose lower bound is: 1
+Checking loose lower bound for S1
+S1 loose lower bound is: 40
+Checking tight lower bound for S0
+S0 tight lower bound is: 1
+Checking tight lower bound for S1
+S1 tight lower bound is: 40
+================================================================================
+Summary of Bounds
+================================================================================
+Variable             LB Loose   LB Tight   UB Loose   UB Tight  
+--------------------------------------------------------------------------------
+S0                   1          1          1          1         
+S1                   40         40         80         80        
+================================================================================
+get_bounds completed successfully
+Time taken by get_bounds on trimmed model: 414.997613ms
+
+████████████████████████████████████████████████████████████████████████████████
+
+
+████████████████████████████████████████████████████████████████████████████████
+
+Model: models/SimplifiedMotilityRegulation/SimplifiedMotilityRegulation.crn
+MODEL PARSED
+
+
+==========================================
+              BEGIN VAS MODEL             
+==========================================
+Variables:
+	S0	S1	S2	S3	S4	S5	S6	S7	S8
+Initial States:
+	1	10	1	10	1	1	10	1	1
+Transitions:
+	0	R0
+		Update:	[	0	-1	0	0	0	0	0	0	0]
+		Enable:	[	1	1	0	0	0	0	0	0	0]
+		Rate:	0.1
+	1	R1
+		Update:	[	0	-1	0	0	0	0	0	0	0]
+		Enable:	[	0	1	0	0	0	0	0	0	0]
+		Rate:	0.0002
+	2	R2
+		Update:	[	0	0	0	1	0	0	0	0	0]
+		Enable:	[	0	0	1	0	0	0	0	0	0]
+		Rate:	1
+	3	R3
+		Update:	[	0	0	0	-1	0	0	0	0	0]
+		Enable:	[	0	0	0	1	0	0	0	0	0]
+		Rate:	0.002
+	4	R4
+		Update:	[	0	0	0	1	-1	1	1	0	0]
+		Enable:	[	0	0	0	0	1	0	0	0	0]
+		Rate:	1
+	5	R5
+		Update:	[	0	0	0	0	0	0	-1	0	0]
+		Enable:	[	0	0	0	0	0	0	1	0	0]
+		Rate:	0.0002
+	6	R6
+		Update:	[	0	0	0	-1	1	-1	0	0	0]
+		Enable:	[	0	0	0	1	0	1	0	0	0]
+		Rate:	0.01
+	7	R7
+		Update:	[	0	0	0	0	0	1	0	0	0]
+		Enable:	[	0	0	0	0	1	0	0	0	0]
+		Rate:	0.1
+	8	R8
+		Update:	[	0	-1	-1	0	0	0	0	1	0]
+		Enable:	[	0	1	1	0	0	0	0	0	0]
+		Rate:	0.02
+	9	R9
+		Update:	[	1	1	0	0	0	0	0	-1	0]
+		Enable:	[	0	0	0	0	0	0	0	1	0]
+		Rate:	0.1
+	10	R10
+		Update:	[	0	-1	0	0	0	-1	0	0	1]
+		Enable:	[	0	1	0	0	0	1	0	0	0]
+		Rate:	0.01
+	11	R11
+		Update:	[	0	1	0	0	0	1	0	0	-1]
+		Enable:	[	0	0	0	0	0	0	0	0	1]
+		Rate:	0.1
+Target:
+	Variable: S1
+	Target Value: 20
+==========================================
+               END VAS MODEL              
+==========================================
+
+===================
+Dependency Graph
+Node: ARTIFICIAL (Executions: 10)
+  Node: R9 (Executions: 10)
+    Node: R8 (Executions: 9)
+  Node: R11 (Executions: 10)
+    Node: R10 (Executions: 9)
+===================
+
+S0: used by transition R9
+S1: used by transition R9
+S2: used by transition R8
+S3: unused
+S4: unused
+S5: used by transition R11
+S6: unused
+S7: used by transition R9
+S8: used by transition R11
+==========================================
+              BEGIN VAS MODEL             
+==========================================
+Variables:
+	S0	S1	S2	S5	S7	S8
+Initial States:
+	1	10	1	1	1	1
+Transitions:
+	9	R9
+		Update:	[	1	1	0	0	-1	0]
+		Enable:	[	0	0	0	0	1	0]
+		Rate:	0.1
+	8	R8
+		Update:	[	0	-1	-1	0	1	0]
+		Enable:	[	0	1	1	0	0	0]
+		Rate:	0.02
+	11	R11
+		Update:	[	0	1	0	1	0	-1]
+		Enable:	[	0	0	0	0	0	1]
+		Rate:	0.1
+	10	R10
+		Update:	[	0	-1	0	-1	0	1]
+		Enable:	[	0	1	0	1	0	0]
+		Rate:	0.01
+Target:
+	Variable: S1
+	Target Value: 20
+==========================================
+               END VAS MODEL              
+==========================================
+
+================================================================================
+VAS Variable Bound Calculator
+================================================================================
+================================================================================
+Z3 Encoder for VAS
+================================================================================
+Using 8-bit vectors
+Encoded initial state
+Encoded transition R0
+Encoded transition R1
+Encoded transition R2
+Encoded transition R3
+Encoded transition R4
+Encoded transition R5
+Encoded transition R6
+Encoded transition R7
+Encoded transition R8
+Encoded transition R9
+Encoded transition R10
+Encoded transition R11
+Target variable: 1
+Target value: 20
+Vars: ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"]
+Encoded target state
+Completed BMC encoding.
+================================================================================
+Bounded Model Checking to 6000 steps
+================================================================================
+-- TIME   0 --
+-- TIME   1 --
+-- TIME   2 --
+-- TIME   3 --
+-- TIME   4 --
+-- TIME   5 --
+-- TIME   6 --
+-- TIME   7 --
+-- TIME   8 --
+-- TIME   9 --
+-- TIME  10 --
+-- TIME  11 --
+-- TIME  12 --
+-- TIME  13 --
+-- TIME  14 --
+-- TIME  15 --
+-- TIME  16 --
+-- TIME  17 --
+-- TIME  18 --
+-- TIME  19 --
+-- TIME  20 --
+-- TIME  21 --
+-- TIME  22 --
+-- TIME  23 --
+-- TIME  24 --
+-- TIME  25 --
+-- TIME  26 --
+-- TIME  27 --
+-- TIME  28 --
+-- TIME  29 --
+-- TIME  30 --
+S2 tight upper bound is: 0
+Checking tight upper bound for S3
+-- TIME  31 --
+-- TIME  32 --
+-- TIME  33 --
+-- TIME  34 --
+-- TIME  35 --
+-- TIME  36 --
+-- TIME  37 --
+S3 tight upper bound is: 1
+Checking tight upper bound for S4
+-- TIME  38 --
+-- TIME  39 --
+-- TIME  40 --
+S4 tight upper bound is: 50
+Checking tight upper bound for S5
+-- TIME  41 --
+-- TIME  42 --
+S5 tight upper bound is: 1
+Checking loose lower bound for S0
+S0 loose lower bound is: 1
+Checking loose lower bound for S1
+-- TIME  43 --
+-- TIME  44 --
+S1 loose lower bound is: 50
+Checking loose lower bound for S2
+S2 loose lower bound is: 0
+Checking loose lower bound for S3
+S3 loose lower bound is: 0
+Checking loose lower bound for S4
+-- TIME  45 --
+-- TIME  46 --
+S4 loose lower bound is: 25
+Checking loose lower bound for S5
+S5 loose lower bound is: 0
+Checking tight lower bound for S0
+S0 tight lower bound is: 1
+Checking tight lower bound for S1
+-- TIME  47 --
+S1 tight lower bound is: 50
+Checking tight lower bound for S2
+S2 tight lower bound is: 0
+Checking tight lower bound for S3
+S3 tight lower bound is: 0
+Checking tight lower bound for S4
+S4 tight lower bound is: 25
+Checking tight lower bound for S5
+S5 tight lower bound is: 0
+================================================================================
+Summary of Bounds
+================================================================================
+Variable             LB Loose   LB Tight   UB Loose   UB Tight  
+--------------------------------------------------------------------------------
+S0                   1          1          1          1         
+S1                   50         50         74         74        
+S2                   0          0          0          0         
+S3                   0          0          1          1         
+S4                   25         25         50         50        
+S5                   0          0          1          1         
+================================================================================
+-- TIME  48 --
+-- TIME  49 --
+-- TIME  50 --
+get_bounds timed out after 10 minutes
+Time taken by get_bounds on regular model: 600.000190841s
+================================================================================
+VAS Variable Bound Calculator
+================================================================================
+================================================================================
+Z3 Encoder for VAS
+================================================================================
+Using 8-bit vectors
+Encoded initial state
+Encoded transition R9
+Encoded transition R8
+Encoded transition R11
+Encoded transition R10
+Target variable: 1
+Target value: 20
+Vars: ["S0", "S1", "S2", "S5", "S7", "S8"]
+Encoded target state
+Completed BMC encoding.
+================================================================================
+Bounded Model Checking to 6000 steps
+================================================================================
+-- TIME   0 --
+-- TIME   1 --
+-- TIME   2 --
+-- TIME   3 --
+-- TIME   4 --
+-- TIME   5 --
+-- TIME   6 --
+-- TIME   7 --
+-- TIME   8 --
+-- TIME   9 --
+-- TIME  10 --
+-- TIME  11 --
+-- TIME  12 --
+-- TIME  13 --
+-- TIME  14 --
+-- TIME  15 --
+-- TIME  16 --
+-- TIME  17 --
+-- TIME  18 --
+-- TIME  19 --
+-- TIME  20 --
+-- TIME  21 --
+-- TIME  22 --
+-- TIME  23 --
+-- TIME  24 --
+-- TIME  25 --
+-- TIME  26 --
+-- TIME  27 --
+-- TIME  28 --
+-- TIME  29 --
+-- TIME  30 --
+-- TIME  31 --
+-- TIME  32 --
+-- TIME  33 --
+-- TIME  34 --
+-- TIME  35 --
+-- TIME  36 --
+-- TIME  37 --
+-- TIME  38 --
+-- TIME  39 --
+-- TIME  40 --
+-- TIME  41 --
+-- TIME  42 --
+-- TIME  43 --
+-- TIME  44 --
+-- TIME  45 --
+-- TIME  46 --
+-- TIME  47 --
+-- TIME  48 --
+-- TIME  49 --
+-- TIME  50 --
+-- TIME  51 --
+-- TIME  52 --
+-- TIME  53 --
+-- TIME  54 --
+-- TIME  55 --
+-- TIME  56 --
+-- TIME  51 --
+-- TIME  57 --
+-- TIME  58 --
+-- TIME  59 --
+-- TIME  60 --
+-- TIME  61 --
+-- TIME  62 --
+-- TIME  63 --
+-- TIME  64 --
+-- TIME  65 --
+-- TIME  66 --
+-- TIME  67 --
+-- TIME  68 --
+-- TIME  69 --
+-- TIME  70 --
+-- TIME  71 --
+-- TIME  72 --
+-- TIME  73 --
+-- TIME  74 --
+-- TIME  75 --
+-- TIME  76 --
+-- TIME  77 --
+-- TIME  78 --
+-- TIME  79 --
+-- TIME  80 --
+-- TIME  81 --
+-- TIME  82 --
+-- TIME  83 --
+-- TIME  84 --
+-- TIME  85 --
+-- TIME  86 --
+-- TIME  87 --
+-- TIME  88 --
+-- TIME  89 --
+-- TIME  90 --
+-- TIME  91 --
+-- TIME  92 --
+-- TIME  93 --
+-- TIME  94 --
+-- TIME  95 --
+-- TIME  96 --
+-- TIME  97 --
+-- TIME  98 --
+-- TIME  99 --
+-- TIME 100 --
+-- TIME 101 --
+-- TIME 102 --
+-- TIME  52 --
+-- TIME 103 --
+-- TIME 104 --
+-- TIME 105 --
+-- TIME 106 --
+-- TIME 107 --
+-- TIME 108 --
+-- TIME 109 --
+-- TIME 110 --
+-- TIME 111 --
+-- TIME 112 --
+-- TIME 113 --
+-- TIME 114 --
+-- TIME 115 --
+-- TIME 116 --
+-- TIME 117 --
+-- TIME 118 --
+-- TIME 119 --
+-- TIME 120 --
+-- TIME 121 --
+-- TIME 122 --
+-- TIME 123 --
+-- TIME 124 --
+-- TIME 125 --
+-- TIME 126 --
+-- TIME 127 --
+-- TIME 128 --
+-- TIME  53 --
+-- TIME 129 --
+-- TIME 130 --
+-- TIME 131 --
+-- TIME 132 --
+-- TIME 133 --
+-- TIME 134 --
+-- TIME 135 --
+-- TIME 136 --
+-- TIME  54 --
+-- TIME 137 --
+-- TIME 138 --
+-- TIME 139 --
+-- TIME 140 --
+-- TIME  55 --
+-- TIME 141 --
+-- TIME 142 --
+-- TIME 143 --
+-- TIME 144 --
+-- TIME 145 --
+-- TIME 146 --
+-- TIME 147 --
+-- TIME 148 --
+-- TIME  56 --
+-- TIME 149 --
+-- TIME 150 --
+-- TIME 151 --
+-- TIME 152 --
+-- TIME 153 --
+get_bounds timed out after 10 minutes
+Time taken by get_bounds on trimmed model: 600.000203164s
+
+████████████████████████████████████████████████████████████████████████████████
+

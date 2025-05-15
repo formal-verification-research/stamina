@@ -3,7 +3,7 @@ use std::fmt;
 use metaverify::trusted;
 use nalgebra::DVector;
 
-use crate::{model::{model::AbstractModel, vas_model::{AbstractVas, AllowedRelation, VasProperty, VasState, VasTransition}}, util::util::read_lines};
+use crate::{model::{model::AbstractModel, vas_model::{AbstractVas, VasProperty, VasState, VasTransition}}, property, util::util::read_lines};
 
 const VARIABLE_TERMS : &[&str] = &["species", "variable", "var"];
 const INITIAL_TERMS : &[&str] = &["initial", "init"];
@@ -78,56 +78,56 @@ impl ModelParseError {
 	#[trusted]
 	fn invalid_init(line: u32, count: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::InvalidInitialVariableCount(count.to_string()),
 		}
 	}
 	#[trusted]
 	fn init_unspecified(line: u32, name: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::InitUnspecified(name.to_string()),
 		}
 	}
 	#[trusted]
 	fn unexpected_token(line: u32, token: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::UnexpextedTokenError(token.to_string()),
 		}
 	}
 	#[trusted]
 	fn expected_integer(line: u32, value: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::ExpectedInteger(value.to_string()),
 		}
 	}
 	#[trusted]
 	fn expected_float(line: u32, value: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::ExpectedFloat(value.to_string()),
 		}
 	}
 	#[trusted]
 	fn unspecified_transition(line: u32, tname: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::UnspecifiedTransitionError(tname.to_string()),
 		}
 	}
 	#[trusted]
 	fn unspecified_variable(line: u32, vname: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::UnspecifiedVariableError(vname.to_string()),
 		}
 	}
 	#[trusted]
 	fn general(line: u32, desc: &dyn ToString) -> Self {
 		Self {
-			line: line,
+			line,
 			etype: ModelParseErrorType::GeneralParseError(desc.to_string()),
 		}		
 	}
@@ -297,52 +297,36 @@ fn build_transitions(raw_data: Vec<Vec<(usize, std::string::String)>>, variable_
 	Ok(transitions)
 }
 
-#[trusted]
 fn build_property(raw_data: Vec<(usize, String)>, variable_names: Box<[String]>) -> Result<VasProperty, ModelParseError> {
 	if raw_data.len() != 1 {
-		return Err(ModelParseError::general(0, &"Property parsing error: property must be a single line for now."));	
-	} else {
-
-		let line_number = raw_data[0].0;
-		let data = raw_data[0].1.clone();
-		let words: &[&str] = &data.split_whitespace().collect::<Vec<&str>>()[..];
-		
-		let variable_name;
-		let variable_id;
-		let relation: AllowedRelation;
-		let value;
-
-		if words.len() != 4 {
-			return Err(ModelParseError::unexpected_token(line_number.try_into().unwrap(), &data));
-		} else {
-			variable_name = words[1].to_string();
-			relation = match words[2] {
-				"==" => AllowedRelation::Equal,
-				"=" => AllowedRelation::Equal,
-				"<" => AllowedRelation::LessThan,
-				">" => AllowedRelation::GreaterThan,
-				_ => {
-					return Err(ModelParseError::unexpected_token(line_number.try_into().unwrap(), &data));
-				}
-			};
-			if let Ok(count) = words[3].parse::<u64>() {
-				value = count;
-			} else {
-				return Err(ModelParseError::expected_integer(line_number.try_into().unwrap(), &words[3]));
-			}
-		}
-		variable_id = match get_variable_id(&variable_names.clone(), &variable_name) {
-			Some(id) => id,
-			None => {
-				return Err(ModelParseError::unspecified_variable(line_number.try_into().unwrap(), &variable_name));
-			}
-		};
-		Ok(VasProperty::new(variable_name, variable_id, relation, value))
+		return Err(ModelParseError::general(0, &"Model parsing error: property must be a single line."));
 	}
+	let words: &[&str] = &raw_data[0].1.split_whitespace().collect::<Vec<&str>>()[..];
+	let variable_name = words.get(1).unwrap_or(&"");
+	let variable_index = get_variable_id(variable_names.clone(), variable_name);
+	if variable_index.is_none() {
+		return Err(ModelParseError::unspecified_variable(raw_data[0].0.try_into().unwrap(), &variable_name));
+	}
+	let variable_index = variable_index.unwrap();
+	let target_value = if words.len() == 4 {
+		if let Ok(value) = words[3].parse::<i128>() {
+			value
+		} else {
+			return Err(ModelParseError::expected_integer(raw_data[0].0.try_into().unwrap(), &words[2]));
+		}
+	} else {
+		return Err(ModelParseError::unexpected_token(raw_data[0].0.try_into().unwrap(), &raw_data[0].1));
+	};
+
+	let property = VasProperty {
+		variable_index,
+		target_value,
+	};
+
+	Ok(property)
 }
 
-#[trusted]
-pub fn build_model(filename: &str) -> Result<(AbstractVas, VasProperty), ModelParseError> {
+pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 	
 	// Initialize everything
 	let lines = read_lines(&filename).map_err(|_| ModelParseError::general(0, &"line-by-line file parsing not Ok. Check your model file."))?;
@@ -390,6 +374,8 @@ pub fn build_model(filename: &str) -> Result<(AbstractVas, VasProperty), ModelPa
 	}
 	transition_lines.push(current_transition);
 	
+	transition_lines.push(current_transition);
+	
 	// Parse the variables and initial states
 	let (variable_names, initial_states) = match build_variables(variable_lines) {
 		Ok(result) => result,
@@ -397,7 +383,7 @@ pub fn build_model(filename: &str) -> Result<(AbstractVas, VasProperty), ModelPa
 	};
 
 	// Read the property
-	let property = build_property(property_lines, variable_names.clone())?;
+	let target = build_property(property_lines, variable_names.clone())?;
 
 	// Read the transitions
 	let transitions = match build_transitions(transition_lines, &variable_names) {
@@ -414,6 +400,7 @@ pub fn build_model(filename: &str) -> Result<(AbstractVas, VasProperty), ModelPa
 		variable_names,
 		vec![VasState::new(DVector::from_vec(initial_states.iter().map(|&x| x as i64).collect()))],
 		transitions,
+		target
 	);
 
 	Ok((model, property))
