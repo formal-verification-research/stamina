@@ -4,16 +4,16 @@ mod logging;
 mod parser;
 mod property;
 mod util;
-
+mod validator;
 mod bmc;
 
 use bmc::formula::{print_satisfying_model, print_z3_encoding};
 // use crate::parser;
 use dependency::graph::make_dependency_graph;
-use logging::logging::*;
 use model::vas_model::AbstractVas;
 use bmc::bounder::get_bounds;
 // use bounder::z3_bounds::get_bounds;
+use logging::messages::*;
 
 use std::fs;
 use std::path::Path;

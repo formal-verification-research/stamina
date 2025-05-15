@@ -38,7 +38,7 @@ fn check_variable_names(variable_names: &Box<[String]>) -> Vec<String> {
 #[trusted]
 fn initial_state_neq_target(initial_state: Box<[u64]>, property: &VasProperty) -> Vec<String> {
     let mut errors = Vec::new();
-    if initial_state[property.variable_id] == property.value {
+    if initial_state[property.variable_index] as i128 == property.target_value {
         errors.push(format!(
             "Initial state [ {} ] satisfies target with value {}",
             initial_state.iter().map(|x| format!("{}", x)).collect::<Vec<String>>().join(" "), property.value

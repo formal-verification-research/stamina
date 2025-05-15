@@ -163,7 +163,7 @@ impl VasTransition {
 			),
 			enabled_bounds: DVector::from_iterator(
 				decrement.len(),
-				decrement.iter().map(|(dec)| *dec as u64),
+				decrement.iter().map(|dec| *dec as u64),
 			),
 			rate_const, 
 			custom_rate_fn: None }
