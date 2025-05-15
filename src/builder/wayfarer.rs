@@ -1,3 +1,5 @@
+use metaverify::*;
+
 use crate::*;
 
 use builder::*;

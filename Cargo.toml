@@ -6,8 +6,16 @@ description = "PRobabilistic Research and Analysis of C(RN|TMC) (and VAS) Tool I
 
 [dependencies]
 clap = { version = "4.5.21", features = ["derive"] }
+colored = "3.0.0"
 evalexpr = "12.0.2"
 nalgebra = "0.33.2"
 num = "0.4.3"
-prusti-contracts = "0.2.0"
+z3 = "0.12.1"
+
+metaverify = { git = "https://github.com/formal-verification-research/multiverify-rs" }
+# creusot-contracts = { path = "/home/landon/creusot/creusot-contracts"}
+# prusti-contracts = "0.2.0"
 # serde = { version = "1.0.215", features = ["derive"] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(creusot)'] }

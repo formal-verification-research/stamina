@@ -1,22 +1,25 @@
+use metaverify::*;
+
 use crate::*;
 
 use builder::*;
 use model::*;
 
 use std::collections::VecDeque;
-
+#[trusted]
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum RangeResult {
     NoResult,
     Range(f64, f64),
 }
-
+#[trusted]
 impl Default for RangeResult {
+	#[trusted]
 	fn default() -> Self {
 		Self::NoResult
 	}
 }
-
+#[trusted]
 struct StateProbability {
 	state_id: usize,
 	// reachability probability
@@ -24,8 +27,9 @@ struct StateProbability {
 	terminal: bool,
 	new: bool,
 }
-
+#[trusted]
 impl Default for StateProbability {
+	#[trusted]
 	fn default() -> Self {
 		Self {
 			state_id: 0,
@@ -36,6 +40,7 @@ impl Default for StateProbability {
 	}
 }
 
+#[trusted]
 pub(crate) struct StaminaBuilder<AbstractModelType, ExplicitModelType>
 	where
 		AbstractModelType: AbstractModel,
@@ -52,25 +57,30 @@ pub(crate) struct StaminaBuilder<AbstractModelType, ExplicitModelType>
 	state_formulae: Option<(StateFormula, StateFormula)>,
 }
 
+#[trusted]
 impl StaminaBuilder<AbstractModelType, ExplicitModelType> {
 	type StateType = AbstractModelType::StateType;
 	/// Maps a state ID to that state's valuation and probabilistic information
 	/// about it (i.e., what we currently think its reachability is).
+	#[trusted]
 	fn id_to_state(&self, id: usize) -> (StateType, Arc<StateProbability>) {
 		// TODO
 		unimplemented!();
 	}
 
 	/// This 
+	#[trusted]
 	fn reserve_state_index(&mut self, state: &StateType, index: usize) {
 		// TODO
 		unimplemented!();
 	}
 
+	#[trusted]
 	fn find_or_create_sp(&mut self, state: &StateType) -> Arc<StateProbability> {
 		unimplemented!();
 	}
 
+	#[trusted]
 	fn can_preterminate(&self, state: &StateType) -> bool {
 		if let Some(left_formula, right_formula) = self.state_formulae {
 			!left_formula.satisfied(state) || right_formula.satisfied(state)
@@ -79,24 +89,28 @@ impl StaminaBuilder<AbstractModelType, ExplicitModelType> {
 		}
 	}
 }
-
+#[trusted]
 impl<AbstractModelType, ExplicitModelType> Builder for StaminaBuilder<AbstractModelType, ExplicitModelType> {
 	type AbstractModelType = StaminaBuilder::AbstractModelType;
 	type ExplicitModelType = StaminaBuilder::ExplicitModelType;
 	type ResultType = RangeResult;
 
 	/// Because we have an absorbing state, this is an abstracted model
+	#[trusted]
 	fn is_abstracted(&self) -> bool {
 		true
 	}
 
+	#[trusted]
 	fn creates_pmin(&self) -> bool {
 		true
 	}
+	#[trusted]
 	fn creates_pmax(&self) -> bool {
 		true
 	}
 
+	#[trusted]
 	fn finished(&mut self, result: &ResultType) -> bool {
 		match result {
 			RangeResult::NoResult => {
@@ -114,10 +128,12 @@ impl<AbstractModelType, ExplicitModelType> Builder for StaminaBuilder<AbstractMo
 		}
 	}
 
+	#[trusted]
 	fn get_abstract_model(&self) -> Arc<AbstractModelType> {
 		self.abstract_model.clone()
 	}
 
+	#[trusted]
 	fn build(&mut self, explicit_model: &mut ExplicitModelType) {
 		let model = self.abstract_model;
 		if self.cur_iters == 0 {

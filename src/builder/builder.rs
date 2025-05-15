@@ -1,7 +1,10 @@
+use metaverify::*;
+
 use crate::*;
 
 use model::*;
 
+#[trusted]
 /// A trait which must be implemented by any struct that
 /// builds a model (i.e., converts it from `AbstractModel` to
 /// `ExplicitModel`. The philosophy behind this trait is that

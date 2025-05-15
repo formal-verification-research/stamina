@@ -1,0 +1,420 @@
+
+████████████████████████████████████████████████████████████████████████████████
+
+Model: models/ReversibleIsomerization/ReversibleIsomerization.crn
+MODEL PARSED
+
+
+==========================================
+              BEGIN VAS MODEL             
+==========================================
+Variables:
+	S0	S1
+Initial States:
+	100	0
+Transitions:
+	0	R0
+		Update:	[	-1	1]
+		Enable:	[	1	0]
+		Rate:	0.12
+Target:
+	Variable: S1
+	Target Value: 30
+==========================================
+               END VAS MODEL              
+==========================================
+
+Node: ARTIFICIAL
+  Executions: 30
+  Enabled: false
+  Init Variables:
+    100: S0
+    0: S1
+  Target Variables:
+    S1: 30
+  Node: R0
+    Executions: 30
+    Enabled: false
+    Init Variables:
+      100: S0
+      0: S1
+    Target Variables:
+      S1: 30
+Node: ARTIFICIAL (Executions: 30)
+  Node: R0 (Executions: 30)
+================================================================================
+VAS Variable Bound Calculator
+================================================================================
+================================================================================
+Z3 Encoder for VAS
+================================================================================
+Using 8-bit vectors
+Encoded initial state
+Encoded transition R0
+Encoded target state
+Completed BMC encoding.
+================================================================================
+Bounded Model Checking to 6000 steps
+================================================================================
+-- TIME   0 --
+-- TIME   1 --
+-- TIME   2 --
+-- TIME   3 --
+-- TIME   4 --
+-- TIME   5 --
+-- TIME   6 --
+-- TIME   7 --
+-- TIME   8 --
+-- TIME   9 --
+-- TIME  10 --
+-- TIME  11 --
+-- TIME  12 --
+-- TIME  13 --
+-- TIME  14 --
+-- TIME  15 --
+-- TIME  16 --
+-- TIME  17 --
+-- TIME  18 --
+-- TIME  19 --
+-- TIME  20 --
+-- TIME  21 --
+-- TIME  22 --
+-- TIME  23 --
+-- TIME  24 --
+-- TIME  25 --
+-- TIME  26 --
+-- TIME  27 --
+-- TIME  28 --
+-- TIME  29 --
+-- TIME  30 --
+Final steps: 30
+Checking loose upper bound for S0
+100-0-255
+   SAT
+0-128-255
+   UNSAT
+0-64-128
+   SAT
+64-96-128
+   SAT
+96-112-128
+   UNSAT
+96-104-112
+   UNSAT
+96-100-104
+   SAT
+100-102-104
+   UNSAT
+100-101-102
+   UNSAT
+100-101-101
+   UNSAT
+100-100-100
+   SAT
+S0 loose upper bound is: 100
+Checking loose upper bound for S1
+0-0-255
+   SAT
+0-128-255
+   UNSAT
+0-64-128
+   UNSAT
+0-32-64
+   UNSAT
+0-16-32
+   SAT
+16-24-32
+   SAT
+24-28-32
+   SAT
+28-30-32
+   SAT
+30-31-32
+   UNSAT
+30-31-31
+   UNSAT
+30-30-30
+   SAT
+S1 loose upper bound is: 30
+Checking tight upper bound for S0
+100-255-255
+   SAT
+100-177-255
+   SAT
+100-138-177
+   SAT
+100-119-138
+   SAT
+100-109-119
+   SAT
+100-104-109
+   SAT
+100-102-104
+   SAT
+100-101-102
+   SAT
+100-100-101
+   SAT
+S0 tight upper bound is: 100
+Checking tight upper bound for S1
+0-255-255
+   SAT
+0-127-255
+   SAT
+0-63-127
+   SAT
+0-31-63
+   SAT
+0-15-31
+   UNSAT
+15-23-31
+   UNSAT
+23-27-31
+   UNSAT
+27-29-31
+   UNSAT
+29-30-31
+   SAT
+29-29-30
+   UNSAT
+S1 tight upper bound is: 30
+Checking loose lower bound for S0
+0-100-100
+   SAT
+0-50-100
+   UNSAT
+50-75-100
+   SAT
+50-62-75
+   UNSAT
+62-68-75
+   UNSAT
+68-71-75
+   SAT
+68-69-71
+   UNSAT
+69-70-71
+   SAT
+69-69-70
+   UNSAT
+S0 loose lower bound is: 70
+Checking loose lower bound for S1
+S1 loose lower bound is: 0
+Checking tight lower bound for S0
+0-0-100
+   SAT
+0-50-100
+   SAT
+50-75-100
+   UNSAT
+50-63-75
+   SAT
+63-69-75
+   SAT
+69-72-75
+   UNSAT
+69-71-72
+   UNSAT
+69-70-71
+   SAT
+70-71-71
+   UNSAT
+S0 tight lower bound is: 70
+Checking tight lower bound for S1
+S1 tight lower bound is: 0
+================================================================================
+Summary of Bounds
+================================================================================
+Variable             LB Loose   LB Tight   UB Loose   UB Tight  
+--------------------------------------------------------------------------------
+S0                   70         70         100        100       
+S1                   0          0          30         30        
+================================================================================
+Time taken by get_bounds: 322.3728ms
+
+████████████████████████████████████████████████████████████████████████████████
+
+
+████████████████████████████████████████████████████████████████████████████████
+
+Model: models/ModifiedYeastPolarization/ModifiedYeastPolarization.crn
+MODEL PARSED
+
+
+==========================================
+              BEGIN VAS MODEL             
+==========================================
+Variables:
+	R	L	RL	G	GA	GBG	GD
+Initial States:
+	50	2	0	50	0	0	0
+Transitions:
+	0	R1
+		Update:	[	1	0	0	0	0	0	0]
+		Enable:	[	0	0	0	0	0	0	0]
+		Rate:	0.0038
+	1	R2
+		Update:	[	-1	0	0	0	0	0	0]
+		Enable:	[	1	0	0	0	0	0	0]
+		Rate:	0.0004
+	2	R3
+		Update:	[	-1	0	1	0	0	0	0]
+		Enable:	[	1	1	0	0	0	0	0]
+		Rate:	0.042
+	3	R4
+		Update:	[	1	0	-1	0	0	0	0]
+		Enable:	[	0	0	1	0	0	0	0]
+		Rate:	0.01
+	4	R5
+		Update:	[	0	0	-1	-1	1	1	0]
+		Enable:	[	0	0	1	1	0	0	0]
+		Rate:	0.011
+	5	R6
+		Update:	[	0	0	0	0	-1	0	1]
+		Enable:	[	0	0	0	0	1	0	0]
+		Rate:	0.1
+	6	R7
+		Update:	[	0	0	0	1	0	-1	-1]
+		Enable:	[	0	0	0	0	0	1	1]
+		Rate:	1050
+	7	R8
+		Update:	[	0	0	1	0	0	0	0]
+		Enable:	[	0	0	0	0	0	0	0]
+		Rate:	3.21
+Target:
+	Variable: GBG
+	Target Value: 50
+==========================================
+               END VAS MODEL              
+==========================================
+
+Failed to create dependency graph
+================================================================================
+VAS Variable Bound Calculator
+================================================================================
+================================================================================
+Z3 Encoder for VAS
+================================================================================
+Using 8-bit vectors
+Encoded initial state
+Encoded transition R1
+Encoded transition R2
+Encoded transition R3
+Encoded transition R4
+Encoded transition R5
+Encoded transition R6
+Encoded transition R7
+Encoded transition R8
+Encoded target state
+Completed BMC encoding.
+================================================================================
+Bounded Model Checking to 6000 steps
+================================================================================
+-- TIME   0 --
+-- TIME   1 --
+-- TIME   2 --
+-- TIME   3 --
+-- TIME   4 --
+-- TIME   5 --
+-- TIME   6 --
+-- TIME   7 --
+-- TIME   8 --
+-- TIME   9 --
+-- TIME  10 --
+-- TIME  11 --
+-- TIME  12 --
+-- TIME  13 --
+-- TIME  14 --
+-- TIME  15 --
+-- TIME  16 --
+-- TIME  17 --
+-- TIME  18 --
+-- TIME  19 --
+-- TIME  20 --
+-- TIME  21 --
+-- TIME  22 --
+-- TIME  23 --
+-- TIME  24 --
+-- TIME  25 --
+-- TIME  26 --
+-- TIME  27 --
+-- TIME  28 --
+-- TIME  29 --
+-- TIME  30 --
+-- TIME  31 --
+-- TIME  32 --
+-- TIME  33 --
+-- TIME  34 --
+-- TIME  35 --
+-- TIME  36 --
+-- TIME  37 --
+-- TIME  38 --
+-- TIME  39 --
+-- TIME  40 --
+-- TIME  41 --
+-- TIME  42 --
+-- TIME  43 --
+-- TIME  44 --
+-- TIME  45 --
+-- TIME  46 --
+-- TIME  47 --
+-- TIME  48 --
+-- TIME  49 --
+-- TIME  50 --
+-- TIME  51 --
+-- TIME  52 --
+-- TIME  53 --
+-- TIME  54 --
+-- TIME  55 --
+-- TIME  56 --
+-- TIME  57 --
+-- TIME  58 --
+-- TIME  59 --
+-- TIME  60 --
+-- TIME  61 --
+-- TIME  62 --
+-- TIME  63 --
+-- TIME  64 --
+-- TIME  65 --
+-- TIME  66 --
+-- TIME  67 --
+-- TIME  68 --
+-- TIME  69 --
+-- TIME  70 --
+-- TIME  71 --
+-- TIME  72 --
+-- TIME  73 --
+-- TIME  74 --
+-- TIME  75 --
+-- TIME  76 --
+-- TIME  77 --
+-- TIME  78 --
+-- TIME  79 --
+-- TIME  80 --
+-- TIME  81 --
+-- TIME  82 --
+-- TIME  83 --
+-- TIME  84 --
+-- TIME  85 --
+-- TIME  86 --
+-- TIME  87 --
+-- TIME  88 --
+-- TIME  89 --
+-- TIME  90 --
+-- TIME  91 --
+-- TIME  92 --
+-- TIME  93 --
+-- TIME  94 --
+-- TIME  95 --
+-- TIME  96 --
+-- TIME  97 --
+-- TIME  98 --
+-- TIME  99 --
+-- TIME 100 --
+Final steps: 100
+Checking loose upper bound for R
+50-0-255
+   SAT
+0-128-255
+   UNSAT
+0-64-128

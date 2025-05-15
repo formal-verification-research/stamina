@@ -5,7 +5,7 @@ species G init 50
 species GA init 0
 species GBG init 0
 species GD init 0
-target GBG = 10
+target GBG = 50
 reaction R1
     produce R 1
     const 0.0038
