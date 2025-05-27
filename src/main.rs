@@ -170,6 +170,7 @@ fn main() {
 			if let Ok(Some(dependency_graph)) = &dg {
 				dependency_graph.pretty_print(&parsed_model);
 				dependency_graph.simple_print(&parsed_model);
+				dependency_graph.original_print(&parsed_model);
 				// let trimmed_model = dependency::trimmer::trim_model(parsed_model.clone(), dependency_graph.clone());
 				// println!("{}", trimmed_model.nice_print());
 			} else {

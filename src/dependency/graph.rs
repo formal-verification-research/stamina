@@ -276,6 +276,24 @@ pub fn make_dependency_graph(vas: &vas_model::AbstractVas) -> Result<Option<Depe
 }
 
 impl DependencyGraph {
+	pub fn original_print(&self, vas: &AbstractVas) {
+		fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize) {
+			let mut node_str = String::new();
+			node_str.push_str(&format!("{} {}", "|".repeat(depth), node.transition.transition_name));
+			node_str.push_str(&format!(" {} times to {} ", node.executions, if node.decrement { "consume" } else { "produce" }));
+			let targets_str = node.node_target.iter()
+				.map(|target| format!("('{}',{})", vas.variable_names.get(target.variable_index).unwrap(), target.target_value))
+				.collect::<Vec<_>>()
+				.join(", ");
+			node_str.push_str(&format!("[{}]", targets_str));
+			println!("{}", node_str);
+			for child in &node.children {
+				print_node(vas, child, depth + 1);
+			}
+		}
+
+		print_node(vas, &self.root, 0);
+	}
 	pub fn pretty_print(&self, vas: &AbstractVas) {
 		fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize) {
 			let indent = " ".repeat(depth * 2);
