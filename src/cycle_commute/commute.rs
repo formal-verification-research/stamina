@@ -24,6 +24,53 @@ fn get_outgoing_rate(t: &VasTransition) -> f64 {
         .product::<f64>()
 }
 
+fn print_prism_files(model: AbstractVas, prism_states: &[CCState], prism_transitions: &[CCTransition], output_file: &str) {
+    
+    // Write .sta file
+    let mut sta_file = match File::create(format!("{}.sta", output_file)) {
+        Ok(f) => f,
+        Err(e) => {
+            println!("Error creating .sta file: {}", e);
+            return;
+        }
+    };
+    // header
+    let var_names = model.variable_names.join(" ");
+    writeln!(sta_file, "({})", var_names).unwrap();
+    // states
+    for i in 0..prism_states.len() {
+        let state_str = prism_states[i].state_vector.iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        writeln!(sta_file, "{}: ({})", i, state_str).unwrap();
+    }
+
+    // Write .tra file
+    let mut tra_file = match File::create(format!("{}.tra", output_file)) {
+        Ok(f) => f,
+        Err(e) => {
+            println!("Error creating .tra file: {}", e);
+            return;
+        }
+    };
+    // header
+    let num_states = prism_states.len();
+    let num_transitions = prism_transitions.len();
+    writeln!(tra_file, "{} {}", num_states, num_transitions).unwrap();
+    // transitions
+    for t in prism_transitions.iter() {
+        writeln!(tra_file, "{} {} {}", t.from_state, t.to_state, t.rate).unwrap();
+    }
+
+    // Output results to the specified output file
+    println!("Resulting explicit state space written to: {}.sta, .tra", output_file);
+    println!("Check this with the following command:\n
+        prism -importtrans {}.tra -importstates {}.sta -ctmc", output_file, output_file);
+
+    }
+
+
 pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
     // Read the trace list
     let trace_file = match File::open(trace_file) {
@@ -126,6 +173,26 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
         }
     }
 
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     // Add transitions to the absorbing state
     for i in 1..prism_states.len() {
         let transition_to_absorbing = CCTransition {
@@ -140,49 +207,8 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
         prism_transitions.push(transition_to_absorbing);
     }
 
-
-    // Write .sta file
-    let mut sta_file = match File::create(format!("{}.sta", output_file)) {
-        Ok(f) => f,
-        Err(e) => {
-            println!("Error creating .sta file: {}", e);
-            return;
-        }
-    };
-    // header
-    let var_names = model.variable_names.join(" ");
-    writeln!(sta_file, "({})", var_names).unwrap();
-    // states
-    for i in 0..prism_states.len() {
-        let state_str = prism_states[i].state_vector.iter()
-            .map(|x| x.to_string())
-            .collect::<Vec<_>>()
-            .join(",");
-        writeln!(sta_file, "{}: ({})", i, state_str).unwrap();
-    }
-
-    // Write .tra file
-    let mut tra_file = match File::create(format!("{}.tra", output_file)) {
-        Ok(f) => f,
-        Err(e) => {
-            println!("Error creating .tra file: {}", e);
-            return;
-        }
-    };
-    // header
-    let num_states = prism_states.len();
-    let num_transitions = prism_transitions.len();
-    writeln!(tra_file, "{} {}", num_states, num_transitions).unwrap();
-    // transitions
-    for t in prism_transitions.iter() {
-        writeln!(tra_file, "{} {} {}", t.from_state, t.to_state, t.rate).unwrap();
-    }
+    print_prism_files(model, &prism_states, &prism_transitions, output_file);
 
     // rate_finder = lambda state : rate_const * np.prod([state[i] ** rate_mul_vector[i] for i in range(len(rate_mul_vector))])
-    // Output results to the specified output file
-    // This is a placeholder; actual implementation would depend on what results you want to output
-    println!("Resulting explicit state space written to: {}.sta, .tra", output_file);
-    println!("Check this with the following command:\n
-        prism -importtrans {}.tra -importstates {}.sta -ctmc", output_file, output_file);
     
 }
