@@ -20,7 +20,7 @@ struct CCTransition {
 fn get_outgoing_rate(t: &VasTransition) -> f64 {
     t.rate_const * t.enabled_bounds.iter()
         .filter(|&&r| r != 0)
-        .map(|&r| -(r as f64))
+        .map(|&r| (r as f64))
         .product::<f64>()
 }
 
@@ -173,7 +173,7 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
         }
     }
 
-    
+
 
 
 

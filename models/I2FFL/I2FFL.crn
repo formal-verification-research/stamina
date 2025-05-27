@@ -1,0 +1,152 @@
+species G_d     init 9
+species md      init 0
+species d       init 0
+species S_A     init 0
+species g_An    init 0
+species c_An    init 0
+species D_A     init 40
+species C_A_An  init 0
+species g_Bn    init 0
+species c_Bn    init 3
+species D_B     init 40
+species C_B_Bn  init 0
+species g_Cn    init 0
+species c_Cn    init 0
+species D_C     init 40
+species C_C_Cn  init 0
+species m_C     init 0
+species Y_C     init 0
+
+
+target Y_C = 30000
+
+reaction R1
+    consume G_d
+    produce G_d
+    produce md
+
+reaction R2
+    consume md
+    produce md
+    produce d
+
+reaction R3
+    consume d
+
+reaction R4
+    consume md
+
+reaction R5
+    consume S_A
+    produce S_A
+    produce g_An
+
+reaction R6
+    consume g_An
+
+reaction R7
+    consume d
+    consume g_Bn
+    produce c_Bn
+
+reaction R8
+    consume c_Bn
+    produce d
+    produce g_Bn
+
+reaction R9
+    consume c_Bn
+    consume D_B
+    produce C_B_Bn
+
+reaction R10
+    consume C_B_Bn
+    produce c_Bn
+    produce D_B
+
+reaction R11
+    consume c_Bn
+
+reaction R12
+    consume D_B
+    produce D_B
+    produce g_Cn
+
+reaction R13
+    consume g_Cn
+
+reaction R14
+    consume d
+    consume g_An
+    produce c_An
+
+reaction R15
+    consume c_An
+    produce d
+    produce g_An
+
+reaction R16
+    consume c_An
+    consume D_A
+    produce C_A_An
+
+reaction R17
+    consume C_A_An
+    produce c_An
+    produce D_A
+
+reaction R18
+    consume c_An
+
+reaction R19
+    consume D_A
+    produce D_A
+    produce g_Bn
+    produce g_Cn
+
+reaction R20
+    consume g_Bn
+
+reaction R21
+    consume d
+    consume g_Cn
+    produce c_Cn
+
+reaction R22
+    consume c_Cn
+    produce d
+    produce g_Cn
+
+reaction R23
+    consume c_Cn
+    consume D_C
+    produce C_C_Cn
+
+reaction R24
+    consume C_C_Cn
+    produce c_Cn
+    produce D_C
+
+reaction R25
+    consume c_Cn
+
+reaction R26
+    consume D_C
+    produce D_C
+    produce m_C
+
+reaction R27
+    consume C_C_Cn
+    produce C_C_Cn
+    produce m_C
+
+reaction R28
+    consume m_C
+
+reaction R29
+    consume m_C
+    produce m_C
+    produce Y_C
+
+reaction R30
+    consume Y_C

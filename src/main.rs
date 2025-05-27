@@ -11,6 +11,8 @@ mod cycle_commute;
 
 use std::path::Path;
 use clap::{Arg, Command};
+use dependency::graph::make_dependency_graph;
+use model::vas_model::AbstractVas;
 
 const TIMEOUT_MINUTES: &str = "10"; // 
 
@@ -37,6 +39,18 @@ fn main() {
 						.value_name("MINUTES")
 						.help("Timeout in minutes for get_bounds")
 						.default_value(TIMEOUT_MINUTES),
+				)
+		)
+		.subcommand(
+			Command::new("dependency-graph")
+				.about("Run the variable bounding tool")
+				.arg(
+					Arg::new("model")
+						.short('m')
+						// .long("model")
+						.value_name("FILE")
+						.help("Sets the model file")
+						.required(true),
 				)
 		)
 		.subcommand(
@@ -139,6 +153,28 @@ fn main() {
 			println!("Running ragtimer with models_dir: {} and timeout: {}", models_dir, timeout);
 			let dir_path = Path::new(models_dir);
 			demos::bmc_demo::bmc_demo(dir_path, timeout.parse::<u64>().unwrap());
+		}
+		Some(("dependency-graph", sub_m)) => {
+			let model_file = sub_m.get_one::<String>("model").unwrap();
+			println!("Running ragtimer with models: {}", model_file);
+			
+			let parsed_model = AbstractVas::from_file(model_file);
+			if !parsed_model.is_ok() {
+				println!("Error parsing model file: {}", model_file);
+				return;
+			}
+			let parsed_model = parsed_model.unwrap();
+			println!("MODEL PARSED\n\n");
+			println!("{}", parsed_model.nice_print());
+			let dg = make_dependency_graph(&parsed_model);
+			if let Ok(Some(dependency_graph)) = &dg {
+				dependency_graph.pretty_print(&parsed_model);
+				dependency_graph.simple_print(&parsed_model);
+				// let trimmed_model = dependency::trimmer::trim_model(parsed_model.clone(), dependency_graph.clone());
+				// println!("{}", trimmed_model.nice_print());
+			} else {
+				println!("Error creating dependency graph.");
+			}
 		}
 		Some(("ragtimer", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();

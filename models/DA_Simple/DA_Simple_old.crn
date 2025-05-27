@@ -1,18 +1,18 @@
 species G_d    init 9
-species md     init 0
-species d      init 0
+species md     init 1
+species d      init 1222
 species S_A    init 40
-species g_An   init 0
-species c_An   init 0
-species D_A    init 40
+species g_An   init 2
+species c_An   init 5814
+species D_A    init 1
 species C_A_An init 40
-species g_Cp   init 0
-species c_Cp   init 0
-species D_C    init 40
-species C_C_Cp init 0
-species m_C    init 0
-species Y_C    init 0
-target Y_C = 100
+species g_Cp   init 1
+species c_Cp   init 3
+species D_C    init 30
+species C_C_Cp init 10
+species m_C    init 57
+species Y_C    init 168791
+target Y_C = 168999
 reaction R1
     consume G_d
     produce G_d 

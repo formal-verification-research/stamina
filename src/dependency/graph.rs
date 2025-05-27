@@ -41,10 +41,17 @@ impl GraphNode {
 			return Ok(());
 		}
 
-        let child_init = VasState::new(
+        let mut child_init = VasState::new(
             (&self.node_init.vector.map(|x| x as i128) + (&self.transition.update_vector * self.executions as i128))
                 .map(|x| x as i64),
         );
+
+		for i in 0..self.node_init.vector.len() {
+			if self.transition.update_vector[i] + self.transition.enabled_bounds[i] as i128 != 0 {
+				// i.e., if there is a catalyst
+				child_init.vector[i] -= self.transition.enabled_bounds[i] as i64;
+			}
+		}
 
 		let child_init_str = (0..child_init.vector.len())
         .map(|i| {
@@ -52,6 +59,7 @@ impl GraphNode {
             format!("{}.{} ", variable_name, child_init.vector[i])
         })
         .collect::<String>();
+
 
 		debug_println(format!("{}child init {}", spaces, child_init_str));
 
@@ -101,7 +109,7 @@ impl GraphNode {
 		for target in &all_targets {
 			debug_println(format!("{}Processing target {}.{}", spaces, vas.variable_names.get(target.variable_index).unwrap(), target.target_value));
 			for trans in &vas.transitions {
-				debug_println(format!("{}Checking transition {}", spaces, trans.transition_name));
+				// debug_println(format!("{}Checking transition {}", spaces, trans.transition_name));
 				if self.parents.iter().all(|p| p.transition_name != trans.transition_name) {
 					// debug_println(format!("{}Transition {} is not in parents", spaces, trans.transition_name));
 
@@ -277,11 +285,12 @@ impl DependencyGraph {
 			if node.decrement {
 				println!("{}  Decrement", indent);
 			}
-			println!("{}  Init Variables:", indent);
-
-			for var in 0..node.node_init.vector.len() {
-                println!("{}    {}: {}", indent, node.node_init.vector.get(var).unwrap(), vas.variable_names.get(var).unwrap());
-			}
+			println!("{}  Init Variables: [{}]", indent,
+				node.node_init.vector.iter()
+					.map(|v| v.to_string())
+					.collect::<Vec<_>>()
+					.join(", ")
+			);
 			println!("{}  Target Variables:", indent);
             for target in node.node_target.iter() {
                 // let var = node.node_target.get(target).unwrap();
@@ -309,8 +318,8 @@ impl DependencyGraph {
         }
         print_node(vas, &self.root, 0);
 		println!("===================\n");
-		
     }
+
     pub fn vec_transitions(&self) -> Vec<VasTransition> {
         fn collect_transitions(node: &GraphNode, transitions: &mut Vec<VasTransition>) {
             transitions.push(node.transition.clone());
