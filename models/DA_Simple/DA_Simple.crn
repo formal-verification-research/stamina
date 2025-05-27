@@ -1,0 +1,91 @@
+species G_d    init 9
+species md     init 1
+species d      init 1222
+species S_A    init 40
+species g_An   init 2
+species c_An   init 5814
+species D_A    init 1
+species C_A_An init 40
+species g_Cp   init 1
+species c_Cp   init 3
+species D_C    init 30
+species C_C_Cp init 10
+species m_C    init 57
+species Y_C    init 168791
+target Y_C = 168999
+reaction R1
+    consume G_d
+    produce G_d 
+    produce md 
+reaction R2
+    consume md
+    produce d
+    produce md
+reaction R3 
+    consume d
+reaction R4
+    consume md
+reaction R5
+    consume S_A
+    produce S_A
+    produce g_An
+reaction R6
+    consume g_An
+reaction R7
+    consume d
+    consume g_An
+    produce c_An
+reaction R8
+    consume c_An
+    produce d
+    produce g_An
+reaction R9
+    consume c_An
+    consume D_A
+    produce C_A_An
+reaction R10
+    consume C_A_An
+    produce c_An
+    produce D_A
+reaction R11
+    consume c_An
+reaction R12
+    consume D_A
+    produce D_A 
+    produce g_Cp
+reaction R13
+    consume g_Cp
+reaction R14
+    consume d
+    consume g_Cp
+    produce c_Cp
+reaction R15
+    consume c_Cp
+    produce d
+    produce g_Cp
+reaction R16
+    consume c_Cp
+    consume D_C
+    produce C_C_Cp
+reaction R17
+    consume C_C_Cp
+    produce c_Cp
+    produce D_C
+reaction R18
+    consume c_Cp
+reaction R19
+    consume D_C
+    produce D_C
+    produce m_C
+reaction R20
+    consume C_C_Cp
+    produce C_C_Cp
+    produce m_C
+reaction R21
+    consume m_C
+    produce m_C
+    produce Y_C
+reaction R22
+    consume m_C
+reaction R23
+    consume Y_C

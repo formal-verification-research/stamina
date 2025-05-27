@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use z3::{ast::{self, Ast}, Config, Context, SatResult, Solver};
 
-use crate::{bmc::{unroller::Unroller, bmc::bmc}, AbstractVas};
+use crate::{bmc::{unroller::Unroller, bmc::bmc}, model::vas_model::AbstractVas};
 
 // Because this uses BMC, it stops at the first SAT result, not necessarily going until k
 pub fn print_z3_encoding(model: AbstractVas, bits: u32, steps: u32) {

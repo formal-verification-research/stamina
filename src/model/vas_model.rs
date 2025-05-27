@@ -328,6 +328,10 @@ impl AbstractVas {
 		result
 	}
 	#[trusted]
+	pub fn get_transition_from_name(&self, transition_name: &str) -> Option<&VasTransition> {
+		self.transitions.iter().find(|t| t.transition_name == transition_name)
+	}
+	#[trusted]
 	pub fn debug_print(&self) {
 		println!("VasModel:");
 		println!("Variables: {:?}", self.variable_names);

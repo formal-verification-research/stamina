@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use z3::{ast::{self, Ast}, Config, Context, SatResult, Solver};
 
-use crate::{bmc::{bmc::bmc, formula::{build_z3_encoding, print_satisfying_model, print_z3_encoding}}, AbstractVas};
+use crate::{bmc::{bmc::bmc, formula::{build_z3_encoding, print_satisfying_model, print_z3_encoding}}, model::vas_model::AbstractVas};
 
 const MAX_BMC_STEPS: u32 = 6000;
 

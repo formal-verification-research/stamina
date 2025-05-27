@@ -1,6 +1,6 @@
 use nalgebra::DVector;
 
-use crate::{model::vas_model::{self, VasProperty, VasState, VasTransition}, AbstractVas};
+use crate::{model::vas_model::{self, VasProperty, VasState, VasTransition}, model::vas_model::AbstractVas};
 use std::io::{self, Write};
 
 fn debug_println(s: String) {

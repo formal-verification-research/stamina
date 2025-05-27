@@ -1,6 +1,6 @@
 use nalgebra::DVector;
 
-use crate::{model::vas_model::{VasProperty, VasState, VasTransition}, AbstractVas};
+use crate::{model::vas_model::{VasProperty, VasState, VasTransition}, model::vas_model::AbstractVas};
 
 use super::graph::{make_dependency_graph, DependencyGraph};
 
