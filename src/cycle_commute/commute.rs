@@ -1,23 +1,28 @@
-use std::{fs::File, io::{BufRead, BufReader}, thread::current};
+/// This module implements the cycle commute algorithm for VAS models.
+/// It generates a PRISM-compatible state space from a given trace file.
+/// It then uses the trace to build a highly-concurrent and cyclical state space of the VAS model
+use std::{fs::File, io::{BufRead, BufReader}};
 
 use nalgebra::DVector;
 
 use crate::{logging, model::{vas_model::{AbstractVas, VasTransition}, vas_trie}};
 use std::io::Write;
 
-/// This module implements the cycle commute algorithm for VAS models.
-/// It generates a PRISM-compatible state space from a given trace file.
-/// It then uses the trace to build a highly-concurrent and cyclical state space of the VAS model
 /// PrismStyleExplicitState represents a state in the PRISM-style explicit state space as described at
 /// https://www.prismmodelchecker.org/manual/RunningPRISM/ExplicitModelImport
 struct PrismStyleExplicitState {
+    /// The VAS state vector
     state_vector: DVector<i64>,
+    /// The total outgoing rate of the state, used to calculate the absorbing rate and mean residence time
     total_rate: f64,
+    /// Label for the state, currently unused
     label: String,
+    /// Vector of next states, here only for convenience in lookup while building the state space.
     next_states: Vec<usize>,
 }
 
 impl PrismStyleExplicitState {
+    /// Creates a new PrismStyleExplicitState from the given parameters.
     fn from_state(state_vector: DVector<i64>, total_rate: f64, label: String, next_states: Vec<usize>) -> Self {
         PrismStyleExplicitState {
             state_vector,
@@ -31,8 +36,11 @@ impl PrismStyleExplicitState {
 /// This struct represents a transition in the PRISM-style explicit state space
 /// as described at https://www.prismmodelchecker.org/manual/RunningPRISM/ExplicitModelImport
 struct PrismStyleExplicitTransition {
+    /// The ID (in Prism) of the state from which the transition originates
     from_state: usize,
+    /// The ID (in Prism) of the state to which the transition goes
     to_state: usize,
+    /// The CTMC rate (for Prism) of the transition
     rate: f64,
 }
 
@@ -40,6 +48,10 @@ struct PrismStyleExplicitTransition {
 /// It currently assumes the SCK assumption that the rate
 /// depends on the product of the enabled bounds.
 impl VasTransition {
+    /// Calculates the SCK rate of the transition.
+    /// This function is temporary and intended only for quick C&C result generation --- 
+    /// it will eventually be replaced by a system-wide more-powerful rate calculation
+    /// that allows for more complex rate calculations.
     fn get_sck_rate(&self) -> f64 {
         self.rate_const * self.enabled_bounds.iter()
             .filter(|&&r| r != 0)
