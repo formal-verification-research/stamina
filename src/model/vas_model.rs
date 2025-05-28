@@ -169,6 +169,24 @@ impl VasTransition {
 			custom_rate_fn: None }
 	}
 }
+
+impl VasTransition {
+	/// Check to see if our state is above every bound in the enabled
+	/// bound. We use try-fold to short circuit and return false if we
+	/// encounter at least one value that does not satisfy.
+	/// This function is used with a plain state vector rather than object.
+	#[trusted]
+	pub fn enabled_vector(&self, state: &DVector<i64>) -> bool {
+		self.enabled_bounds
+			.iter()
+			.zip(state.iter())
+			.try_fold(true, |_, (bound, state_val)| {
+				if *state_val >= *bound as i64 { Some(true) } else { None }
+			})
+			.is_some()
+	}
+}
+
 #[trusted]
 impl Transition for VasTransition {
 	type StateType = VasState;

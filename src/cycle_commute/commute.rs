@@ -5,11 +5,15 @@ use std::{fs::File, io::{BufRead, BufReader}};
 
 use nalgebra::DVector;
 
-use crate::{logging, model::{vas_model::{AbstractVas, VasTransition}, vas_trie}};
+use crate::{logging::{self, messages::*}, model::{model::Transition, vas_model::{AbstractVas, VasTransition}, vas_trie}};
 use std::io::Write;
+
+/// Temporary constant max depth for the cycle commute algorithm.
+const MAX_DEPTH: usize = 2;
 
 /// PrismStyleExplicitState represents a state in the PRISM-style explicit state space as described at
 /// https://www.prismmodelchecker.org/manual/RunningPRISM/ExplicitModelImport
+#[derive(Debug, Clone)]
 struct PrismStyleExplicitState {
     /// The VAS state vector
     state_vector: DVector<i64>,
@@ -35,6 +39,7 @@ impl PrismStyleExplicitState {
 
 /// This struct represents a transition in the PRISM-style explicit state space
 /// as described at https://www.prismmodelchecker.org/manual/RunningPRISM/ExplicitModelImport
+#[derive(Debug, Clone)]
 struct PrismStyleExplicitTransition {
     /// The ID (in Prism) of the state from which the transition originates
     from_state: usize,
@@ -123,6 +128,7 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
     let mut current_state_id = 1;
     let mut prism_states: Vec<PrismStyleExplicitState> = Vec::new();
     let mut prism_transitions: Vec<PrismStyleExplicitTransition> = Vec::new();
+    let mut seed_trace: Vec<PrismStyleExplicitTransition> = Vec::new();
     // State trie for super quick lookups
     let mut state_trie = vas_trie::VasTrie::new();
     state_trie.insert(&current_state, 0);
@@ -192,7 +198,8 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
                         rate: t.get_sck_rate()
                     };
                     prism_states[current_state_id].next_states.push(next_state_id);
-                    prism_transitions.push(this_transition);
+                    prism_transitions.push(this_transition.clone());
+                    seed_trace.push(this_transition.clone());
                 }
                 // Move along the state space
                 current_state = next_state.clone();
@@ -203,6 +210,8 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
             }
         }
     }
+    // Add commuted/parallel traces
+    commute(model.clone(), &mut prism_states, &mut state_trie, &mut prism_transitions, &seed_trace, 0, MAX_DEPTH);
     // Add transitions to the absorbing state
     for i in 1..prism_states.len() {
         let transition_to_absorbing = PrismStyleExplicitTransition {
@@ -217,4 +226,118 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
         prism_transitions.push(transition_to_absorbing);
     }
     print_prism_files(model, &prism_states, &prism_transitions, output_file);
+    visualize_prism_state_space(&prism_states, &prism_transitions, output_file);
+}
+
+/// Recursively takes the model and existing state space and generates
+/// many concurrent traces, expanding the state space with parallel traces.
+fn commute(
+        model: AbstractVas, 
+        prism_states: &mut Vec<PrismStyleExplicitState>, 
+        state_trie: &mut vas_trie::VasTrie,
+        prism_transitions: &mut Vec<PrismStyleExplicitTransition>, 
+        trace: &Vec<PrismStyleExplicitTransition>,
+        depth: usize,
+        max_depth: usize,
+    ){
+    // Base case: if the depth is greater than the max depth, return
+    if depth >= max_depth {
+        return;
+    }
+    // Get universally enabled transitions
+    // Clone the state vector to avoid holding an immutable borrow during mutation
+    let initial_state_vector = prism_states[trace[0].from_state].state_vector.clone();
+    let mut current_state = initial_state_vector.clone(); // Start from the initial state
+    // To do: maybe make this a hash set instead for faster lookups?
+    let mut enabled_transitions: Vec<&VasTransition> = model.transitions
+        .iter()
+        .filter(|t| t.enabled_vector(&current_state))
+        .collect();
+    let mut universally_enabled_transitions: Vec<&VasTransition> = enabled_transitions.clone();
+    for transition in trace {
+        current_state = initial_state_vector.clone(); // Start from the initial state
+        enabled_transitions = model.transitions
+            .iter()
+            .filter(|t| t.enabled_vector(&current_state))
+            .collect();
+        universally_enabled_transitions.retain(|t| enabled_transitions.contains(t));
+    }
+    debug_message(&format!("{} universally enabled transitions: {}", universally_enabled_transitions.len(), &universally_enabled_transitions.iter().map(|t| t.transition_name.as_str()).collect::<Vec<_>>().join(" ")));
+    // Fire all universally enabled transitions from the initial state to create parallel traces
+    // Do this in 2 steps:
+    // Step 1. From each state in the trace, fire all universally enabled transitions
+    for (i, trace_transition) in trace.iter().enumerate() {
+        let state_id = trace_transition.from_state;
+        let state_vector = prism_states[state_id].state_vector.clone();
+        for transition in &universally_enabled_transitions {
+            // Compute the next state
+            let next_state = (state_vector.clone().cast::<i128>() + transition.update_vector.clone()).clone().cast::<i64>();
+            // Skip if next state has negative entries
+            if next_state.iter().any(|&x| x < 0) {
+                continue;
+            }
+            // Insert or get the state ID
+            let mut next_state_id = prism_states.len();
+            if let Some(existing_id) = state_trie.id_else_insert(&next_state, next_state_id) {
+                next_state_id = existing_id;
+            } else {
+                // Compute total outgoing rate for the new state
+                let rate_sum = model.transitions.iter()
+                    .map(|trans| trans.get_sck_rate())
+                    .sum();
+                prism_states.push(PrismStyleExplicitState::from_state(
+                    next_state.clone(),
+                    rate_sum,
+                    format!("State {}", next_state_id),
+                    Vec::new(),
+                ));
+            }
+            // Check if this transition already exists
+            if !prism_states[state_id].next_states.contains(&next_state_id) {
+                let new_transition = PrismStyleExplicitTransition {
+                    from_state: state_id,
+                    to_state: next_state_id,
+                    rate: transition.get_sck_rate(),
+                };
+                prism_states[state_id].next_states.push(next_state_id);
+                prism_transitions.push(new_transition.clone());
+                // Step 2. For each new state, create a new trace with the transition added
+                let mut new_trace = trace[..i+1].to_vec();
+                new_trace.push(new_transition);
+                commute(
+                    model.clone(),
+                    prism_states,
+                    state_trie,
+                    prism_transitions,
+                    &new_trace,
+                    depth + 1,
+                    max_depth,
+                );
+            }
+        }
+    }
+}
+
+/// This function takes the explicit state space and generates a visualization using Graphviz.
+fn visualize_prism_state_space(prism_states: &[PrismStyleExplicitState], prism_transitions: &[PrismStyleExplicitTransition], output_file: &str) {
+    let mut dot_file = match File::create(format!("{}.dot", output_file)) {
+        Ok(f) => f,
+        Err(e) => {
+            logging::messages::error(&format!("Error creating .dot file: {}", e));
+            return;
+        }
+    };
+    writeln!(dot_file, "digraph StateSpace {{").unwrap();
+    // Write nodes
+    for (i, state) in prism_states.iter().enumerate() {
+        let label = format!("{}\\n({})", state.label, state.state_vector.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(","));
+        writeln!(dot_file, "    {} [label=\"{}\"];", i, label).unwrap();
+    }
+    // Write edges
+    for t in prism_transitions {
+        writeln!(dot_file, "    {} -> {} [label=\"{:.2}\"];", t.from_state, t.to_state, t.rate).unwrap();
+    }
+    writeln!(dot_file, "}}").unwrap();
+    logging::messages::message(&format!("Graphviz .dot file written to: {}.dot", output_file));
+    logging::messages::message("You can visualize it with: dot -Tpng -O <file>.dot");
 }

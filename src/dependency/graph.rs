@@ -255,6 +255,7 @@ pub fn make_dependency_graph(vas: &vas_model::AbstractVas) -> Result<Option<Depe
 /// TODO: These should be unified into a single printout and a single JSON format.
 impl DependencyGraph {
 	/// Prints the dependency graph in its original format.
+	/// This uses println! instead of message to simplify Beckey's work.
 	pub fn original_print(&self, vas: &AbstractVas) {
 		fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize) {
 			let mut node_str = String::new();
@@ -265,7 +266,8 @@ impl DependencyGraph {
 				.collect::<Vec<_>>()
 				.join(", ");
 			node_str.push_str(&format!("[{}]", targets_str));
-			message(&format!("{}", node_str));
+			println!("{}", node_str);
+			// message(&format!("{}", node_str));
 			for child in &node.children {
 				print_node(vas, child, depth + 1);
 			}
