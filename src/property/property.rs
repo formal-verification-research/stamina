@@ -1,5 +1,5 @@
-use metaverify::trusted;
 use evalexpr::*;
+use metaverify::trusted;
 
 use std::fmt::{Display, Error, Formatter};
 
@@ -37,18 +37,18 @@ pub(crate) trait Labeled {
 #[trusted]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) enum PropertyClass {
-	ContinuousStochasticLogic, // CSL (for CTMCs and CMDPs)
-	ProbabilisticComputationTreeLogic, // PCTL (for DTMCs and MDPs)
+	ContinuousStochasticLogic,             // CSL (for CTMCs and CMDPs)
+	ProbabilisticComputationTreeLogic,     // PCTL (for DTMCs and MDPs)
 	ProbabilisticComputationTreeLogicStar, // PCTL* (extended PCTL for DTMCs and MDPs)
-	LinearTemporalLogic, // Nonprobabilistic properties
+	LinearTemporalLogic,                   // Nonprobabilistic properties
 }
 
 #[trusted]
 #[derive(Debug)]
 pub(crate) enum Property {
 	/// Where the state formula holds for all
-    Globally(StateFormula),
-    Finally(StateFormula, Option<f64>), // Optional bound
+	Globally(StateFormula),
+	Finally(StateFormula, Option<f64>),             // Optional bound
 	Until(StateFormula, StateFormula, Option<f64>), // Optional bound
 }
 
@@ -57,22 +57,21 @@ pub(crate) enum Property {
 pub(crate) enum PropertyQuery {
 	/// We are computing the probability of something.
 	Probability(Property), // TODO: should have Option<(evalexpr::Operator, f64)> for specific
-						   // bounds? Or just leave this as is?
+	// bounds? Or just leave this as is?
 	MaxProbability(Property),
 	SteadyState(Property),
-
 }
 
 /// A trait representing any type of CSL, PCTL, or LTL property
 // pub(crate) trait PropertyQuery {
-	// fn property_class(&self) -> PropertyClass;
+// fn property_class(&self) -> PropertyClass;
 // }
 
 #[trusted]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 pub(crate) enum StateFormula {
 	StateLabel(String),
-	Expression(Box<crate::property::property::StateFormula>)
+	Expression(Box<crate::property::property::StateFormula>),
 }
 
 #[trusted]
@@ -94,4 +93,3 @@ impl Display for StateFormula {
 		todo!()
 	}
 }
-

@@ -1,5 +1,5 @@
-use metaverify::trusted;
 use evalexpr::*;
+use metaverify::trusted;
 use num::*;
 
 use crate::property::{property::Labeled, *};
@@ -21,7 +21,6 @@ pub(crate) trait State: evalexpr::Context + Labeled + Clone + PartialEq {
 	/// Valuates the state by a certain variable name
 	#[trusted]
 	fn valuate(&self, var_name: &str) -> Self::VariableValueType;
-
 }
 
 /// A trait representing a transition in a model
@@ -53,7 +52,10 @@ pub(crate) trait Transition: Clone + PartialEq {
 	}
 
 	#[trusted]
-	fn next(&self, state: &Self::StateType) -> Option<(Self::RateOrProbabilityType, Self::StateType)> {
+	fn next(
+		&self,
+		state: &Self::StateType,
+	) -> Option<(Self::RateOrProbabilityType, Self::StateType)> {
 		if let Some(rate) = self.rate_probability_at(state) {
 			// If we can't unwrap the next_state the implementation of this
 			// trait is wrong (only should be none if this trait is not enabled
@@ -79,9 +81,9 @@ pub(crate) trait AbstractModel {
 	// and must be provided by derived types
 
 	#[trusted]
-	fn transitions(&self) -> impl Iterator<Item=Self::TransitionType>;
+	fn transitions(&self) -> impl Iterator<Item = Self::TransitionType>;
 	#[trusted]
-	fn initial_states(&self) -> impl Iterator<Item=(Self::StateType, usize)>;
+	fn initial_states(&self) -> impl Iterator<Item = (Self::StateType, usize)>;
 	/// The type of this model
 	#[trusted]
 	fn model_type(&self) -> ModelType;
@@ -103,12 +105,12 @@ pub(crate) trait AbstractModel {
 	// /// Only finds successors for transitions that pass a certain filter predicate `filter`.
 	// /// This is useful in Wayfarer/ISR, as well as pancake abstraction.
 	// fn next_filtered(&self, state: &Self::StateType, filter: &dyn Fn(Self::TransitionType) -> bool)
-		// -> impl Iterator<Item=(<Self::TransitionType as Transition>::RateOrProbabilityType, Self::StateType)> {
+	// -> impl Iterator<Item=(<Self::TransitionType as Transition>::RateOrProbabilityType, Self::StateType)> {
 
-		// self.transitions()
-		// 	.filter(filter) // This filter call applies our filter function
-		// 	.filter_map(|t| t.next(state)) // and this one filters enabledness
-		// unimplemented!();
+	// self.transitions()
+	// 	.filter(filter) // This filter call applies our filter function
+	// 	.filter_map(|t| t.next(state)) // and this one filters enabledness
+	// unimplemented!();
 	// }
 }
 #[trusted]
@@ -136,7 +138,12 @@ pub(crate) trait ExplicitModel: Default {
 	fn model_type(&self) -> ModelType;
 	/// Adds an entry to the sparse matrix
 	#[trusted]
-	fn add_entry(&mut self, from_idx: usize, to_idx: usize, entry: <Self::TransitionType as Transition>::RateOrProbabilityType);
+	fn add_entry(
+		&mut self,
+		from_idx: usize,
+		to_idx: usize,
+		entry: <Self::TransitionType as Transition>::RateOrProbabilityType,
+	);
 	/// Converts this model into a sparse matrix
 	#[trusted]
 	fn to_matrix(&self) -> Self::MatrixType;
