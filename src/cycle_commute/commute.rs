@@ -144,7 +144,6 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
         label: "SINK".to_string(),
         next_states: Vec::new(),
     });
-    
     // Read the trace file line by line (traces are line-separated)
     let trace_reader = BufReader::new(trace_file);
     for trace in trace_reader.lines() {
@@ -213,7 +212,7 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
         }
     }
     // Add commuted/parallel traces
-    // commute(model.clone(), &mut prism_states, &mut state_trie, &mut prism_transitions, &seed_trace, 0, MAX_DEPTH);
+    commute(model.clone(), &mut prism_states, &mut state_trie, &mut prism_transitions, &seed_trace, 0, MAX_DEPTH);
     // Add cycles to the state space
     add_cycles(&model, &mut prism_states, &mut state_trie, &mut prism_transitions, MAX_CYCLE_LENGTH);
     // Add transitions to the absorbing state
@@ -227,9 +226,6 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
                 .map(|tr| tr.rate)
                 .sum::<f64>()
         };
-        if transition_to_absorbing.from_state == absorbing_state_id {
-            logging::messages::error(&format!("ERROR: Absorbing Transition from absorbing state {} to {} found in model", absorbing_state_id, 0));
-        }
         prism_transitions.push(transition_to_absorbing);
     }
     print_prism_files(model, &prism_states, &prism_transitions, output_file);
@@ -306,10 +302,6 @@ fn commute(
                     to_state: next_state_id,
                     rate: transition.get_sck_rate(),
                 };
-                
-                if new_transition.from_state == 0 {
-                    logging::messages::error(&format!("ERROR: 0 Transition from absorbing state {} to {} found in model", 0, next_state_id));
-                }
                 prism_states[state_id].next_states.push(next_state_id);
                 prism_transitions.push(new_transition.clone());
                 // Step 2. For each new state, create a new trace with the transition added
@@ -386,9 +378,6 @@ fn add_cycles(
                         }
                         let mut current_state = state_vector.clone();
                         let mut prev_state_id = state_id;
-						if prev_state_id == 0 {
-							logging::messages::error(&format!("ERROR: Previous state index is 0"));
-						}
                         // Try to apply each transition in the permutation
                         for &&idx in perm {
 							let transition = &model.transitions[idx];
@@ -402,14 +391,7 @@ fn add_cycles(
                             let mut next_state_id = prism_states.len();
                             if let Some(existing_id) = state_trie.insert_if_not_exists(&next_state, next_state_id) {
 								next_state_id = existing_id;
-								if existing_id == 0 {
-									logging::messages::error(&format!("ERROR: 1 Transition from absorbing state {} to {} found in model", 0, next_state_id));
-								}
                             } else {
-								// if next_state_id == 0 {
-								// 	logging::messages::error(&format!("ERROR: Next state index is 0"));
-								// 	logging::messages::error(&format!("Next state: {:?}", next_state));
-								// }
                                 // Compute total outgoing rate for the new state
                                 let rate_sum = model.transitions.iter()
                                     .map(|trans| trans.get_sck_rate())
