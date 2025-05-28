@@ -18,7 +18,7 @@ use crate::{
 use std::io::Write;
 
 /// PrismStyleExplicitState represents a state in the PRISM-style explicit state space as described at
-/// https://www.prismmodelchecker.org/manual/RunningPRISM/ExplicitModelImport
+/// <https://www.prismmodelchecker.org/manual/RunningPRISM/ExplicitModelImport>
 struct PrismStyleExplicitState {
 	/// The VAS state vector
 	state_vector: DVector<i64>,
@@ -48,7 +48,7 @@ impl PrismStyleExplicitState {
 }
 
 /// This struct represents a transition in the PRISM-style explicit state space
-/// as described at https://www.prismmodelchecker.org/manual/RunningPRISM/ExplicitModelImport
+/// as described at <https://www.prismmodelchecker.org/manual/RunningPRISM/ExplicitModelImport>
 struct PrismStyleExplicitTransition {
 	/// The ID (in Prism) of the state from which the transition originates
 	from_state: usize,
