@@ -132,10 +132,10 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
     let mut prism_transitions: Vec<PrismStyleExplicitTransition> = Vec::new();
     let mut seed_trace: Vec<PrismStyleExplicitTransition> = Vec::new();
     // State trie for super quick lookups
-    let mut state_trie = vas_trie::VasTrie::new();
-    state_trie.insert(&current_state, 0);
+    let mut state_trie = vas_trie::TrieNode::new();
+    state_trie.insert_if_not_exists(&current_state, current_state_id);
     // Create the absorbing state
-    let absorbing_state = DVector::from_element(current_state.len(), 0);
+    let absorbing_state = DVector::from_element(current_state.len(), -1);
     let absorbing_state_id = 0;
     // Add the absorbing state to the prism states
     prism_states.insert(absorbing_state_id, PrismStyleExplicitState {
@@ -172,13 +172,12 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
                     return;
                 }
                 // Add the new state to the trie if it doesn't already exist
-                let potential_id = state_trie.id_else_insert(&next_state, next_state_id);
+                let potential_id = state_trie.insert_if_not_exists(&next_state, next_state_id);
                 if potential_id.is_some() {
                     next_state_id = potential_id.unwrap();
                 } else {
                     // TODO: This only works for CRNs right now. Need to generalize for VAS with custom formulas.
-                    let mut rate_sum = 0.0;
-                    rate_sum = model.transitions.iter()
+                    let rate_sum = model.transitions.iter()
                         .map(|trans| {
                             trans.get_sck_rate()
                         })
@@ -201,9 +200,6 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
                         rate: t.get_sck_rate()
                     };
                     prism_states[current_state_id].next_states.push(next_state_id);
-                    if this_transition.from_state == absorbing_state_id {
-                        logging::messages::error(&format!("ERROR: Transition from absorbing state {} to {} found in model", absorbing_state_id, next_state_id));
-                    }
                     prism_transitions.push(this_transition.clone());
                     seed_trace.push(this_transition.clone());
                 }
@@ -245,7 +241,7 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
 fn commute(
         model: AbstractVas, 
         prism_states: &mut Vec<PrismStyleExplicitState>, 
-        state_trie: &mut vas_trie::VasTrie,
+        state_trie: &mut vas_trie::TrieNode,
         prism_transitions: &mut Vec<PrismStyleExplicitTransition>, 
         trace: &Vec<PrismStyleExplicitTransition>,
         depth: usize,
@@ -289,7 +285,7 @@ fn commute(
             }
             // Insert or get the state ID
             let mut next_state_id = prism_states.len();
-            if let Some(existing_id) = state_trie.id_else_insert(&next_state, next_state_id) {
+            if let Some(existing_id) = state_trie.insert_if_not_exists(&next_state, next_state_id) {
                 next_state_id = existing_id;
             } else {
                 // Compute total outgoing rate for the new state
@@ -338,7 +334,7 @@ fn commute(
 fn add_cycles(
     model: &AbstractVas,
     prism_states: &mut Vec<PrismStyleExplicitState>,
-    state_trie: &mut vas_trie::VasTrie,
+    state_trie: &mut vas_trie::TrieNode,
     prism_transitions: &mut Vec<PrismStyleExplicitTransition>,
     max_cycle_length: usize,
 ) {
@@ -404,13 +400,16 @@ fn add_cycles(
                             let next_state = (current_state.clone().cast::<i128>() + transition.update_vector.clone()).cast::<i64>();
                             // Insert or get the state ID
                             let mut next_state_id = prism_states.len();
-                            if let Some(existing_id) = state_trie.id_else_insert(&next_state, next_state_id) {
-								if next_state_id == 0 {
-									logging::messages::error(&format!("ERROR: Next state index is 0"));
-									logging::messages::error(&format!("Next state: {:?}", next_state));
-								}
+                            if let Some(existing_id) = state_trie.insert_if_not_exists(&next_state, next_state_id) {
 								next_state_id = existing_id;
+								if existing_id == 0 {
+									logging::messages::error(&format!("ERROR: 1 Transition from absorbing state {} to {} found in model", 0, next_state_id));
+								}
                             } else {
+								// if next_state_id == 0 {
+								// 	logging::messages::error(&format!("ERROR: Next state index is 0"));
+								// 	logging::messages::error(&format!("Next state: {:?}", next_state));
+								// }
                                 // Compute total outgoing rate for the new state
                                 let rate_sum = model.transitions.iter()
                                     .map(|trans| trans.get_sck_rate())
@@ -430,9 +429,6 @@ fn add_cycles(
                                     rate: transition.get_sck_rate(),
                                 };
                                 prism_states[prev_state_id].next_states.push(next_state_id);
-                                if new_transition.from_state == 0 {
-                                    logging::messages::error(&format!("ERROR: 1 Transition from absorbing state {} to {} found in model", 0, next_state_id));
-                                }
                                 prism_transitions.push(new_transition);
                             }
                             current_state = next_state;
