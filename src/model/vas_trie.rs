@@ -2,8 +2,6 @@ use std::collections::HashMap;
 
 use nalgebra::DVector;
 
-use super::vas_model::AbstractVas;
-
 /// A node in the VAS state trie.
 #[derive(Default)]
 struct TrieNode {
@@ -24,7 +22,7 @@ impl VasTrie {
     /// Creates a new, empty VasTrie.
     pub fn new() -> Self {
         Self {
-            root: TrieNode::default(),
+            ..Self::default()
         }
     }
 
@@ -50,16 +48,18 @@ impl VasTrie {
         node.is_end
     }
 
+    /// Returns the first ID associated with a state if it exists, or inserts the state and returns None.
     pub fn id_else_insert(&mut self, state: &DVector<i64>, id: usize) -> Option<usize> {
         let mut node = &mut self.root;
         for &val in state {
             node = node.children.entry(val.try_into().unwrap()).or_default();
         }
         if node.is_end {
-            return Some(node.ids[0]); // State already exists (contains)
+            node.ids.first().copied()
+        } else {
+            node.is_end = true;
+            node.ids.push(id);
+            None
         }
-        node.is_end = true;
-        node.ids.push(id);
-        None // State was inserted (not contains)
     }
 }

@@ -12,6 +12,7 @@ mod cycle_commute;
 use std::path::Path;
 use clap::{Arg, Command};
 use dependency::graph::make_dependency_graph;
+use logging::messages::*;
 use model::vas_model::AbstractVas;
 
 const TIMEOUT_MINUTES: &str = "10"; // 
@@ -150,64 +151,59 @@ fn main() {
 		Some(("bounds", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
 			let timeout = sub_m.get_one::<String>("timeout").unwrap();
-			println!("Running ragtimer with models_dir: {} and timeout: {}", models_dir, timeout);
+			message(&format!("Running ragtimer with models_dir: {} and timeout: {}", models_dir, timeout));
 			let dir_path = Path::new(models_dir);
 			demos::bmc_demo::bmc_demo(dir_path, timeout.parse::<u64>().unwrap());
 		}
 		Some(("dependency-graph", sub_m)) => {
+			// TODO: Move this whole thing to a demo
 			let model_file = sub_m.get_one::<String>("model").unwrap();
-			println!("Running ragtimer with models: {}", model_file);
-			
+			message(&format!("Running ragtimer with models: {}", model_file));
 			let parsed_model = AbstractVas::from_file(model_file);
 			if !parsed_model.is_ok() {
-				println!("Error parsing model file: {}", model_file);
+				error(&format!("Error parsing model file: {}", model_file));
 				return;
 			}
 			let parsed_model = parsed_model.unwrap();
-			println!("MODEL PARSED\n\n");
-			println!("{}", parsed_model.nice_print());
+			message(&format!("MODEL PARSED\n\n"));
+			message(&format!("{}", parsed_model.nice_print()));
 			let dg = make_dependency_graph(&parsed_model);
 			if let Ok(Some(dependency_graph)) = &dg {
 				dependency_graph.pretty_print(&parsed_model);
 				dependency_graph.simple_print(&parsed_model);
 				dependency_graph.original_print(&parsed_model);
-				// let trimmed_model = dependency::trimmer::trim_model(parsed_model.clone(), dependency_graph.clone());
-				// println!("{}", trimmed_model.nice_print());
 			} else {
-				println!("Error creating dependency graph.");
+				error(&format!("Error creating dependency graph."));
 			}
 		}
 		Some(("ragtimer", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
 			let timeout = sub_m.get_one::<String>("timeout").unwrap();
-			println!("Running ragtimer with models_dir: {} and timeout: {}", models_dir, timeout);
-			println!("Ragtimer is not yet implemented in Practice.");
+			message(&format!("Running ragtimer with models_dir: {} and timeout: {}", models_dir, timeout));
+			message(&format!("Ragtimer is not yet implemented in Practice."));
 			unimplemented!();
 		}
 		Some(("cycle-commute", sub_m)) => {
 			let model = sub_m.get_one::<String>("model").unwrap();
 			let trace = sub_m.get_one::<String>("trace").unwrap();
 			let output_file = sub_m.get_one::<String>("output_file").unwrap();
-			println!("Running cycle-commute with model: {} and trace: {}", model, trace);
+			message(&format!("Running cycle-commute with model: {} and trace: {}", model, trace));
 			demos::cycle_commute_demo::cycle_commute_demo(model, trace, output_file);
 		}
 		Some(("stamina", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
 			let timeout = sub_m.get_one::<String>("timeout").unwrap();
-			println!("Running stamina with models_dir: {} and timeout: {}", models_dir, timeout);
-			// Call your stamina logic here
+			message(&format!("Running stamina with models_dir: {} and timeout: {}", models_dir, timeout));
+			unimplemented!();
 		}
 		Some(("wayfarer", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
 			let timeout = sub_m.get_one::<String>("timeout").unwrap();
-			println!("Running wayfarer with models_dir: {} and timeout: {}", models_dir, timeout);
-			// Call your wayfarer logic here
+			message(&format!("Running wayfarer with models_dir: {} and timeout: {}", models_dir, timeout));
+			unimplemented!();
 		}
 		_ => {
-			println!("No valid subcommand was used. Use --help for more information.");
+			error(&format!("No valid subcommand was used. Use --help for more information."));
 		}
 	}
-
-
-	// if let Some(matches) = matches.subcommand_matches("ragtimer") {
 }
