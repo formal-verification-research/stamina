@@ -7,9 +7,11 @@ use nalgebra::DVector;
 
 use crate::{logging::{self, messages::*}, model::{model::Transition, vas_model::{AbstractVas, VasTransition}, vas_trie}};
 use std::io::Write;
+use itertools::Itertools;
 
 /// Temporary constant max depth for the cycle commute algorithm.
 const MAX_DEPTH: usize = 2;
+const MAX_CYCLE_LENGTH: usize = 2;
 
 /// PrismStyleExplicitState represents a state in the PRISM-style explicit state space as described at
 /// https://www.prismmodelchecker.org/manual/RunningPRISM/ExplicitModelImport
@@ -101,7 +103,7 @@ fn print_prism_files(model: AbstractVas, prism_states: &[PrismStyleExplicitState
     let num_transitions = prism_transitions.len();
     writeln!(tra_file, "{} {}", num_states, num_transitions).unwrap();
     // transitions
-    for t in prism_transitions.iter() {
+    for t in prism_transitions.iter().sorted_by_key(|t| t.from_state) {
         writeln!(tra_file, "{} {} {}", t.from_state, t.to_state, t.rate).unwrap();
     }
     // Output results to the specified output file
@@ -142,6 +144,7 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
         label: "SINK".to_string(),
         next_states: Vec::new(),
     });
+    
     // Read the trace file line by line (traces are line-separated)
     let trace_reader = BufReader::new(trace_file);
     for trace in trace_reader.lines() {
@@ -198,6 +201,9 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
                         rate: t.get_sck_rate()
                     };
                     prism_states[current_state_id].next_states.push(next_state_id);
+                    if this_transition.from_state == absorbing_state_id {
+                        logging::messages::error(&format!("ERROR: Transition from absorbing state {} to {} found in model", absorbing_state_id, next_state_id));
+                    }
                     prism_transitions.push(this_transition.clone());
                     seed_trace.push(this_transition.clone());
                 }
@@ -211,7 +217,9 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
         }
     }
     // Add commuted/parallel traces
-    commute(model.clone(), &mut prism_states, &mut state_trie, &mut prism_transitions, &seed_trace, 0, MAX_DEPTH);
+    // commute(model.clone(), &mut prism_states, &mut state_trie, &mut prism_transitions, &seed_trace, 0, MAX_DEPTH);
+    // Add cycles to the state space
+    add_cycles(&model, &mut prism_states, &mut state_trie, &mut prism_transitions, MAX_CYCLE_LENGTH);
     // Add transitions to the absorbing state
     for i in 1..prism_states.len() {
         let transition_to_absorbing = PrismStyleExplicitTransition {
@@ -223,6 +231,9 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
                 .map(|tr| tr.rate)
                 .sum::<f64>()
         };
+        if transition_to_absorbing.from_state == absorbing_state_id {
+            logging::messages::error(&format!("ERROR: Absorbing Transition from absorbing state {} to {} found in model", absorbing_state_id, 0));
+        }
         prism_transitions.push(transition_to_absorbing);
     }
     print_prism_files(model, &prism_states, &prism_transitions, output_file);
@@ -299,6 +310,10 @@ fn commute(
                     to_state: next_state_id,
                     rate: transition.get_sck_rate(),
                 };
+                
+                if new_transition.from_state == 0 {
+                    logging::messages::error(&format!("ERROR: 0 Transition from absorbing state {} to {} found in model", 0, next_state_id));
+                }
                 prism_states[state_id].next_states.push(next_state_id);
                 prism_transitions.push(new_transition.clone());
                 // Step 2. For each new state, create a new trace with the transition added
@@ -313,6 +328,118 @@ fn commute(
                     depth + 1,
                     max_depth,
                 );
+            }
+        }
+    }
+}
+
+/// This function combinatorially finds cycles of transitions (i.e., update vectors add to 0)
+/// and adds them to every where they are enabled.
+fn add_cycles(
+    model: &AbstractVas,
+    prism_states: &mut Vec<PrismStyleExplicitState>,
+    state_trie: &mut vas_trie::VasTrie,
+    prism_transitions: &mut Vec<PrismStyleExplicitTransition>,
+    max_cycle_length: usize,
+) {
+    // Collect all transition indices for easier cycle enumeration
+    let transition_indices: Vec<usize> = (0..model.transitions.len()).collect();
+    // For all cycle lengths from 2 up to max_cycle_length
+    for cycle_len in 2..=max_cycle_length {
+        // Generate all possible multisets (with repetition) of transitions
+        for cycle in Itertools::combinations_with_replacement(transition_indices.iter(), cycle_len) {
+            // For each multiset, check if the sum of update vectors is zero
+            let mut sum_update = model.transitions[*cycle[0]].update_vector.clone().cast::<i128>();
+            for &idx in &cycle[1..] {
+                sum_update += model.transitions[*idx].update_vector.clone().cast::<i128>();
+            }
+            if sum_update.iter().all(|&x| x == 0) {
+                // This is a cycle
+                debug_message(&format!("Found cycle: {:?}", cycle));
+                // Get every permutation of the cycle
+                let mut cycle_permutations = Vec::new();
+                let mut cycle_indices = cycle.clone();
+                cycle_indices.sort(); // Ensure canonical order for deduplication
+                for perm in cycle_indices.iter().permutations(cycle_indices.len()).unique() {
+                    cycle_permutations.push(perm.into_iter().copied().collect::<Vec<_>>());
+                }
+                // Add the cycle to all states where it is enabled (i.e., where the current state + min_vector is non-negative)
+                // Right now, 1 is the index of the first real initial state. Eventually, maybe we make this safer by including
+                // the absorbing state ID in the calculation
+                for state_id in 1..prism_states.len() {
+                    let state_vector = prism_states[state_id].state_vector.clone();
+                    // Check if the cycle is enabled at this state (state_vector + min_vector >= 0)
+                    // For each permutation of the cycle, try to fire the transitions in order
+                    for perm in &cycle_permutations {
+                        // For each permutation, find the min possible value for each values
+                        let mut min_vector = model.transitions[*cycle[0]].update_vector.clone();
+                        let mut running_sum = min_vector.clone();
+                        for &idx in &cycle[1..] {
+                            running_sum += model.transitions[*idx].update_vector.clone();
+                            for i in 0..min_vector.len() {
+                                if running_sum[i] < min_vector[i] {
+                                    min_vector[i] = running_sum[i];
+                                }
+                            }
+                        }
+                        let enabled = state_vector.iter()
+                        .zip(min_vector.iter())
+                            .all(|(&s, &m)| (s as i128) + m >= 0);
+                        if !enabled {
+                            continue;
+                        }
+                        let mut current_state = state_vector.clone();
+                        let mut prev_state_id = state_id;
+						if prev_state_id == 0 {
+							logging::messages::error(&format!("ERROR: Previous state index is 0"));
+						}
+                        // Try to apply each transition in the permutation
+                        for &&idx in perm {
+							let transition = &model.transitions[idx];
+                            // Check if enabled: min_vector + update_vector must be non-negative
+                            if (current_state.clone().cast::<i128>() + transition.update_vector.clone().cast::<i128>()).iter().any(|&x| x < 0) { 
+                                break; 
+                            }
+                            // Compute next state
+                            let next_state = (current_state.clone().cast::<i128>() + transition.update_vector.clone()).cast::<i64>();
+                            // Insert or get the state ID
+                            let mut next_state_id = prism_states.len();
+                            if let Some(existing_id) = state_trie.id_else_insert(&next_state, next_state_id) {
+								if next_state_id == 0 {
+									logging::messages::error(&format!("ERROR: Next state index is 0"));
+									logging::messages::error(&format!("Next state: {:?}", next_state));
+								}
+								next_state_id = existing_id;
+                            } else {
+                                // Compute total outgoing rate for the new state
+                                let rate_sum = model.transitions.iter()
+                                    .map(|trans| trans.get_sck_rate())
+                                    .sum();
+                                prism_states.push(PrismStyleExplicitState::from_state(
+                                    next_state.clone(),
+                                    rate_sum,
+                                    format!("State {}", next_state_id),
+                                    Vec::new(),
+                                ));
+                            }
+                            // Add transition if not already present
+                            if !prism_states[prev_state_id].next_states.contains(&next_state_id) {
+                                let new_transition = PrismStyleExplicitTransition {
+                                    from_state: prev_state_id,
+                                    to_state: next_state_id,
+                                    rate: transition.get_sck_rate(),
+                                };
+                                prism_states[prev_state_id].next_states.push(next_state_id);
+                                if new_transition.from_state == 0 {
+                                    logging::messages::error(&format!("ERROR: 1 Transition from absorbing state {} to {} found in model", 0, next_state_id));
+                                }
+                                prism_transitions.push(new_transition);
+                            }
+                            current_state = next_state;
+                            prev_state_id = next_state_id;
+                        }
+                    }
+                }
             }
         }
     }

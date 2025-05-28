@@ -6,7 +6,7 @@ use nalgebra::DVector;
 #[derive(Default)]
 struct TrieNode {
     children: HashMap<u64, TrieNode>,
-    ids: Vec<usize>,
+    id: usize,
     is_end: bool,
 }
 
@@ -33,7 +33,7 @@ impl VasTrie {
             node = node.children.entry(val.try_into().unwrap()).or_default();
         }
         node.is_end = true;
-        node.ids.push(id);
+        node.id = id;
     }
 
     /// Checks if a state exists in the trie.
@@ -55,10 +55,10 @@ impl VasTrie {
             node = node.children.entry(val.try_into().unwrap()).or_default();
         }
         if node.is_end {
-            node.ids.first().copied()
+            Some(node.id)
         } else {
             node.is_end = true;
-            node.ids.push(id);
+            node.id = id;
             None
         }
     }
