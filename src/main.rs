@@ -6,126 +6,204 @@ mod property;
 mod util;
 mod validator;
 mod bmc;
+mod demos;
+mod cycle_commute;
 
-use bmc::formula::{print_satisfying_model, print_z3_encoding};
-// use crate::parser;
-use dependency::graph::make_dependency_graph;
-use model::vas_model::AbstractVas;
-use bmc::bounder::get_bounds;
-// use bounder::z3_bounds::get_bounds;
-use logging::messages::*;
-
-use std::fs;
 use std::path::Path;
-use std::time::Instant;
+use clap::{Arg, Command};
+use dependency::graph::make_dependency_graph;
+use logging::messages::*;
+use model::vas_model::AbstractVas;
 
-const TIMEOUT_MINUTES: u64 = 10; // 
+const TIMEOUT_MINUTES: &str = "10"; // 
 
 fn main() {
-	
-	
-	let mut crn_files: Vec<String> = Vec::new();
-	let dir_path = Path::new("models");
-	for entry in fs::read_dir(dir_path).unwrap() {
-		let entry = entry.unwrap();
-		let path = entry.path();
-		if path.is_dir() {
-			for model_entry in fs::read_dir(&path).unwrap() {
-				let model_entry = model_entry.unwrap();
-				let model_path = model_entry.path();
-				
-				if model_path.is_file() && model_path.extension().unwrap().to_str().unwrap() == "crn" {
-					let model_name = model_path.file_stem().unwrap().to_str().unwrap();
-					let folder_name = path.file_name().unwrap().to_str().unwrap();
-					crn_files.push(format!("{}/{}.crn", folder_name, model_name));
-				}
-			}
+	let matches = Command::new("practice")
+		.version("0.0.1")
+		.author("Formal Verification Research at Utah State University")
+		.about("More details coming soon")
+		.subcommand(
+			Command::new("bounds")
+				.about("Run the variable bounding tool")
+				.arg(
+					Arg::new("models_dir")
+						.short('d')
+						.long("models-dir")
+						.value_name("DIR")
+						.help("Sets the directory containing model folders")
+						.default_value("models"),
+				)
+				.arg(
+					Arg::new("timeout")
+						.short('t')
+						.long("timeout")
+						.value_name("MINUTES")
+						.help("Timeout in minutes for get_bounds")
+						.default_value(TIMEOUT_MINUTES),
+				)
+		)
+		.subcommand(
+			Command::new("dependency-graph")
+				.about("Run the variable bounding tool")
+				.arg(
+					Arg::new("model")
+						.short('m')
+						// .long("model")
+						.value_name("FILE")
+						.help("Sets the model file")
+						.required(true),
+				)
+		)
+		.subcommand(
+			Command::new("ragtimer")
+				.about("Run the ragtimer tool")
+				.arg(
+					Arg::new("models_dir")
+						.required(true)
+						.short('d')
+						.long("models-dir")
+						.value_name("DIR")
+						.help("Sets the directory containing model folders")
+						.default_value("models"),
+				)
+				.arg(
+					Arg::new("timeout")
+						.short('t')
+						.long("timeout")
+						.value_name("MINUTES")
+						.help("Timeout in minutes for get_bounds")
+						.default_value(TIMEOUT_MINUTES),
+				)
+		)
+		.subcommand(
+			Command::new("cycle-commute")
+				.about("Run the Cycle & Commute tool")
+				.arg(
+					Arg::new("model")
+						.short('d')
+						.long("model-file")
+						.value_name("MODEL")
+						.help("Sets the directory containing model folders")
+						.required(true),
+				)
+				.arg(
+					Arg::new("trace")
+						.short('t')
+						.long("trace-file")
+						.value_name("TRACE")
+						.help("File containing white-space separated transition names for seed traces")
+						.required(true),
+				)
+				.arg(
+					Arg::new("output_file")
+						.short('o')
+						.long("output-file")
+						.value_name("OUTPUT")
+						.help("File to write the output to WITHOUT A FILE EXTENSION")
+						.default_value("cycle_commute"),
+				)
+		)
+		.subcommand(
+			Command::new("stamina")
+				.about("Run the stamina tool")
+				.arg(
+					Arg::new("models_dir")
+						.required(true)
+						.short('d')
+						.long("models-dir")
+						.value_name("DIR")
+						.help("Sets the directory containing model folders")
+						.default_value("models"),
+				)
+				.arg(
+					Arg::new("timeout")
+						.short('t')
+						.long("timeout")
+						.value_name("MINUTES")
+						.help("Timeout in minutes for get_bounds")
+						.default_value(TIMEOUT_MINUTES),
+				)
+		)
+		.subcommand(
+			Command::new("wayfarer")
+				.about("Run the wayfarer tool")
+				.arg(
+					Arg::new("models_dir")
+						.required(true)
+						.short('d')
+						.long("models-dir")
+						.value_name("DIR")
+						.help("Sets the directory containing model folders")
+						.default_value("models"),
+				)
+				.arg(
+					Arg::new("timeout")
+						.short('t')
+						.long("timeout")
+						.value_name("MINUTES")
+						.help("Timeout in minutes for get_bounds")
+						.default_value(TIMEOUT_MINUTES),
+				)
+		)
+		.get_matches();
+
+	match matches.subcommand() {
+		Some(("bounds", sub_m)) => {
+			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
+			let timeout = sub_m.get_one::<String>("timeout").unwrap();
+			message(&format!("Running ragtimer with models_dir: {} and timeout: {}", models_dir, timeout));
+			let dir_path = Path::new(models_dir);
+			demos::bmc_demo::bmc_demo(dir_path, timeout.parse::<u64>().unwrap());
 		}
-	}
-	
-	// crn_files.push("ModifiedYeastPolarization/ModifiedYeastPolarization.crn".to_string());
-	// crn_files.push("EnzymaticFutileCycle/EnzymaticFutileCycle.crn".to_string());
-	
-	for m in crn_files {
-		println!("\n{}\n", "█".repeat(80));
-		message(&format!("Model: models/{}", m));
-		println!("Model: models/{}", m);
-		let parsed_model = AbstractVas::from_file(&format!("models/{}", m));
-		
-		if parsed_model.is_ok() {
-			let model = parsed_model.unwrap();
-			// println!("{:?}", model.debug_print());
-			println!("MODEL PARSED\n\n");
-			println!("{}", model.nice_print());
-			
-			let dg = make_dependency_graph(&model);
-			// dg.unwrap().pretty_print();
+		Some(("dependency-graph", sub_m)) => {
+			// TODO: Move this whole thing to a demo
+			let model_file = sub_m.get_one::<String>("model").unwrap();
+			message(&format!("Running ragtimer with models: {}", model_file));
+			let parsed_model = AbstractVas::from_file(model_file);
+			if !parsed_model.is_ok() {
+				error(&format!("Error parsing model file: {}", model_file));
+				return;
+			}
+			let parsed_model = parsed_model.unwrap();
+			message(&format!("MODEL PARSED\n\n"));
+			message(&format!("{}", parsed_model.nice_print()));
+			let dg = make_dependency_graph(&parsed_model);
 			if let Ok(Some(dependency_graph)) = &dg {
-				dependency_graph.simple_print(&model);
-				let trimmed_model = dependency::trimmer::trim_model(model.clone(), dependency_graph.clone());
-				println!("{}", trimmed_model.nice_print());
-
-				let start = Instant::now();
-				let result = std::thread::spawn(move || {
-					get_bounds(model.clone(), 8)
-				});
-				let timeout = std::time::Duration::from_secs(TIMEOUT_MINUTES*60);
-				let (tx, rx) = std::sync::mpsc::channel();
-				std::thread::spawn(move || {
-					let _ = result.join();
-					let _ = tx.send(());
-				});
-				if rx.recv_timeout(timeout).is_ok() {
-					println!("get_bounds completed successfully");
-				} else {
-					println!("get_bounds timed out after {} minutes", TIMEOUT_MINUTES);
-				}
-				let duration = start.elapsed();
-				println!("Time taken by get_bounds on regular model: {:?}", duration);
-				
-				let start = Instant::now();
-				let result = std::thread::spawn(move || {
-					get_bounds(trimmed_model.clone(), 8)
-				});
-				let timeout = std::time::Duration::from_secs(TIMEOUT_MINUTES*60);
-				let (tx, rx) = std::sync::mpsc::channel();
-				std::thread::spawn(move || {
-					let _ = result.join();
-					let _ = tx.send(());
-				});
-				if rx.recv_timeout(timeout).is_ok() {
-					println!("get_bounds completed successfully");
-				} else {
-					println!("get_bounds timed out after {} minutes", TIMEOUT_MINUTES);
-				}
-				let duration = start.elapsed();
-				println!("Time taken by get_bounds on trimmed model: {:?}", duration);
-				
-				
-				// let start = Instant::now();
-				// get_bounds(trimmed_model.clone(), 8);
-				// let duration = start.elapsed();
-				// println!("Time taken by get_bounds on trimmed model: {:?}", duration);
-
+				dependency_graph.pretty_print(&parsed_model);
+				dependency_graph.simple_print(&parsed_model);
+				dependency_graph.original_print(&parsed_model);
 			} else {
-				println!("Failed to create dependency graph");
+				error(&format!("Error creating dependency graph."));
 			}
-			// print_z3_encoding(model.clone(), bits, steps);
-			// print_satisfying_model(model.clone(), bits, steps);
-			
-			
 		}
-		else {
-			println!("parsing failed");
-			if let Err(e) = parsed_model {
-				println!("{}", e);
-			}
-			continue;
+		Some(("ragtimer", sub_m)) => {
+			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
+			let timeout = sub_m.get_one::<String>("timeout").unwrap();
+			message(&format!("Running ragtimer with models_dir: {} and timeout: {}", models_dir, timeout));
+			message(&format!("Ragtimer is not yet implemented in Practice."));
+			unimplemented!();
 		}
-		println!("\n{}\n", "█".repeat(80));
+		Some(("cycle-commute", sub_m)) => {
+			let model = sub_m.get_one::<String>("model").unwrap();
+			let trace = sub_m.get_one::<String>("trace").unwrap();
+			let output_file = sub_m.get_one::<String>("output_file").unwrap();
+			message(&format!("Running cycle-commute with model: {} and trace: {}", model, trace));
+			demos::cycle_commute_demo::cycle_commute_demo(model, trace, output_file);
+		}
+		Some(("stamina", sub_m)) => {
+			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
+			let timeout = sub_m.get_one::<String>("timeout").unwrap();
+			message(&format!("Running stamina with models_dir: {} and timeout: {}", models_dir, timeout));
+			unimplemented!();
+		}
+		Some(("wayfarer", sub_m)) => {
+			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
+			let timeout = sub_m.get_one::<String>("timeout").unwrap();
+			message(&format!("Running wayfarer with models_dir: {} and timeout: {}", models_dir, timeout));
+			unimplemented!();
+		}
+		_ => {
+			error(&format!("No valid subcommand was used. Use --help for more information."));
+		}
 	}
-	
-
-	// let dep_graph = make_dependency_graph(&parsed_model.unwrap());
-
 }

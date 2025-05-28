@@ -1,14 +1,11 @@
 use nalgebra::DVector;
 
-use crate::{model::vas_model::{self, VasProperty, VasState, VasTransition}, AbstractVas};
-use std::io::{self, Write};
+use crate::{logging::messages::*, model::vas_model::{self, AbstractVas, VasProperty, VasState, VasTransition}};
 
-fn debug_println(s: String) {
-	// if cfg!(debug_assertions) {
-	// 	println!("{}", s);
-	// }
-}
+/// Temporary constants for debugging.
+const DEBUG_DEPTH_LIMIT: u32 = 5000;
 
+/// A node in the dependency graph.
 #[derive(Clone)]
 struct GraphNode {
 	transition: VasTransition,
@@ -21,56 +18,64 @@ struct GraphNode {
 	decrement: bool,
 }
 
+/// A dependency graph containing only a root node.
 #[derive(Clone)]
 pub(crate) struct DependencyGraph {
 	root: Box<GraphNode>,
 }
 
+/// This trait provides methods for building and manipulating the dependency graph.
 impl GraphNode {
 
+	/// Creates a new dependency graph (node) with the given transition and initial state.
 	fn rec_build_graph(&mut self, vas: &AbstractVas, depth: u32) -> Result<(), String> {
-		if depth > 500 {
-			return Err("DEPTH OVER 500".to_string());
+		// Handle administrative tasks before building the node.
+		if depth > DEBUG_DEPTH_LIMIT {
+			error(&format!("Error: Depth limit exceeded: {}", DEBUG_DEPTH_LIMIT));
+			return Err(format!("Error: Depth limit exceeded: {}", DEBUG_DEPTH_LIMIT));
 		}
-		let spaces = " ".repeat(depth as usize);
-
-		debug_println(format!("{}Building graph at node {} x{}", spaces, self.transition.transition_name, self.executions));
-		
+		let indentation = " ".repeat(depth as usize);
+		debug_message(&format!("{}Building graph at node {} x{}", indentation, self.transition.transition_name, self.executions));
+		// Check if the node is already enabled.
 		if self.enabled {
-			debug_println(format!("{}Node Enabled? {}", spaces, self.enabled));
+			debug_message(&format!("{}Node Enabled? {}", indentation, self.enabled));
 			return Ok(());
 		}
-
-        let child_init = VasState::new(
+		// Create a new "initial state" for the child nodes.
+		// This is the state after the child's parents have been applied to the model's initial state.
+        let mut child_init = VasState::new(
             (&self.node_init.vector.map(|x| x as i128) + (&self.transition.update_vector * self.executions as i128))
                 .map(|x| x as i64),
         );
-
-		let child_init_str = (0..child_init.vector.len())
-        .map(|i| {
-            let variable_name = vas.variable_names.get(i).map_or("unknown", |name| name.as_str());
-            format!("{}.{} ", variable_name, child_init.vector[i])
-        })
-        .collect::<String>();
-
-		debug_println(format!("{}child init {}", spaces, child_init_str));
-
+		// Compute the adjustment vector: if update_vector[i] + enabled_bounds[i] != 0, subtract enabled_bounds[i] from child_init.vector[i]
+		let adjustment = self.transition.update_vector.iter().zip(self.transition.enabled_bounds.iter())
+			.map(|(update, bound)| if *update + *bound as i128 != 0 { -(*bound as i64) } else { 0 })
+			.collect::<Vec<_>>();
+		child_init.vector += nalgebra::DVector::from_vec(adjustment);
+		debug_message(&format!("{}child init {}", indentation, (0..child_init.vector.len())
+			.map(|i| {
+				let variable_name = vas.variable_names.get(i).map_or("unknown", |name| name.as_str());
+				format!("{}.{} ", variable_name, child_init.vector[i])
+			})
+			.collect::<String>()));
+		// Similarly, compute the target values for the child nodes.
+		// This is a set of targets that the child nodes must satisfy in order to enable its parents.
 		let child_targets: Vec<VasProperty> = self.node_target.iter().filter_map(|prop| {
 			let reqd = if self.decrement {
                 let initial_value = child_init.vector.get(prop.variable_index).unwrap();
                 let consumed_here = 0 - self.transition.update_vector.get(prop.variable_index).unwrap();
-				debug_println(format!("{}consumed_here {}.{}", spaces, vas.variable_names.get(prop.variable_index).unwrap(), consumed_here));
-				debug_println(format!("{}initial_value {}", spaces, initial_value));
+				debug_message(&format!("{}consumed_here {}.{}", indentation, vas.variable_names.get(prop.variable_index).unwrap(), consumed_here));
+				debug_message(&format!("{}initial_value {}", indentation, initial_value));
 				prop.target_value + (consumed_here * self.executions as i128)
 			} else {
 				let initial_value = child_init.vector.get(prop.variable_index).unwrap();
                 let consumed_here = 0 + self.transition.update_vector.get(prop.variable_index).unwrap();
-				debug_println(format!("{}produced_here {}.{}", spaces, vas.variable_names.get(prop.variable_index).unwrap(), consumed_here));
-				debug_println(format!("{}initial_value {}", spaces, initial_value));
+				debug_message(&format!("{}produced_here {}.{}", indentation, vas.variable_names.get(prop.variable_index).unwrap(), consumed_here));
+				debug_message(&format!("{}initial_value {}", indentation, initial_value));
 				prop.target_value - (consumed_here * self.executions as i128)
 			};
 			if reqd != 0 {
-				debug_println(format!("{}reqd {}", spaces, reqd));
+				debug_message(&format!("{}reqd {}", indentation, reqd));
 				Some(VasProperty {
                     variable_index: prop.variable_index,
                     target_value: reqd,
@@ -80,40 +85,37 @@ impl GraphNode {
 				None
 			}
 		}).collect();
-
+		// Any value that is consumed here more than it is produced, is a negative target.
 		let mut negative_targets: Vec<VasProperty> = Vec::new();
         for i in 0..child_init.vector.len() {
             if child_init.vector[i] < 0 {
-                debug_println(format!("{}negative_target {}.{}", spaces, vas.variable_names.get(i).unwrap(), child_init.vector[i]));
+                debug_message(&format!("{}negative_target {}.{}", indentation, vas.variable_names.get(i).unwrap(), child_init.vector[i]));
                 negative_targets.push(VasProperty {
                     variable_index: i,
 					target_value: -child_init.vector[i] as i128,
                 });
             }
         }
+		// Combine all the targets into a single vector.
 		let mut all_targets = child_targets;
 		all_targets.extend(negative_targets);
-
-		debug_println(format!("{}child targets {}", spaces, 
+		debug_message(&format!("{}child targets {}", indentation, 
             all_targets.iter().map(|mm| format!("{}.{} ", vas.variable_names.get(mm.variable_index).unwrap(), mm.target_value)).collect::<String>()
         ));
-
+		// For all targets, try and add children nodes that meet that target.
 		for target in &all_targets {
-			debug_println(format!("{}Processing target {}.{}", spaces, vas.variable_names.get(target.variable_index).unwrap(), target.target_value));
+			debug_message(&format!("{}Processing target {}.{}", indentation, vas.variable_names.get(target.variable_index).unwrap(), target.target_value));
 			for trans in &vas.transitions {
-				debug_println(format!("{}Checking transition {}", spaces, trans.transition_name));
+				debug_message(&format!("{}Checking transition {}", indentation, trans.transition_name));
 				if self.parents.iter().all(|p| p.transition_name != trans.transition_name) {
-					// debug_println(format!("{}Transition {} is not in parents", spaces, trans.transition_name));
-
 					let mut this_child_targets: Vec<VasProperty> = Vec::new();
 					let mut executions: i128 = 0;
-
                     if (target.target_value > 0 && trans.update_vector[target.variable_index] > 0)
                         || (target.target_value < 0 && trans.update_vector[target.variable_index] < 0)
                     {
-                        debug_println(format!(
+                        debug_message(&format!(
                             "{}Sign match for transition {} on target {}.{}",
-                            spaces,
+                            indentation,
                             trans.transition_name,
                             vas.variable_names.get(target.variable_index).unwrap(),
                             target.target_value
@@ -123,18 +125,17 @@ impl GraphNode {
                             target_value: target.target_value,
                         });
                         executions = (target.target_value / trans.update_vector[target.variable_index]).try_into().unwrap();
-                        debug_println(format!("{}Executions calculated: {}", spaces, executions));
+                        debug_message(&format!("{}Executions calculated: {}", indentation, executions));
                     } else {
-                        // debug_println(format!(
-                        //     "{}Sign mismatch for transition {} on target {}.{}",
-                        //     spaces,
-                        //     trans.transition_name,
-                        //     vas.variable_names.get(target.variable_index).unwrap(),
-                        //     target.target_value
-                        // ));
+						debug_message(&format!(
+						    "{}Sign mismatch for transition {} on target {}.{}",
+						    indentation,
+						    trans.transition_name,
+						    vas.variable_names.get(target.variable_index).unwrap(),
+						    target.target_value
+						));
                         continue;
                     }
-
                     if executions > 0 {
                         let mut child = GraphNode {
                             transition: trans.clone(),
@@ -148,12 +149,12 @@ impl GraphNode {
                         };
                         child.parents.push(self.transition.clone());
                         self.children.push(Box::new(child));
-                        debug_println(format!("{}Added child node for transition {}", spaces, trans.transition_name));
+                        debug_message(&format!("{}Added child node for transition {}", indentation, trans.transition_name));
                     }
 				}
 			}
 		}
-
+		// Collect all the children that have the same transition name and merge them.
 		let mut merged_children: Vec<Box<GraphNode>> = Vec::new();
 
 		for child in self.children.drain(..) {
@@ -165,22 +166,19 @@ impl GraphNode {
 				merged_children.push(child);
 			}
 		}
-
 		self.children = merged_children;
-
+		// Recursively build the graph for each child node, propagating enabled status back up the graph.
 		for child in &mut self.children {
 			let _ = child.rec_build_graph(vas, depth + 1);
 			if !child.enabled {
 				self.enabled = false;
 			}
 		}
-
-
 		Ok(())
 	}
-
 }
 
+/// Checks if a given property is satisfied in the current state.
 fn property_sat(prop: &VasProperty, state: &VasState) -> Result<bool,String>{
 	if state.vector.len() < prop.variable_index {
 		return Err(format!("Error: Index out of bounds for state vector: {} >= {}", prop.variable_index, state.vector.len()));
@@ -191,10 +189,9 @@ fn property_sat(prop: &VasProperty, state: &VasState) -> Result<bool,String>{
     return Ok(false);
 }
 
+/// Top-level function to create a dependency graph from an abstract VAS model.
 pub fn make_dependency_graph(vas: &vas_model::AbstractVas) -> Result<Option<DependencyGraph>, String> {
-
-	debug_println(format!("Building a dependency graph."));
-
+	debug_message(&format!("Building a dependency graph."));
 	// check if target is satisfied in the initial state; if not, build a root node.
 	let initial_state = VasState::new(vas.initial_states[0].vector.clone());
 	let initially_sat = property_sat(&vas.target, &initial_state);
@@ -204,10 +201,7 @@ pub fn make_dependency_graph(vas: &vas_model::AbstractVas) -> Result<Option<Depe
 	else if initially_sat.is_err() {
 		return Err(String::from("Error: Cannot check initial state against target property."));
 	}
-
 	// figure out the executions on the artificial root node
-
-
     let target_variable = vas.target.variable_index;
     let initial_value = vas.initial_states[0].vector[target_variable];
     let target_value = vas.target.target_value;
@@ -217,17 +211,14 @@ pub fn make_dependency_graph(vas: &vas_model::AbstractVas) -> Result<Option<Depe
 		(initial_value as i128) - target_value
 	};
     let decrement = (initial_value as i128) > target_value;
-
-	// debug_println(format!("");
-    // TODO: Stoichiometry greater than one.
-	debug_println(format!("Target Executions: {}", target_difference));
-	
-	// build a new root node
+    // TODO: Handle stoichiometry greater than one.
+	debug_message(&format!("Target Executions: {}", target_difference));
+	// Build a new root (abstract transition) node
 	let mut dependency_graph = DependencyGraph {
 		root: {
 		Box::new(GraphNode {
 			transition: VasTransition {
-				transition_id: 999999,
+				transition_id: usize::MAX,
 				transition_name: "ARTIFICIAL".to_string(),
 				update_vector: DVector::zeros(vas.variable_names.len()),
 				enabled_bounds: DVector::zeros(vas.variable_names.len()),
@@ -247,49 +238,34 @@ pub fn make_dependency_graph(vas: &vas_model::AbstractVas) -> Result<Option<Depe
             })
         }
     };
-
-	// handle the decrement case
+	// handle the case where it is desired to decrease a value to reach a target
 	if dependency_graph.root.decrement {
 		if let Some(first_target) = dependency_graph.root.node_target.first_mut() {
             first_target.target_value -= dependency_graph.root.node_init.vector[first_target.variable_index] as i128;
 		}
 	}
-
-	debug_println(format!("decrement? {}", dependency_graph.root.decrement));
-
+	debug_message(&format!("decrement? {}", dependency_graph.root.decrement));
+	// Start building the graph from the root node.
 	let _ = dependency_graph.root.rec_build_graph(vas, 1);
-
-	// if cfg!(debug_assertions) {
-	// 	dependency_graph.pretty_print(vas);
-	// }
-
 	Ok(Some(dependency_graph))
-
 }
 
-impl DependencyGraph {
-	pub fn pretty_print(&self, vas: &AbstractVas) {
-		fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize) {
-			let indent = " ".repeat(depth * 2);
-			println!("{}Node: {}", indent, node.transition.transition_name);
-			println!("{}  Executions: {}", indent, node.executions);
-			println!("{}  Enabled: {}", indent, node.enabled);
-			if node.decrement {
-				println!("{}  Decrement", indent);
-			}
-			println!("{}  Init Variables:", indent);
 
-			for var in 0..node.node_init.vector.len() {
-                println!("{}    {}: {}", indent, node.node_init.vector.get(var).unwrap(), vas.variable_names.get(var).unwrap());
-			}
-			println!("{}  Target Variables:", indent);
-            for target in node.node_target.iter() {
-                // let var = node.node_target.get(target).unwrap();
-                // println!("{}    {}: {}", indent, target.variable_name, target.count);
-			// for var in &node.node_target {
-                println!("{}    {}: {}", indent, vas.variable_names.get(target.variable_index).unwrap(), target.target_value);
-				// println!("{}    {}: {}", indent, var.variable_name, var.count);
-			}
+/// These methods provide functionality to print the dependency graph in various formats.
+/// TODO: These should be unified into a single printout and a single JSON format.
+impl DependencyGraph {
+	/// Prints the dependency graph in its original format.
+	pub fn original_print(&self, vas: &AbstractVas) {
+		fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize) {
+			let mut node_str = String::new();
+			node_str.push_str(&format!("{}{}", "|".repeat(depth), node.transition.transition_name));
+			node_str.push_str(&format!(" {} times to {} ", node.executions, if node.decrement { "consume" } else { "produce" }));
+			let targets_str = node.node_target.iter()
+				.map(|target| format!("('{}',{})", vas.variable_names.get(target.variable_index).unwrap(), target.target_value))
+				.collect::<Vec<_>>()
+				.join(", ");
+			node_str.push_str(&format!("[{}]", targets_str));
+			message(&format!("{}", node_str));
 			for child in &node.children {
 				print_node(vas, child, depth + 1);
 			}
@@ -297,32 +273,71 @@ impl DependencyGraph {
 
 		print_node(vas, &self.root, 0);
 	}
+	/// Pretty prints the dependency graph in a human-readable format.
+	pub fn pretty_print(&self, vas: &AbstractVas) {
+		fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize) {
+			let indent = " ".repeat(depth * 2);
+			message(&format!("{}Node: {}", indent, node.transition.transition_name));
+			message(&format!("{}  Executions: {}", indent, node.executions));
+			message(&format!("{}  Enabled: {}", indent, node.enabled));
+			if node.decrement {
+				message(&format!("{}  Decrement", indent));
+			}
+			message(&format!("{}  Init Variables: [{}]", indent,
+				node.node_init.vector.iter()
+					.map(|v| v.to_string())
+					.collect::<Vec<_>>()
+					.join(", ")
+			));
+			message(&format!("{}  Target Variables:", indent));
+            for target in node.node_target.iter() {
+                message(&format!("{}    {}: {}", indent, vas.variable_names.get(target.variable_index).unwrap(), target.target_value));
+			}
+			for child in &node.children {
+				print_node(vas, child, depth + 1);
+			}
+		}
+		print_node(vas, &self.root, 0);
+	}
+
+	/// Prints a simple representation of the dependency graph.
     pub fn simple_print(&self, vas: &AbstractVas) {
-		println!("===================");
-		println!("Dependency Graph");
+		message(&format!("==================="));
+		message(&format!("Dependency Graph"));
         fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize) {
 			let indent = " ".repeat(depth * 2);
-            println!("{}Node: {} (Executions: {})", indent, node.transition.transition_name, node.executions);
+            message(&format!("{}Node: {} (Executions: {})", indent, node.transition.transition_name, node.executions));
             for child in &node.children {
 				print_node(vas, child, depth + 1);
             }
         }
         print_node(vas, &self.root, 0);
-		println!("===================\n");
-		
+		message(&format!("===================\n"));
     }
-    pub fn vec_transitions(&self) -> Vec<VasTransition> {
-        fn collect_transitions(node: &GraphNode, transitions: &mut Vec<VasTransition>) {
-            transitions.push(node.transition.clone());
-            for child in &node.children {
-                collect_transitions(child, transitions);
-            }
-        }
-        let mut transitions = Vec::new();
-        collect_transitions(&self.root, &mut transitions);
-        transitions
+	
+	/// Nicely formats the dependency graph as a string for better readability.
+	pub fn nice_print(&self, vas: &AbstractVas) -> String {
+		let mut output = String::new();
+		fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize, output: &mut String) {
+			let indent = "  ".repeat(depth);
+			output.push_str(&format!("{}- {} (x{})\n", indent, node.transition.transition_name, node.executions));
+			for target in &node.node_target {
+				output.push_str(&format!(
+					"{}    target: {} = {}\n",
+					indent,
+					vas.variable_names.get(target.variable_index).unwrap_or(&"unknown".to_string()),
+					target.target_value
+				));
+			}
+			for child in &node.children {
+				print_node(vas, child, depth + 1, output);
+			}
+		}
+		print_node(vas, &self.root, 0, &mut output);
+		output
     }
 
+	/// Gives a vector of all the transitions in the dependency graph.
 	pub fn get_transitions(&self) -> Vec<VasTransition> {
 		let mut transitions = Vec::new();
 		fn traverse(node: &GraphNode, transitions: &mut Vec<VasTransition>) {

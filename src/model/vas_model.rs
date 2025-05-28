@@ -1,6 +1,6 @@
 use std::{collections::BTreeSet, fmt};
 
-use crate::{parser::vas_file_reader, property::property, validator::vas_validator::validate_vas};
+use crate::{logging::messages::*, parser::vas_file_reader, property::property, validator::vas_validator::validate_vas};
 
 use metaverify::trusted;
 use nalgebra::DVector;
@@ -212,8 +212,6 @@ impl Transition for VasTransition {
 		} else {
 			None
 		}
-
-
 	}
 
 	#[trusted]
@@ -295,6 +293,7 @@ impl fmt::Display for AllowedRelation {
 		write!(f, "{}", relation_str)
 	}
 }
+
 // TODO: May need to allow discrete/continuous time models
 // for now we will just use continuous time models
 #[trusted]
@@ -308,50 +307,61 @@ impl AbstractVas {
 			target
 		}
 	}
+
+	/// Calls a parser to get a VAS model from a file
 	#[trusted]
 	pub fn from_file(filename: &str) -> Result<Self, String> {
 		match vas_file_reader::build_model(filename) {
 			Ok(model) => {
-				println!("Parsing gave OK result");
+				debug_message(&format!("Parsing gave OK result"));
 				Ok(model)
 			}
 			Err(err) => {
-				println!("ERROR DURING PARSING:");
-				println!("{}", err.to_string());
+				error(&format!("ERROR DURING PARSING: {}", err));
 				Err(err.to_string())
 			},
 		}
 	}
+
+	/// Runs the validator on the model and its property
 	#[trusted]
 	pub fn validate_model(&self, property: VasProperty) -> Result<String, String> {
 		let result = validate_vas(self, &property);
 		result
 	}
+	
+	/// Look up the index/ID of a transition by its name
 	#[trusted]
-	pub fn debug_print(&self) {
-		println!("VasModel:");
-		println!("Variables: {:?}", self.variable_names);
-		println!("Initial States: {:?}", self.initial_states);
-		println!("Transitions: {:?}", self.transitions);
+	pub fn get_transition_from_name(&self, transition_name: &str) -> Option<&VasTransition> {
+		self.transitions.iter().find(|t| t.transition_name == transition_name)
 	}
+
+	/// Outputs a model in a debuggable string format
+	#[trusted]
+	pub fn debug_print(&self) -> String{
+		let mut output = String::new();
+		output.push_str(&format!("VasModel:"));
+		output.push_str(&format!("Variables: {:?}", self.variable_names));
+		output.push_str(&format!("Initial States: {:?}", self.initial_states));
+		output.push_str(&format!("Transitions: {:?}", self.transitions));
+		output
+	}
+
+	/// Outputs a model in a human-readable string format
 	#[trusted]
 	pub fn nice_print(&self) -> String {
 		let mut output = String::new();
-		
 		output.push_str("==========================================\n");
 		output.push_str("              BEGIN VAS MODEL             \n");
 		output.push_str("==========================================\n");
-		
 		output.push_str("Variables:\n");
 		self.variable_names.iter().for_each(|name| output.push_str(&format!("\t{}", name)));
 		output.push_str("\n");
-
 		output.push_str("Initial States:\n");
 		for state in self.initial_states.clone() {
 			state.vector.iter().for_each(|name| output.push_str(&format!("\t{}", name)));
 		}
 		output.push_str("\n");
-
 		output.push_str("Transitions:\n");
 		for transition in self.transitions.clone() {
 			output.push_str(&format!("\t{}\t{}\n", transition.transition_id, transition.transition_name));
@@ -361,7 +371,6 @@ impl AbstractVas {
 			transition.enabled_bounds.iter().for_each(|name| output.push_str(&format!("\t{}", name)));
 			output.push_str(&format!("\t]\n\t\tRate:\t{}\n", transition.rate_const));
 		}
-
 		output.push_str("Target:\n");
 		output.push_str(&format!(
 			"\tVariable: {}\n",
@@ -371,11 +380,9 @@ impl AbstractVas {
 				.unwrap_or("Unknown")
 		));
 		output.push_str(&format!("\tTarget Value: {}\n", self.target.target_value));
-
 		output.push_str("==========================================\n");
 		output.push_str("               END VAS MODEL              \n");
 		output.push_str("==========================================\n");
-
 		output
 	}
 }

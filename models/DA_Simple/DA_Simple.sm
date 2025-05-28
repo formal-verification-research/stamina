@@ -1,0 +1,113 @@
+ctmc
+
+// Parameters
+const double I_d = 4;
+const double r_p = 1.0 / 2400;    // RNA degradation rate constant
+const double r_m = 0.0067;        // RNA degradation rate
+const double s_A = 500;
+const double k_crF = 0.001848;    // Formation rate of dCas:gRNA complex
+const double k_crUF = 1.0 / 2400; // Dissociation rate of dCas:gRNA complex
+const double k_crB = 0.0000483;   // Binding rate to DNA
+const double k_crunB = 1.0 / 2400;// Unbinding rate from DNA
+const double k_J23101 = 0.019;    // Basal production rate from J23101
+const double k_J23117 = 0.0016;   // Basal production rate from J23117
+
+// dtet expression
+const double dtet_min = 0.0000931;
+const double dtet_max = 0.046;
+const double dtet_exp = 3.8;
+const double dtet_denom = pow(13, dtet_exp);
+formula dtet = dtet_min + (dtet_max - dtet_min) * (pow(I_d, dtet_exp) / (dtet_denom + pow(I_d, dtet_exp)));
+
+// dtac expression
+const double dtac_min = 0.0000912;
+const double dtac_max = 0.0627;
+const double dtac_exp = 1.8;
+const double dtac_denom = pow(140.6, dtac_exp);
+formula dtac = dtac_min + (dtac_max - dtac_min) * (pow(s_A, dtac_exp) / (dtac_denom + pow(s_A, dtac_exp)));
+
+module reactions
+    G_d  : int init 9;
+    md   : int init 1;
+    d    : int init 1222;
+    S_A  : int init 40;
+    g_An : int init 2;
+    c_An : int init 5814;
+    D_A  : int init 1;
+    C_A_An : int init 40;
+    g_Cp : int init 1;
+    c_Cp : int init 3;
+    D_C  : int init 30;
+    C_C_Cp : int init 10;
+    m_C  : int init 57;
+    Y_C  : int init 168791;
+
+    // Reaction 1: G_d → G_d + md
+    [reaction1] G_d > 0 -> (dtet * G_d) : (md' = md + 1);
+
+    // Reaction 2: md → d + md
+    [reaction2] md > 0 -> (3.59 * md) : (d' = d + 1);
+
+    // Reaction 3: d → ∅
+    [reaction3] d > 0 -> (r_p * d) : (d' = d - 1);
+
+    // Reaction 4: md → ∅
+    [reaction4] md > 0 -> (r_m * md) : (md' = md - 1);
+
+    // Reaction 5: S_A → S_A + g_An
+    [reaction5] S_A > 0 -> (dtac * S_A) : (g_An' = g_An + 1);
+
+    // Reaction 6: g_An → ∅
+    [reaction6] g_An > 0 -> (r_m * g_An) : (g_An' = g_An - 1);
+
+    // Reaction 7: d + g_An → c_An
+    [reaction7] d > 0 & g_An > 0 -> (k_crF * d * g_An) : (c_An' = c_An + 1) & (d' = d - 1) & (g_An' = g_An - 1);
+
+    // Reaction 8: c_An → d + g_An
+    [reaction8] c_An > 0 -> (k_crUF * c_An) : (c_An' = c_An - 1) & (d' = d + 1) & (g_An' = g_An + 1);
+
+    // Reaction 9: c_An + D_A → C_A_An
+    [reaction9] c_An > 0 & D_A > 0 -> (k_crB * c_An * D_A) : (C_A_An' = C_A_An + 1) & (c_An' = c_An - 1) & (D_A' = D_A - 1);
+
+    // Reaction 10: C_A_An → c_An + D_A
+    [reaction10] C_A_An > 0 -> (k_crunB * C_A_An) : (c_An' = c_An + 1) & (D_A' = D_A + 1) & (C_A_An' = C_A_An - 1);
+
+    // Reaction 11: c_An → ∅
+    [reaction11] c_An > 0 -> (r_p * c_An) : (c_An' = c_An - 1);
+
+    // Reaction 12: D_A → D_A + g_Cp
+    [reaction12] D_A > 0 -> (k_J23101 * D_A) : (g_Cp' = g_Cp + 1);
+
+    // Reaction 13: g_Cp → ∅
+    [reaction13] g_Cp > 0 -> (r_m * g_Cp) : (g_Cp' = g_Cp - 1);
+
+    // Reaction 14: d + g_Cp → c_Cp
+    [reaction14] d > 0 & g_Cp > 0 -> (k_crF * d * g_Cp) : (c_Cp' = c_Cp + 1) & (d' = d - 1) & (g_Cp' = g_Cp - 1);
+
+    // Reaction 15: c_Cp → d + g_Cp
+    [reaction15] c_Cp > 0 -> (k_crUF * c_Cp) : (c_Cp' = c_Cp - 1) & (d' = d + 1) & (g_Cp' = g_Cp + 1);
+
+    // Reaction 16: c_Cp + D_C → C_C_Cp
+    [reaction16] c_Cp > 0 & D_C > 0 -> (k_crB * c_Cp * D_C) : (C_C_Cp' = C_C_Cp + 1) & (c_Cp' = c_Cp - 1) & (D_C' = D_C - 1);
+
+    // Reaction 17: C_C_Cp → c_Cp + D_C
+    [reaction17] C_C_Cp > 0 -> (k_crunB * C_C_Cp) : (c_Cp' = c_Cp + 1) & (D_C' = D_C + 1) & (C_C_Cp' = C_C_Cp - 1);
+
+    // Reaction 18: c_Cp → ∅
+    [reaction18] c_Cp > 0 -> (r_p * c_Cp) : (c_Cp' = c_Cp - 1);
+
+    // Reaction 19: D_C → D_C + m_C
+    [reaction19] D_C > 0 -> (k_J23117 * D_C) : (m_C' = m_C + 1);
+
+    // Reaction 20: C_C_Cp → C_C_Cp + m_C
+    [reaction20] C_C_Cp > 0 -> (22 * k_J23117 * C_C_Cp) : (m_C' = m_C + 1);
+
+    // Reaction 21: m_C → m_C + Y_C
+    [reaction21] m_C > 0 -> (1.22 * m_C) : (Y_C' = Y_C + 1);
+
+    // Reaction 22: m_C → ∅
+    [reaction22] m_C > 0 -> (r_m * m_C) : (m_C' = m_C - 1);
+
+    // Reaction 23: Y_C → ∅
+    [reaction23] Y_C > 0 -> (r_p * Y_C) : (Y_C' = Y_C - 1);
+endmodule
