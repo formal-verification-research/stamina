@@ -5,7 +5,7 @@ species S_A    init 40
 species g_An   init 0
 species c_An   init 0
 species D_A    init 40
-species C_A_An init 40
+species C_A_An init 0
 species g_Cp   init 0
 species c_Cp   init 0
 species D_C    init 40
