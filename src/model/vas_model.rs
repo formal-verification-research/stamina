@@ -199,7 +199,11 @@ impl VasTransition {
 			.iter()
 			.zip(state.iter())
 			.try_fold(true, |_, (bound, state_val)| {
-				if *state_val >= *bound as i64 { Some(true) } else { None }
+				if *state_val >= *bound as i64 {
+					Some(true)
+				} else {
+					None
+				}
 			})
 			.is_some()
 	}
