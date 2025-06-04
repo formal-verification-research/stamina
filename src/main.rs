@@ -1,21 +1,21 @@
-mod model;
+mod bmc;
+mod cycle_commute;
+mod demos;
 mod dependency;
 mod logging;
+mod model;
 mod parser;
 mod property;
 mod util;
 mod validator;
-mod bmc;
-mod demos;
-mod cycle_commute;
 
-use std::path::Path;
 use clap::{Arg, Command};
 use dependency::graph::make_dependency_graph;
 use logging::messages::*;
 use model::vas_model::AbstractVas;
+use std::path::Path;
 
-const TIMEOUT_MINUTES: &str = "10"; // 
+const TIMEOUT_MINUTES: &str = "10"; //
 
 fn main() {
 	let matches = Command::new("practice")
@@ -151,7 +151,10 @@ fn main() {
 		Some(("bounds", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
 			let timeout = sub_m.get_one::<String>("timeout").unwrap();
-			message(&format!("Running ragtimer with models_dir: {} and timeout: {}", models_dir, timeout));
+			message(&format!(
+				"Running ragtimer with models_dir: {} and timeout: {}",
+				models_dir, timeout
+			));
 			let dir_path = Path::new(models_dir);
 			demos::bmc_demo::bmc_demo(dir_path, timeout.parse::<u64>().unwrap());
 		}
@@ -179,7 +182,10 @@ fn main() {
 		Some(("ragtimer", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
 			let timeout = sub_m.get_one::<String>("timeout").unwrap();
-			message(&format!("Running ragtimer with models_dir: {} and timeout: {}", models_dir, timeout));
+			message(&format!(
+				"Running ragtimer with models_dir: {} and timeout: {}",
+				models_dir, timeout
+			));
 			message(&format!("Ragtimer is not yet implemented in Practice."));
 			unimplemented!();
 		}
@@ -187,23 +193,34 @@ fn main() {
 			let model = sub_m.get_one::<String>("model").unwrap();
 			let trace = sub_m.get_one::<String>("trace").unwrap();
 			let output_file = sub_m.get_one::<String>("output_file").unwrap();
-			message(&format!("Running cycle-commute with model: {} and trace: {}", model, trace));
+			message(&format!(
+				"Running cycle-commute with model: {} and trace: {}",
+				model, trace
+			));
 			demos::cycle_commute_demo::cycle_commute_demo(model, trace, output_file);
 		}
 		Some(("stamina", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
 			let timeout = sub_m.get_one::<String>("timeout").unwrap();
-			message(&format!("Running stamina with models_dir: {} and timeout: {}", models_dir, timeout));
+			message(&format!(
+				"Running stamina with models_dir: {} and timeout: {}",
+				models_dir, timeout
+			));
 			unimplemented!();
 		}
 		Some(("wayfarer", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
 			let timeout = sub_m.get_one::<String>("timeout").unwrap();
-			message(&format!("Running wayfarer with models_dir: {} and timeout: {}", models_dir, timeout));
+			message(&format!(
+				"Running wayfarer with models_dir: {} and timeout: {}",
+				models_dir, timeout
+			));
 			unimplemented!();
 		}
 		_ => {
-			error(&format!("No valid subcommand was used. Use --help for more information."));
+			error(&format!(
+				"No valid subcommand was used. Use --help for more information."
+			));
 		}
 	}
 }

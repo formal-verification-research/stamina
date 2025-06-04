@@ -1,11 +1,21 @@
 /// This module implements the cycle commute algorithm for VAS models.
 /// It generates a PRISM-compatible state space from a given trace file.
 /// It then uses the trace to build a highly-concurrent and cyclical state space of the VAS model
-use std::{fs::File, io::{BufRead, BufReader}};
+use std::{
+	fs::File,
+	io::{BufRead, BufReader},
+};
 
 use nalgebra::DVector;
 
-use crate::{logging::{self, messages::*}, model::{model::Transition, vas_model::{AbstractVas, VasTransition}, vas_trie}};
+use crate::{
+	logging,
+	model::{
+    Transition
+		vas_model::{AbstractVas, VasTransition},
+		vas_trie,
+	},
+};
 use std::io::Write;
 use itertools::Itertools;
 
@@ -14,102 +24,123 @@ const MAX_DEPTH: usize = 2;
 const MAX_CYCLE_LENGTH: usize = 2;
 
 /// PrismStyleExplicitState represents a state in the PRISM-style explicit state space as described at
-/// https://www.prismmodelchecker.org/manual/RunningPRISM/ExplicitModelImport
+/// <https://www.prismmodelchecker.org/manual/RunningPRISM/ExplicitModelImport>
 #[derive(Debug, Clone)]
 struct PrismStyleExplicitState {
-    /// The VAS state vector
-    state_vector: DVector<i64>,
-    /// The total outgoing rate of the state, used to calculate the absorbing rate and mean residence time
-    total_rate: f64,
-    /// Label for the state, currently unused
-    label: String,
-    /// Vector of next states, here only for convenience in lookup while building the state space.
-    next_states: Vec<usize>,
+	/// The VAS state vector
+	state_vector: DVector<i64>,
+	/// The total outgoing rate of the state, used to calculate the absorbing rate and mean residence time
+	total_rate: f64,
+	/// Label for the state, currently unused
+	label: String,
+	/// Vector of next states, here only for convenience in lookup while building the state space.
+	next_states: Vec<usize>,
 }
 
 impl PrismStyleExplicitState {
-    /// Creates a new PrismStyleExplicitState from the given parameters.
-    fn from_state(state_vector: DVector<i64>, total_rate: f64, label: String, next_states: Vec<usize>) -> Self {
-        PrismStyleExplicitState {
-            state_vector,
-            total_rate,
-            label,
-            next_states,
-        }
-    }
+	/// Creates a new PrismStyleExplicitState from the given parameters.
+	fn from_state(
+		state_vector: DVector<i64>,
+		total_rate: f64,
+		label: String,
+		next_states: Vec<usize>,
+	) -> Self {
+		PrismStyleExplicitState {
+			state_vector,
+			total_rate,
+			label,
+			next_states,
+		}
+	}
 }
 
 /// This struct represents a transition in the PRISM-style explicit state space
 /// as described at https://www.prismmodelchecker.org/manual/RunningPRISM/ExplicitModelImport
 #[derive(Debug, Clone)]
 struct PrismStyleExplicitTransition {
-    /// The ID (in Prism) of the state from which the transition originates
-    from_state: usize,
-    /// The ID (in Prism) of the state to which the transition goes
-    to_state: usize,
-    /// The CTMC rate (for Prism) of the transition
-    rate: f64,
+	/// The ID (in Prism) of the state from which the transition originates
+	from_state: usize,
+	/// The ID (in Prism) of the state to which the transition goes
+	to_state: usize,
+	/// The CTMC rate (for Prism) of the transition
+	rate: f64,
 }
 
 /// This function calculates the outgoing rate of a transition.
 /// It currently assumes the SCK assumption that the rate
 /// depends on the product of the enabled bounds.
 impl VasTransition {
-    /// Calculates the SCK rate of the transition.
-    /// This function is temporary and intended only for quick C&C result generation --- 
-    /// it will eventually be replaced by a system-wide more-powerful rate calculation
-    /// that allows for more complex rate calculations.
-    fn get_sck_rate(&self) -> f64 {
-        self.rate_const * self.enabled_bounds.iter()
-            .filter(|&&r| r != 0)
-            .map(|&r| (r as f64))
-            .product::<f64>()
-    }
+	/// Calculates the SCK rate of the transition.
+	/// This function is temporary and intended only for quick C&C result generation ---
+	/// it will eventually be replaced by a system-wide more-powerful rate calculation
+	/// that allows for more complex rate calculations.
+	fn get_sck_rate(&self) -> f64 {
+		self.rate_const
+			* self
+				.enabled_bounds
+				.iter()
+				.filter(|&&r| r != 0)
+				.map(|&r| (r as f64))
+				.product::<f64>()
+	}
 }
 
 /// This function prints the PRISM-style explicit state space to .sta and .tra files.
 /// The .sta file contains the state vectors and their IDs,
 /// while the .tra file contains the transitions between states with their rates.
-fn print_prism_files(model: AbstractVas, prism_states: &[PrismStyleExplicitState], prism_transitions: &[PrismStyleExplicitTransition], output_file: &str) {
-    // Write .sta file
-    let mut sta_file = match File::create(format!("{}.sta", output_file)) {
-        Ok(f) => f,
-        Err(e) => {
-            logging::messages::error(&format!("Error creating .sta file: {}", e));
-            return;
-        }
-    };
-    // header
-    let var_names = model.variable_names.join(" ");
-    writeln!(sta_file, "({})", var_names).unwrap();
-    // states
-    for i in 0..prism_states.len() {
-        let state_str = prism_states[i].state_vector.iter()
-            .map(|x| x.to_string())
-            .collect::<Vec<_>>()
-            .join(",");
-        writeln!(sta_file, "{}: ({})", i, state_str).unwrap();
-    }
-    // Write .tra file
-    let mut tra_file = match File::create(format!("{}.tra", output_file)) {
-        Ok(f) => f,
-        Err(e) => {
-            logging::messages::error(&format!("Error creating .tra file: {}", e));
-            return;
-        }
-    };
-    // header
-    let num_states = prism_states.len();
-    let num_transitions = prism_transitions.len();
-    writeln!(tra_file, "{} {}", num_states, num_transitions).unwrap();
-    // transitions
-    for t in prism_transitions.iter().sorted_by_key(|t| t.from_state) {
-        writeln!(tra_file, "{} {} {}", t.from_state, t.to_state, t.rate).unwrap();
-    }
-    // Output results to the specified output file
-    logging::messages::message(&format!("Resulting explicit state space written to: {}.sta, .tra", output_file));
-    logging::messages::message(&format!("Check this with the following command:\n
-        prism -importtrans {}.tra -importstates {}.sta -ctmc", output_file, output_file));
+fn print_prism_files(
+	model: AbstractVas,
+	prism_states: &[PrismStyleExplicitState],
+	prism_transitions: &[PrismStyleExplicitTransition],
+	output_file: &str,
+) {
+	// Write .sta file
+	let mut sta_file = match File::create(format!("{}.sta", output_file)) {
+		Ok(f) => f,
+		Err(e) => {
+			logging::messages::error(&format!("Error creating .sta file: {}", e));
+			return;
+		}
+	};
+	// header
+	let var_names = model.variable_names.join(" ");
+	writeln!(sta_file, "({})", var_names).unwrap();
+	// states
+	for i in 0..prism_states.len() {
+		let state_str = prism_states[i]
+			.state_vector
+			.iter()
+			.map(|x| x.to_string())
+			.collect::<Vec<_>>()
+			.join(",");
+		writeln!(sta_file, "{}: ({})", i, state_str).unwrap();
+	}
+	// Write .tra file
+	let mut tra_file = match File::create(format!("{}.tra", output_file)) {
+		Ok(f) => f,
+		Err(e) => {
+			logging::messages::error(&format!("Error creating .tra file: {}", e));
+			return;
+		}
+	};
+	// header
+	let num_states = prism_states.len();
+	let num_transitions = prism_transitions.len();
+	writeln!(tra_file, "{} {}", num_states, num_transitions).unwrap();
+	// transitions
+	for t in prism_transitions.iter() {
+		writeln!(tra_file, "{} {} {}", t.from_state, t.to_state, t.rate).unwrap();
+	}
+	// Output results to the specified output file
+	logging::messages::message(&format!(
+		"Resulting explicit state space written to: {}.sta, .tra",
+		output_file
+	));
+	logging::messages::message(&format!(
+		"Check this with the following command:\n
+		prism -importtrans {}.tra -importstates {}.sta -ctmc",
+		output_file, output_file
+	));
 }
 
 /// This is the main function that implements the cycle & commute algorithm.

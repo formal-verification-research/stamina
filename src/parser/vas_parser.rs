@@ -17,12 +17,16 @@ impl Parser for VasParser {
 	}
 	#[trusted]
 	fn parse_or_panic(filename: &str) -> ModelType {
-				let model = Self::parse(filename);
-				match model {
-					Ok(model) => { return model.into(); },
-					Err(parse_error) => { std::panic!("{parse_error:?}"); },
-				};
+		let model = Self::parse(filename);
+		match model {
+			Ok(model) => {
+				return model.into();
 			}
+			Err(parse_error) => {
+				std::panic!("{parse_error:?}");
+			}
+		};
+	}
 }
 
 // Ensure ModelType is properly imported or defined
@@ -51,15 +55,15 @@ impl VasParseError {
 }
 #[trusted]
 impl ModelParseError for VasParseError {
-    #[trusted]
+	#[trusted]
 	fn line(&self) -> (u64, String) {
-        unimplemented!();
-    }
+		unimplemented!();
+	}
 
-    #[trusted]
+	#[trusted]
 	fn column(&self) -> Option<u64> {
-        unimplemented!();
-    }
+		unimplemented!();
+	}
 }
 #[trusted]
 impl ToString for VasParseError {

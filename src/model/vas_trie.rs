@@ -11,7 +11,7 @@ pub enum TrieNode {
 }
     
 /// Trie for storing VAS states, where each state is a vector of u64.
-/// WARNING: It is the user's responsibility to ensure that the 
+/// WARNING: It is the user's responsibility to ensure that the
 /// ordering of the state vector is consistent.
 impl TrieNode {
     /// Creates a new empty TrieNode.

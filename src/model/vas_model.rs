@@ -1,6 +1,9 @@
 use std::{collections::BTreeSet, fmt};
 
-use crate::{logging::messages::*, parser::vas_file_reader, property::property, validator::vas_validator::validate_vas};
+use crate::{
+	logging::messages::*, parser::vas_file_reader, property::property,
+	validator::vas_validator::validate_vas,
+};
 
 use metaverify::trusted;
 use nalgebra::DVector;
@@ -25,15 +28,14 @@ impl VasState {
 	// TODO: Maybe this shouldn't be none labels, or have an init label?
 	#[trusted]
 	pub fn new(vector: DVector<i64>) -> Self {
-		Self { 
-			vector, 
+		Self {
+			vector,
 			labels: None,
 		}
 	}
 }
 #[trusted]
 impl property::Labeled for VasState {
-	
 	type LabelType = property::StateFormula;
 
 	#[trusted]
@@ -44,7 +46,7 @@ impl property::Labeled for VasState {
 			.into_iter()
 			.flatten()
 	}
-		
+
 	#[trusted]
 	fn has_label(&self, label: &Self::LabelType) -> bool {
 		self.labels
@@ -88,7 +90,7 @@ impl evalexpr::Context for VasState {
 
 #[trusted]
 impl State for VasState {
-	type VariableValueType = u64; 
+	type VariableValueType = u64;
 
 	#[trusted]
 	fn valuate(&self, var_name: &str) -> Self::VariableValueType {
@@ -134,7 +136,10 @@ impl std::fmt::Debug for CustomRateFn {
 #[trusted]
 impl CustomRateFn {
 	#[trusted]
-	fn set_custom_rate_fn(&mut self, rate_fn: std::sync::Arc<dyn Fn(&VasState) -> f64 + Send + Sync + 'static>) {
+	fn set_custom_rate_fn(
+		&mut self,
+		rate_fn: std::sync::Arc<dyn Fn(&VasState) -> f64 + Send + Sync + 'static>,
+	) {
 		self.0 = rate_fn;
 	}
 }
@@ -148,25 +153,38 @@ impl VasTransition {
 	// 	self.rate_const = rate;
 	// }
 	#[trusted]
-	pub fn set_custom_rate_fn(&mut self, rate_fn: std::sync::Arc<dyn Fn(&VasState) -> f64 + Send + Sync + 'static>) {
+	pub fn set_custom_rate_fn(
+		&mut self,
+		rate_fn: std::sync::Arc<dyn Fn(&VasState) -> f64 + Send + Sync + 'static>,
+	) {
 		self.custom_rate_fn = Some(CustomRateFn(rate_fn));
 	}
 	#[trusted]
-	pub fn new(transition_id: usize, transition_name: String, increment: Box<[u64]>, decrement: Box<[u64]>, rate_const: f64) -> Self {
-		Self { 
+	pub fn new(
+		transition_id: usize,
+		transition_name: String,
+		increment: Box<[u64]>,
+		decrement: Box<[u64]>,
+		rate_const: f64,
+	) -> Self {
+		Self {
 			transition_id,
 			transition_name,
-			// update_vector: DVector::from_data(increment) - DVector::from_data(decrement), 
+			// update_vector: DVector::from_data(increment) - DVector::from_data(decrement),
 			update_vector: DVector::from_iterator(
 				increment.len(),
-				increment.iter().zip(decrement.iter()).map(|(inc, dec)| *inc as i128 - *dec as i128),
+				increment
+					.iter()
+					.zip(decrement.iter())
+					.map(|(inc, dec)| *inc as i128 - *dec as i128),
 			),
 			enabled_bounds: DVector::from_iterator(
 				decrement.len(),
 				decrement.iter().map(|dec| *dec as u64),
 			),
-			rate_const, 
-			custom_rate_fn: None }
+			rate_const,
+			custom_rate_fn: None,
+		}
 	}
 }
 
@@ -201,15 +219,17 @@ impl Transition for VasTransition {
 			.iter()
 			.zip(state.vector.iter())
 			.try_fold(true, |_, (bound, state_val)| {
-				if *state_val >= *bound as i64 { Some(true) } else { None }
+				if *state_val >= *bound as i64 {
+					Some(true)
+				} else {
+					None
+				}
 			})
 			.is_some()
-
 	}
 
 	#[trusted]
 	fn rate_probability_at(&self, state: &VasState) -> Option<f64> {
-
 		let enabled = self.enabled(state);
 		if enabled {
 			let rate = if let Some(rate_fn) = &self.custom_rate_fn {
@@ -217,14 +237,16 @@ impl Transition for VasTransition {
 			} else {
 				// Compute the transition rate using the same equation that
 				// is used for the chemical kinetics equation
-				self.rate_const * self.update_vector
-				.zip_fold(&state.vector, 1.0, |acc, state_i, update_i| {
-					if (update_i as f64) <= 0.0 {
-						acc * (state_i as f64).powf(-update_i as f64)
-					} else {
-						acc
-					}
-				})
+				self.rate_const
+					* self
+						.update_vector
+						.zip_fold(&state.vector, 1.0, |acc, state_i, update_i| {
+							if (update_i as f64) <= 0.0 {
+								acc * (state_i as f64).powf(-update_i as f64)
+							} else {
+								acc
+							}
+						})
 			};
 			Some(rate)
 		} else {
@@ -244,17 +266,20 @@ impl Transition for VasTransition {
 			None
 		}
 	}
-	
+
 	#[trusted]
-	fn next(&self, state: &Self::StateType) -> Option<(Self::RateOrProbabilityType, Self::StateType)> {
-				if let Some(rate) = self.rate_probability_at(state) {
-					// If we can't unwrap the next_state the implementation of this
-					// trait is wrong (only should be none if this trait is not enabled
-					Some((rate, self.next_state(state).unwrap()))
-				} else {
-					None
-				}
-			}
+	fn next(
+		&self,
+		state: &Self::StateType,
+	) -> Option<(Self::RateOrProbabilityType, Self::StateType)> {
+		if let Some(rate) = self.rate_probability_at(state) {
+			// If we can't unwrap the next_state the implementation of this
+			// trait is wrong (only should be none if this trait is not enabled
+			Some((rate, self.next_state(state).unwrap()))
+		} else {
+			None
+		}
+	}
 }
 
 #[derive(Clone, Debug)]
@@ -279,13 +304,17 @@ impl AbstractModel for AbstractVas {
 	type StateType = VasState;
 
 	#[trusted]
-	fn transitions(&self) -> impl Iterator<Item=VasTransition> {
+	fn transitions(&self) -> impl Iterator<Item = VasTransition> {
 		self.transitions.iter().cloned()
 	}
 
 	#[trusted]
-	fn initial_states(&self) -> impl Iterator<Item=(VasState, usize)> {
-		self.initial_states.iter().cloned().enumerate().map(|(i, state)| (state, i))
+	fn initial_states(&self) -> impl Iterator<Item = (VasState, usize)> {
+		self.initial_states
+			.iter()
+			.cloned()
+			.enumerate()
+			.map(|(i, state)| (state, i))
 	}
 
 	#[trusted]
@@ -316,13 +345,18 @@ impl fmt::Display for AllowedRelation {
 // for now we will just use continuous time models
 #[trusted]
 impl AbstractVas {
-	pub fn new(variable_names: Box<[String]>, initial_states: Vec<VasState>, transitions: Vec<VasTransition>, target: VasProperty) -> Self {
-		Self { 
+	pub fn new(
+		variable_names: Box<[String]>,
+		initial_states: Vec<VasState>,
+		transitions: Vec<VasTransition>,
+		target: VasProperty,
+	) -> Self {
+		Self {
 			variable_names,
-			initial_states, 
-			transitions, 
+			initial_states,
+			transitions,
 			m_type: ModelType::ContinuousTime,
-			target
+			target,
 		}
 	}
 
@@ -337,7 +371,7 @@ impl AbstractVas {
 			Err(err) => {
 				error(&format!("ERROR DURING PARSING: {}", err));
 				Err(err.to_string())
-			},
+			}
 		}
 	}
 
@@ -347,16 +381,18 @@ impl AbstractVas {
 		let result = validate_vas(self, &property);
 		result
 	}
-	
+
 	/// Look up the index/ID of a transition by its name
 	#[trusted]
 	pub fn get_transition_from_name(&self, transition_name: &str) -> Option<&VasTransition> {
-		self.transitions.iter().find(|t| t.transition_name == transition_name)
+		self.transitions
+			.iter()
+			.find(|t| t.transition_name == transition_name)
 	}
 
 	/// Outputs a model in a debuggable string format
 	#[trusted]
-	pub fn debug_print(&self) -> String{
+	pub fn debug_print(&self) -> String {
 		let mut output = String::new();
 		output.push_str(&format!("VasModel:"));
 		output.push_str(&format!("Variables: {:?}", self.variable_names));
@@ -373,20 +409,34 @@ impl AbstractVas {
 		output.push_str("              BEGIN VAS MODEL             \n");
 		output.push_str("==========================================\n");
 		output.push_str("Variables:\n");
-		self.variable_names.iter().for_each(|name| output.push_str(&format!("\t{}", name)));
+		self.variable_names
+			.iter()
+			.for_each(|name| output.push_str(&format!("\t{}", name)));
 		output.push_str("\n");
 		output.push_str("Initial States:\n");
 		for state in self.initial_states.clone() {
-			state.vector.iter().for_each(|name| output.push_str(&format!("\t{}", name)));
+			state
+				.vector
+				.iter()
+				.for_each(|name| output.push_str(&format!("\t{}", name)));
 		}
 		output.push_str("\n");
 		output.push_str("Transitions:\n");
 		for transition in self.transitions.clone() {
-			output.push_str(&format!("\t{}\t{}\n", transition.transition_id, transition.transition_name));
+			output.push_str(&format!(
+				"\t{}\t{}\n",
+				transition.transition_id, transition.transition_name
+			));
 			output.push_str("\t\tUpdate:\t[");
-			transition.update_vector.iter().for_each(|name| output.push_str(&format!("\t{}", name)));
+			transition
+				.update_vector
+				.iter()
+				.for_each(|name| output.push_str(&format!("\t{}", name)));
 			output.push_str("\t]\n\t\tEnable:\t[");
-			transition.enabled_bounds.iter().for_each(|name| output.push_str(&format!("\t{}", name)));
+			transition
+				.enabled_bounds
+				.iter()
+				.for_each(|name| output.push_str(&format!("\t{}", name)));
 			output.push_str(&format!("\t]\n\t\tRate:\t{}\n", transition.rate_const));
 		}
 		output.push_str("Target:\n");

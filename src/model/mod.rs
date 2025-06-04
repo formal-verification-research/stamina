@@ -1,4 +1,4 @@
 // pub mod parser;
-pub mod vas_model;
 pub mod model;
+pub mod vas_model;
 pub mod vas_trie;

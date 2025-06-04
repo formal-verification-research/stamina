@@ -24,11 +24,19 @@ impl fmt::Display for dyn ModelParseError {
 		let err_str = self.to_string();
 		let marker = if col.is_some() {
 			let col_n = col.unwrap();
-			format!("{}^{}", " ".repeat(col_n as usize), "-".repeat(line_content.len() - col_n as usize - 1))
+			format!(
+				"{}^{}",
+				" ".repeat(col_n as usize),
+				"-".repeat(line_content.len() - col_n as usize - 1)
+			)
 		} else {
 			"^".repeat(line_content.len())
 		};
-		write!(f, "[Parse Error] Error in model parsing. Unable to parse model!\n{}: {}\n{}\n{}", line_num, line_content, marker, err_str)
+		write!(
+			f,
+			"[Parse Error] Error in model parsing. Unable to parse model!\n{}: {}\n{}\n{}",
+			line_num, line_content, marker, err_str
+		)
 	}
 }
 
@@ -44,8 +52,12 @@ pub(crate) trait Parser {
 	fn parse_or_panic(filename: &str) -> ModelType {
 		let model = Self::parse(filename);
 		match model {
-			Ok(model) => { return model.into(); },
-			Err(parse_error) => { panic!("{parse_error:?}"); },
+			Ok(model) => {
+				return model.into();
+			}
+			Err(parse_error) => {
+				panic!("{parse_error:?}");
+			}
 		};
 	}
 }
