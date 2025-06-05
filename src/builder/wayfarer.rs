@@ -14,7 +14,7 @@ struct AffineSpace {
 pub(crate) struct WayfarerBuilder {
 	create_pmin: bool,
 	model_built: bool,
-    solution_space: AffineSpace,
+	solution_space: AffineSpace,
 	nested_spaces: Option<Vec<AffineSpace>>,
 	abstract_model: Arc<AbstractModelType>,
 }
