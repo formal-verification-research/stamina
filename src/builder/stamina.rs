@@ -9,8 +9,8 @@ use std::collections::VecDeque;
 #[trusted]
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum RangeResult {
-    NoResult,
-    Range(f64, f64),
+	NoResult,
+	Range(f64, f64),
 }
 #[trusted]
 impl Default for RangeResult {

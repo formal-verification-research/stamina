@@ -9,7 +9,7 @@ use std::{
 use nalgebra::DVector;
 
 use crate::{
-	logging,
+	logging::{self, messages::*},
 	model::{
 		vas_model::{AbstractVas, VasTransition},
 		vas_trie,
