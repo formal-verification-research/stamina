@@ -8,13 +8,13 @@ The following are required for correct execution:
 
 0. Suitable operating system. PRACTICE is designed to be cross-compatible, but current features have been designed and tested on Ubuntu 24.
 1. Correct installation of `z3` including `clang`:
-    ```
-    sudo apt-get install z3 clang libclang-dev
-    ```
+	```
+	sudo apt-get install z3 clang libclang-dev
+	```
 2. Correct installation of Rust:
-    ```
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-    ```
+	```
+	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+	```
 
 Test your `z3` installation with `z3 --version` and your Rust installation with `rustc --version`.
 
