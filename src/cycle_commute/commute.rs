@@ -319,7 +319,7 @@ fn commute(
 		.filter(|t| t.enabled_vector(&current_state))
 		.collect();
 	let mut universally_enabled_transitions: Vec<&VasTransition> = enabled_transitions.clone();
-	for transition in trace {
+	for _ in trace {
 		current_state = initial_state_vector.clone(); // Start from the initial state
 		enabled_transitions = model
 			.transitions

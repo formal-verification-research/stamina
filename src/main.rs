@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod bmc;
 mod cycle_commute;
 mod demos;
@@ -6,9 +8,9 @@ mod logging;
 mod model;
 mod parser;
 mod property;
+mod ragtimer;
 mod util;
 mod validator;
-mod ragtimer;
 
 use clap::{Arg, Command};
 use dependency::graph::make_dependency_graph;
@@ -207,7 +209,11 @@ fn main() {
 			let dg = make_dependency_graph(&parsed_model);
 			if let Ok(Some(dependency_graph)) = &dg {
 				dependency_graph.pretty_print(&parsed_model);
-				let traces = ragtimer::rl_traces::generate_traces(&parsed_model, dependency_graph, num_traces);
+				let traces = ragtimer::rl_traces::generate_traces(
+					&parsed_model,
+					dependency_graph,
+					num_traces,
+				);
 				print_traces_to_file(&traces, "ragtimer_traces.txt");
 			} else {
 				error(&format!("Error creating dependency graph."));

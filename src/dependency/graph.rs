@@ -185,7 +185,7 @@ impl GraphNode {
 					.all(|p| p.transition_name != trans.transition_name)
 				{
 					let mut this_child_targets: Vec<VasProperty> = Vec::new();
-					let mut executions: i128 = 0;
+					let executions: i128;
 					if (target.target_value > 0 && trans.update_vector[target.variable_index] > 0)
 						|| (target.target_value < 0
 							&& trans.update_vector[target.variable_index] < 0)
