@@ -394,6 +394,14 @@ impl AbstractVas {
 			.find(|t| t.transition_name == transition_name)
 	}
 
+	/// Look up the name of a transition by its index
+	#[trusted]
+	pub fn get_transition_from_id(&self, transition_id: usize) -> Option<&VasTransition> {
+		self.transitions
+			.iter()
+			.find(|t| t.transition_id == transition_id)
+	}
+
 	/// Outputs a model in a debuggable string format
 	#[trusted]
 	pub fn debug_print(&self) -> String {

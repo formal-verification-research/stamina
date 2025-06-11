@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod bmc;
 mod cycle_commute;
 mod demos;
@@ -6,6 +8,7 @@ mod logging;
 mod model;
 mod parser;
 mod property;
+mod ragtimer;
 mod util;
 mod validator;
 
@@ -14,6 +17,8 @@ use dependency::graph::make_dependency_graph;
 use logging::messages::*;
 use model::vas_model::AbstractVas;
 use std::path::Path;
+
+use crate::ragtimer::rl_traces::print_traces_to_file;
 
 const TIMEOUT_MINUTES: &str = "10"; //
 
@@ -56,15 +61,22 @@ fn main() {
 		)
 		.subcommand(
 			Command::new("ragtimer")
-				.about("Run the ragtimer tool")
+				.about("Run the ragtimer tool (currently including only the RL Traces tool)")
 				.arg(
-					Arg::new("models_dir")
-						.required(true)
+					Arg::new("model")
 						.short('d')
-						.long("models-dir")
-						.value_name("DIR")
-						.help("Sets the directory containing model folders")
-						.default_value("models"),
+						.long("model")
+						.value_name("MODEL")
+						.help("Sets the model file (crn format)")
+						.required(true),
+				)
+				.arg(
+					Arg::new("qty")
+						.short('q')
+						.long("qty")
+						.value_name("QTY")
+						.help("Sets the number of traces to generate (default 100)")
+						.default_value("100"),
 				)
 				.arg(
 					Arg::new("timeout")
@@ -83,7 +95,7 @@ fn main() {
 						.short('d')
 						.long("model-file")
 						.value_name("MODEL")
-						.help("Sets the directory containing model folders")
+						.help("Sets the model file (crn format)")
 						.required(true),
 				)
 				.arg(
@@ -180,14 +192,33 @@ fn main() {
 			}
 		}
 		Some(("ragtimer", sub_m)) => {
-			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
-			let timeout = sub_m.get_one::<String>("timeout").unwrap();
-			message(&format!(
-				"Running ragtimer with models_dir: {} and timeout: {}",
-				models_dir, timeout
-			));
-			message(&format!("Ragtimer is not yet implemented in Practice."));
-			unimplemented!();
+			let num_traces = sub_m
+				.get_one::<String>("qty")
+				.and_then(|s| s.parse::<usize>().ok())
+				.unwrap();
+			let model_file = sub_m.get_one::<String>("model").unwrap();
+			message(&format!("Running ragtimer with models: {}", model_file));
+			let parsed_model = AbstractVas::from_file(model_file);
+			if !parsed_model.is_ok() {
+				error(&format!("Error parsing model file: {}", model_file));
+				return;
+			}
+			let parsed_model = parsed_model.unwrap();
+			message(&format!("MODEL PARSED\n\n"));
+			message(&format!("{}", parsed_model.nice_print()));
+			let dg = make_dependency_graph(&parsed_model);
+			if let Ok(Some(dependency_graph)) = &dg {
+				dependency_graph.pretty_print(&parsed_model);
+				let traces = ragtimer::rl_traces::generate_traces(
+					&parsed_model,
+					dependency_graph,
+					num_traces,
+				);
+				print_traces_to_file(&traces, "ragtimer_traces.txt");
+			} else {
+				error(&format!("Error creating dependency graph."));
+				return;
+			}
 		}
 		Some(("cycle-commute", sub_m)) => {
 			let model = sub_m.get_one::<String>("model").unwrap();

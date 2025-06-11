@@ -39,7 +39,7 @@ pub fn bmc_demo(crn_model_directory: &Path, timeout_minutes: u64) {
 	// This function is a placeholder for the actual BMC demo logic
 	message(&format!("Running BMC demo..."));
 	// Collect all .crn files in the directory and its subdirectories
-	let mut crn_files: Vec<String> = get_crn_files(crn_model_directory);
+	let crn_files: Vec<String> = get_crn_files(crn_model_directory);
 	// Uncomment the following lines to test specific models manually instead of all models in the directory:
 	// let mut crn_files: Vec<String> = Vec::new();
 	// crn_files.push("ModifiedYeastPolarization/ModifiedYeastPolarization.crn".to_string());
