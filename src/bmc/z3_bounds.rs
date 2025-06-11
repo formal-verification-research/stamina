@@ -72,12 +72,12 @@ pub fn get_bounds(model: AbstractVas, bits: u32) {
 
 			// Consumption
 			if transition.enabled_bounds[i] > 0 {
-			let consumption_constraint = state_var.bvuge(&ast::BV::from_i64(
-				&ctx,
-				transition.enabled_bounds[i].try_into().unwrap(),
-				bits,
-			));
-			current_transition_constraints.push(consumption_constraint);
+				let consumption_constraint = state_var.bvuge(&ast::BV::from_i64(
+					&ctx,
+					transition.enabled_bounds[i].try_into().unwrap(),
+					bits,
+				));
+				current_transition_constraints.push(consumption_constraint);
 			}
 			
 			let update_constraint = if *update > 0 {

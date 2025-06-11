@@ -5,7 +5,12 @@ use z3::{
 
 use crate::bmc::unroller::Unroller;
 
-// Returns (formula, steps)
+/// Performs symbolic BMC and returns the result formula and number of steps taken on a tuple.
+/// `init_formula`: The initial formula representing the system
+/// `trans_formula`: The transition formula modifying the system
+/// `target_formula`: The formula identifying the target
+/// `unroller`: The unroller used
+/// `steps`: The max number of steps
 pub fn bmc<'a>(
 	init_formula: ast::Bool<'a>,
 	trans_formula: ast::Bool<'a>,

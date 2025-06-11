@@ -12,20 +12,19 @@ use crate::{
 };
 
 /// Prints the Z3 encoding of the VAS model for BMC.
+#[cfg(debug_assertions)]
 pub fn print_z3_encoding(model: AbstractVas, bits: u32, steps: u32) {
 	let cfg = Config::new();
 	let ctx = Context::new(&cfg);
 	let (unroller, init_formula, trans_formula, target_formula) =
 		build_z3_encoding(&model, bits, &ctx);
 	let formula = bmc(init_formula, trans_formula, target_formula, unroller, steps);
-	message(&format!("{}", "=".repeat(80)));
-	message(&format!("Z3 Encoding:"));
-	message(&format!("{:?}", formula));
-	message(&format!("{}", "=".repeat(80)));
+	message(&format!("Z3 Encoding:\n {:?}", formula));
 }
 
 /// Prints a satisfying model for the VAS model using BMC.
 /// Because this uses BMC, it stops at the first SAT result, not necessarily going until k
+#[cfg(debug_assertions)]
 pub fn print_satisfying_model(model: AbstractVas, bits: u32, steps: u32) {
 	let cfg = Config::new();
 	let ctx = Context::new(&cfg);
@@ -63,9 +62,7 @@ pub fn build_z3_encoding<'ctx>(
 	ast::Bool<'ctx>,
 	ast::Bool<'ctx>,
 ) {
-	message(&format!("{}", "=".repeat(80)));
 	message(&format!("Z3 Encoder for VAS"));
-	message(&format!("{}", "=".repeat(80)));
 	debug_message(&format!("Using {}-bit vectors", bits));
 	// State variables and initialization
 	let mut init_constraints = vec![];
