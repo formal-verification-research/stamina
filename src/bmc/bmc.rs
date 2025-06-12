@@ -3,7 +3,7 @@ use z3::{
 	SatResult, Solver,
 };
 
-use crate::bmc::unroller::Unroller;
+use crate::{bmc::unroller::Unroller, logging::messages::*};
 
 /// Performs symbolic BMC and returns the result formula and number of steps taken on a tuple.
 /// `init_formula`: The initial formula representing the system
@@ -18,9 +18,7 @@ pub fn bmc<'a>(
 	mut unroller: Unroller<'a>,
 	steps: u32,
 ) -> (ast::Bool<'a>, u32) {
-	println!("{}", "=".repeat(80));
-	println!("Bounded Model Checking to {} steps", steps);
-	println!("{}", "=".repeat(80));
+	debug_message(&format!("Bounded Model Checking to {} steps", steps));
 
 	let ctx = init_formula.get_ctx();
 	let solver = Solver::new(&ctx);
@@ -29,7 +27,7 @@ pub fn bmc<'a>(
 
 	for k in 0..steps {
 		max_k = k;
-		println!("-- TIME {:3} --", k);
+		debug_message(&format!("-- TIME {:3} --", k));
 
 		let step_formula =
 			&ast::Bool::and(&ctx, &[&formula, &unroller.at_time(&target_formula, k)]);
@@ -49,7 +47,7 @@ pub fn bmc<'a>(
 	}
 
 	// println!("Final formula:\n{:?}", formula);
-	println!("Final steps: {}", max_k);
+	debug_message(&format!("Finished BMC with actual step count of {}", max_k));
 
 	(formula, max_k)
 }

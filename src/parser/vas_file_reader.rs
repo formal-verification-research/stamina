@@ -4,11 +4,11 @@ use metaverify::trusted;
 use nalgebra::DVector;
 
 use crate::{
+	logging::messages::*,
 	model::{
 		model::AbstractModel,
 		vas_model::{AbstractVas, VasProperty, VasState, VasTransition},
 	},
-	property,
 	util::util::read_lines,
 };
 
@@ -479,8 +479,11 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 	let transitions = match build_transitions(transition_lines, &variable_names) {
 		Ok(result) => result,
 		Err(e) => {
-			println!("ERROR DURING TRANSITION PARSING:\n{}", e.to_string());
-			println!("HERE");
+			error(&format!(
+				"ERROR DURING TRANSITION PARSING:\n{}",
+				e.to_string()
+			));
+			error(&format!("HERE"));
 			return Err(e);
 		}
 	};
