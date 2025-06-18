@@ -1,4 +1,4 @@
-pub mod bmc;
-pub mod bounder;
-pub mod formula;
+pub mod bounds;
+pub mod encoding;
 pub mod unroller;
+pub mod vas_bmc;

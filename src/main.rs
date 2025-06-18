@@ -38,14 +38,6 @@ fn main() {
 						.help("Sets the directory containing model folders")
 						.default_value("models"),
 				)
-				.arg(
-					Arg::new("timeout")
-						.short('t')
-						.long("timeout")
-						.value_name("MINUTES")
-						.help("Timeout in minutes for get_bounds")
-						.default_value(TIMEOUT_MINUTES),
-				)
 		)
 		.subcommand(
 			Command::new("dependency-graph")
@@ -162,13 +154,9 @@ fn main() {
 	match matches.subcommand() {
 		Some(("bounds", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
-			let timeout = sub_m.get_one::<String>("timeout").unwrap();
-			message(&format!(
-				"Running ragtimer with models_dir: {} and timeout: {}",
-				models_dir, timeout
-			));
+			message(&format!("Running ragtimer with models_dir: {}", models_dir));
 			let dir_path = Path::new(models_dir);
-			demos::bmc_demo::bmc_demo(dir_path, timeout.parse::<u64>().unwrap());
+			demos::bmc_demo::bmc_demo(dir_path);
 		}
 		Some(("dependency-graph", sub_m)) => {
 			// TODO: Move this whole thing to a demo

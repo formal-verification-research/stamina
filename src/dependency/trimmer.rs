@@ -9,7 +9,7 @@ use super::graph::DependencyGraph;
 
 /// This trims the model by removing unnecessary variables and transitions
 /// determined by the dependency graph.
-pub fn trim_model(model: AbstractVas, dg: DependencyGraph) -> AbstractVas {
+pub fn trim_model(model: &AbstractVas, dg: DependencyGraph) -> AbstractVas {
 	let mut variable_names = Vec::<String>::new();
 	let mut initial_state = Vec::<u64>::new();
 	let mut transitions = Vec::<VasTransition>::new();
@@ -86,6 +86,7 @@ pub fn trim_model(model: AbstractVas, dg: DependencyGraph) -> AbstractVas {
 		transitions: transitions,
 		m_type: model.m_type,
 		target: target,
+		z3_context: None,
 	};
 	trimmed_model
 }

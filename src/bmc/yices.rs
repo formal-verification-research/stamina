@@ -1,1 +1,0 @@
-// TODO: Get yices2 install working.
