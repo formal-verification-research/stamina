@@ -1,7 +1,7 @@
 use std::{collections::BTreeSet, fmt};
 
 use crate::{
-	logging::messages::*, parser::vas_file_reader, property::property,
+	logging::messages::*, model::model::ExplicitModel, parser::vas_file_reader, property::property,
 	validator::vas_validator::validate_vas,
 };
 
@@ -466,5 +466,90 @@ impl AbstractVas {
 		output.push_str("               END VAS MODEL              \n");
 		output.push_str("==========================================\n");
 		output
+	}
+}
+
+/// The data for an abstract Vector Addition System
+// #[derive(Clone)]
+pub(crate) struct VasPrismExport {
+	pub(crate) variable_names: Box<[String]>,
+	pub(crate) initial_states: Vec<VasState>,
+	pub(crate) transitions: Vec<VasTransition>,
+	pub(crate) m_type: ModelType,
+	pub(crate) target: VasProperty,
+	pub(crate) z3_context: Option<z3::Context>, // Removed because z3::Context and z3::Config do not implement Clone
+}
+
+impl Default for VasPrismExport {
+	fn default() -> Self {
+		VasPrismExport {
+			variable_names: Box::new([]),
+			initial_states: Vec::new(),
+			transitions: Vec::new(),
+			m_type: ModelType::ContinuousTime,
+			target: VasProperty {
+				variable_index: 0,
+				target_value: 0,
+			},
+			z3_context: None,
+		}
+	}
+}
+
+impl ExplicitModel for VasPrismExport {
+	type StateType = VasState;
+	type TransitionType = VasTransition;
+	type MatrixType = (); // TODO: Replace `()` with the actual matrix type eventually
+
+	#[doc = " Maps the state to a state index (in our case just a usize)"]
+	fn state_to_index(&self, state: &Self::StateType) -> Option<usize> {
+		todo!()
+	}
+
+	#[doc = " Like `state_to_index` but if the state is not present adds it and"]
+	#[doc = " assigns it a new index"]
+	fn find_or_add_index(&mut self, state: &Self::StateType) -> usize {
+		todo!()
+	}
+
+	#[doc = " Reserve an index in the explicit model (useful for artificially introduced absorbing"]
+	#[doc = " states). Returns whether or not the index was able to be reserved."]
+	fn reserve_index(&mut self, index: usize) -> bool {
+		todo!()
+	}
+
+	#[doc = " The number of states added to our model so far"]
+	fn state_count(&self) -> usize {
+		todo!()
+	}
+
+	#[doc = " The type of this model"]
+	fn model_type(&self) -> ModelType {
+		todo!()
+	}
+
+	#[doc = " Adds an entry to the sparse matrix"]
+	fn add_entry(
+		&mut self,
+		from_idx: usize,
+		to_idx: usize,
+		entry: <Self::TransitionType as Transition>::RateOrProbabilityType,
+	) {
+		todo!()
+	}
+
+	#[doc = " Converts this model into a sparse matrix"]
+	fn to_matrix(&self) -> Self::MatrixType {
+		todo!()
+	}
+
+	#[doc = " Whether or not this model has not been expanded yet/is empty"]
+	fn empty(&self) -> bool {
+		todo!()
+	}
+
+	#[doc = " Whether or not `state` is present in the model"]
+	fn has_state(&self, state: &Self::StateType) -> bool {
+		self.state_to_index(state).is_some()
 	}
 }

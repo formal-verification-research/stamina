@@ -8,7 +8,9 @@ mod logging;
 mod model;
 mod parser;
 mod property;
-mod ragtimer;
+// mod ragtimer;
+mod builder;
+mod trace;
 mod util;
 mod validator;
 
@@ -18,7 +20,7 @@ use logging::messages::*;
 use model::vas_model::AbstractVas;
 use std::path::Path;
 
-use crate::ragtimer::rl_traces::print_traces_to_file;
+// use crate::ragtimer::rl_traces::print_traces_to_file;
 
 const TIMEOUT_MINUTES: &str = "10"; //
 

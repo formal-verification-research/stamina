@@ -1,10 +1,7 @@
-use metaverify::*;
+use std::sync::Arc;
 
-use crate::*;
+use crate::model::model::{AbstractModel, ExplicitModel};
 
-use model::*;
-
-#[trusted]
 /// A trait which must be implemented by any struct that
 /// builds a model (i.e., converts it from `AbstractModel` to
 /// `ExplicitModel`. The philosophy behind this trait is that
@@ -28,13 +25,13 @@ pub(crate) trait Builder {
 	/// Whether or not we are finished or should continue. The reason that this takes
 	/// a `&mut self` is many implementations may want to only have exactly one
 	/// iteration and keep an internal flag tripped after this function is called.
-	fn finished(&mut self, result: &ResultType) -> bool;
+	fn finished(&mut self, result: &Self::ResultType) -> bool;
 
 	/// Performs the next iteration of building the model
-	fn build(&mut self, explicit_model: &mut ExplicitModelType);
+	fn build(&mut self, explicit_model: &mut Self::ExplicitModelType);
 
 	/// Gets the abstract model that we're working with
-	fn get_abstract_model(&self) -> Arc<AbstractModelType>;
+	fn get_abstract_model(&self) -> Arc<Self::AbstractModelType>;
 
 	// TODO
 }
