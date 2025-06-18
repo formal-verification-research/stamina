@@ -4,7 +4,7 @@ use z3::ast::{self, Ast};
 
 #[derive(Debug, Clone)]
 pub struct Unroller<'ctx> {
-	state_vars: HashMap<String, ast::BV<'ctx>>,
+	pub state_vars: HashMap<String, ast::BV<'ctx>>,
 	next_vars: HashMap<String, ast::BV<'ctx>>,
 	var_cache: HashMap<(String, u32), ast::BV<'ctx>>,
 	time_cache: Vec<HashMap<ast::BV<'ctx>, ast::BV<'ctx>>>,

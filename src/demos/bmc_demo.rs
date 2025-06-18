@@ -1,4 +1,4 @@
-use crate::bmc::bounder::get_bounds;
+use crate::bmc::vas_bmc::AbstractVasBmc;
 use crate::dependency;
 use crate::dependency::graph::make_dependency_graph;
 use crate::logging::messages::*;
@@ -6,7 +6,6 @@ use crate::model::vas_model::AbstractVas;
 
 use std::fs;
 use std::path::Path;
-use std::time::Instant;
 
 /// Gets the list of .crn files in the models directory
 fn get_crn_files(dir_path: &Path) -> Vec<String> {
@@ -35,7 +34,7 @@ fn get_crn_files(dir_path: &Path) -> Vec<String> {
 /// The directory should contain subdirectories with .crn files.
 /// This is not meant to be used by an end user, but rather as a demo
 /// or proof of concept for the BMC functionality.
-pub fn bmc_demo(crn_model_directory: &Path, timeout_minutes: u64) {
+pub fn bmc_demo(crn_model_directory: &Path) {
 	// This function is a placeholder for the actual BMC demo logic
 	message(&format!("Running BMC demo..."));
 	// Collect all .crn files in the directory and its subdirectories
@@ -46,11 +45,11 @@ pub fn bmc_demo(crn_model_directory: &Path, timeout_minutes: u64) {
 	// crn_files.push("EnzymaticFutileCycle/EnzymaticFutileCycle.crn".to_string());
 	for m in crn_files {
 		// Parse each model file
-		message(&format!("\n{}\n", "█".repeat(80)));
-		message(&format!("Model: models/{}", m));
-		let parsed_model = AbstractVas::from_file(&format!("models/{}", m));
+		message(&format!("Model: {}", m));
+		let model_path = crn_model_directory.join(&m);
+		let parsed_model = AbstractVas::from_file(model_path.to_str().unwrap());
 		if parsed_model.is_ok() {
-			let model = parsed_model.unwrap();
+			let mut model = parsed_model.unwrap();
 			message(&format!("Finished parsing model: {}", m));
 			debug_message(&format!("Model: {}", model.nice_print()));
 			// Build the dependency graph
@@ -62,66 +61,23 @@ pub fn bmc_demo(crn_model_directory: &Path, timeout_minutes: u64) {
 					"Dependency graph: {:?}",
 					dependency_graph.nice_print(&model)
 				));
+
+				model.setup_z3();
+				let bmc_encoding = model.bmc_encoding();
+				let _ = model.variable_bounds(&bmc_encoding);
+				message("Bounding completed successfully on original model.");
+
 				// Trim the model using the dependency graph
-				let trimmed_model =
-					dependency::trimmer::trim_model(model.clone(), dependency_graph.clone());
+				let mut trimmed_model =
+					dependency::trimmer::trim_model(&model, dependency_graph.clone());
 				message(&format!("Trimmed model created for model: {}", m));
 				debug_message(&format!("{}", trimmed_model.nice_print()));
-				let start = Instant::now();
-				let result = std::thread::spawn(move || {
-					// TODO: Implement a calculator instead of a fixed number of bits
-					get_bounds(model.clone(), 8)
-				});
-				let timeout = std::time::Duration::from_secs(timeout_minutes * 60);
-				let (tx, rx) = std::sync::mpsc::channel();
-				std::thread::spawn(move || {
-					let _ = result.join();
-					let _ = tx.send(());
-				});
-				if rx.recv_timeout(timeout).is_ok() {
-					debug_message(&format!("get_bounds completed successfully"));
-				} else {
-					warning(&format!(
-						"get_bounds timed out after {} minutes",
-						timeout_minutes
-					));
-				}
-				let duration = start.elapsed();
-				message(&format!(
-					"Time taken by get_bounds on regular model: {:?}",
-					duration
-				));
-				let start = Instant::now();
-				let result = std::thread::spawn(move || get_bounds(trimmed_model.clone(), 8));
-				let timeout = std::time::Duration::from_secs(timeout_minutes * 60);
-				let (tx, rx) = std::sync::mpsc::channel();
-				std::thread::spawn(move || {
-					let _ = result.join();
-					let _ = tx.send(());
-				});
-				if rx.recv_timeout(timeout).is_ok() {
-					debug_message(&format!("get_bounds completed successfully"));
-				} else {
-					warning(&format!(
-						"get_bounds timed out after {} minutes",
-						timeout_minutes
-					));
-				}
-				let duration = start.elapsed();
-				message(&format!(
-					"Time taken by get_bounds on trimmed model: {:?}",
-					duration
-				));
-			} else {
-				message(&format!("Failed to create dependency graph"));
+
+				trimmed_model.setup_z3();
+				let bmc_encoding = trimmed_model.bmc_encoding();
+				let _ = trimmed_model.variable_bounds(&bmc_encoding);
+				message("Bounding completed successfully on trimmed model.");
 			}
-		} else {
-			error(&format!("parsing failed"));
-			if let Err(e) = parsed_model {
-				error(&format!("{}", e));
-			}
-			continue;
 		}
-		error(&format!("\n{}\n", "█".repeat(80)));
 	}
 }

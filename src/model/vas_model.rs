@@ -293,13 +293,14 @@ pub struct VasProperty {
 }
 
 /// The data for an abstract Vector Addition System
-#[derive(Clone)]
+// #[derive(Clone)]
 pub(crate) struct AbstractVas {
 	pub(crate) variable_names: Box<[String]>,
 	pub(crate) initial_states: Vec<VasState>,
 	pub(crate) transitions: Vec<VasTransition>,
 	pub(crate) m_type: ModelType,
 	pub(crate) target: VasProperty,
+	pub(crate) z3_context: Option<z3::Context>, // Removed because z3::Context and z3::Config do not implement Clone
 }
 
 #[trusted]
@@ -361,6 +362,7 @@ impl AbstractVas {
 			transitions,
 			m_type: ModelType::ContinuousTime,
 			target,
+			z3_context: None, // z3_context is not initialized here
 		}
 	}
 
