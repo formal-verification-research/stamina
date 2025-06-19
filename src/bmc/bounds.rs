@@ -141,6 +141,7 @@ impl<'a> BMCBounds {
 			let mut min_bound: VasValue = 0;
 			let mut max_bound: VasValue = model.initial_states[0].vector[state_var_index];
 			let mut bound: VasValue = model.initial_states[0].vector[state_var_index];
+
 			loop {
 				if max_bound == 0 {
 					bound = 0;
