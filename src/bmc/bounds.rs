@@ -55,7 +55,6 @@ impl<'a> BMCBounds {
 			let mut min_bound = model.initial_states.clone()[0].vector[state_var_index];
 			let mut max_bound = (1 << bits) - 1;
 			let mut bound = 0;
-			debug_message(&format!("Checking loose upper bound for {}", variable_name));
 			// This loop does a binary search for the loosest upper bound
 			loop {
 				solver.reset();
@@ -87,7 +86,7 @@ impl<'a> BMCBounds {
 			variable_bounds
 				.ub_loose
 				.insert(variable_name.clone(), bound);
-			message(&format!(
+			debug_message(&format!(
 				"{} loose upper bound is: {}",
 				variable_name, variable_bounds.ub_loose[variable_name]
 			));
@@ -99,7 +98,6 @@ impl<'a> BMCBounds {
 			let mut min_bound = model.initial_states.clone()[0].vector[state_var_index];
 			let mut max_bound = (1 << bits) - 1;
 			let mut bound = (1 << bits) - 1;
-			debug_message(&format!("Checking tight upper bound for {}", s));
 			// This loop does a binary search for the tightest upper bound
 			loop {
 				solver.reset();
@@ -130,7 +128,7 @@ impl<'a> BMCBounds {
 				}
 			}
 			variable_bounds.ub_tight.insert(s.clone(), bound);
-			message(&format!(
+			debug_message(&format!(
 				"{} tight upper bound is: {}",
 				s, variable_bounds.ub_tight[s]
 			));
@@ -142,9 +140,6 @@ impl<'a> BMCBounds {
 			let mut min_bound = 0;
 			let mut max_bound = model.initial_states[0].vector[state_var_index];
 			let mut bound = model.initial_states[0].vector[state_var_index];
-
-			debug_message(&format!("Checking loose lower bound for {}", s));
-
 			loop {
 				if max_bound == 0 {
 					bound = 0;
@@ -179,7 +174,7 @@ impl<'a> BMCBounds {
 				}
 			}
 			variable_bounds.lb_loose.insert(s.clone(), bound);
-			message(&format!(
+			debug_message(&format!(
 				"{} loose lower bound is: {}",
 				s, variable_bounds.lb_loose[s]
 			));
@@ -191,7 +186,6 @@ impl<'a> BMCBounds {
 			let mut min_bound = 0;
 			let mut max_bound = model.initial_states[0].vector[state_var_index];
 			let mut bound = 0;
-			debug_message(&format!("Checking tight lower bound for {}", s));
 			// This loop does a binary search for the tightest lower bound
 			loop {
 				if max_bound == 0 {
@@ -226,12 +220,11 @@ impl<'a> BMCBounds {
 				}
 			}
 			variable_bounds.lb_tight.insert(s.clone(), bound);
-			message(&format!(
+			debug_message(&format!(
 				"{} tight lower bound is: {}",
 				s, variable_bounds.lb_tight[s]
 			));
 		}
-
 		// Print summary
 		debug_message(&format!("Summary of Bounds"));
 		debug_message(&format!(
@@ -248,7 +241,6 @@ impl<'a> BMCBounds {
 				variable_bounds.ub_tight[s],
 			));
 		}
-
 		variable_bounds
 	}
 }
