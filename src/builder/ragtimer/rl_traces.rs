@@ -81,9 +81,9 @@ impl<'a> RagtimerBuilder<'a> {
 		let latest_probability = trace_probability_history.last().cloned().unwrap_or(0.0);
 		if trace.len() == 0 || latest_probability <= 0.0 {
 			debug_message(&format!(
-                "Skipping reward update for trace {:?} with probability {:.3e}",
-                trace, latest_probability
-            ));
+				"Skipping reward update for trace {:?} with probability {:.3e}",
+				trace, latest_probability
+			));
 			return;
 		}
 		// Use the last 10% of entries to compute the average probability
@@ -190,30 +190,30 @@ impl<'a> RagtimerBuilder<'a> {
 		transition: &VasTransition,
 	) -> VasProbOrRate {
 		let total_outgoing_rate = self.crn_total_outgoing_rate(current_state);
-        // debug_message(&format!(
-        //     "Transition probability {:.3e} for transition {:?} in state {:?} with total outgoing rate {:.3e}",
-        //     self.crn_transition_rate(current_state, transition) / total_outgoing_rate, transition, current_state, total_outgoing_rate
-        // ));
+		// debug_message(&format!(
+		//     "Transition probability {:.3e} for transition {:?} in state {:?} with total outgoing rate {:.3e}",
+		//     self.crn_transition_rate(current_state, transition) / total_outgoing_rate, transition, current_state, total_outgoing_rate
+		// ));
 		self.crn_transition_rate(current_state, transition) / total_outgoing_rate
 	}
-    
+
 	/// Calculates the transition probability for a given transition in the context
-    /// of the current state under the SCK assumption for CRN models.
+	/// of the current state under the SCK assumption for CRN models.
 	fn crn_total_outgoing_rate(&self, current_state: &VasStateVector) -> VasProbOrRate {
-        let mut total_outgoing_rate = 0.0;
+		let mut total_outgoing_rate = 0.0;
 		let available_transitions = self.get_available_transitions(current_state);
 		for t in available_transitions {
-            if let Some(vas_transition) = self.abstract_model.get_transition_from_id(t) {
-                total_outgoing_rate += self.crn_transition_rate(current_state, vas_transition);
+			if let Some(vas_transition) = self.abstract_model.get_transition_from_id(t) {
+				total_outgoing_rate += self.crn_transition_rate(current_state, vas_transition);
 			} else {
-                error(&format!("Transition ID {} not found in model.", t));
+				error(&format!("Transition ID {} not found in model.", t));
 				return 0.0; // If the transition is not found, return 0 probability
 			}
 		}
-        // debug_message(&format!(
-        //     "Total outgoing rate for state {:?} is {:.3e}",
-        //     current_state, total_outgoing_rate
-        // ));
+		// debug_message(&format!(
+		//     "Total outgoing rate for state {:?} is {:.3e}",
+		//     current_state, total_outgoing_rate
+		// ));
 		total_outgoing_rate
 	}
 
@@ -421,11 +421,12 @@ impl<'a> RagtimerBuilder<'a> {
 						current_state = current_state + vas_transition.update_vector.clone();
 						trace.push(transition);
 						// debug_message(&format!("Transition {} selected with reward {:.3e}. Current state updated to: {:?}", transition, transition_reward, current_state));
-						trace_probability *= self.crn_transition_probability(&current_state, &vas_transition);
-                        // debug_message(&format!(
-                        //     "Transition {} selected with reward {:.3e}. Current state updated to: {:?}, trace probability: {:.3e}",
-                        //     transition, transition_reward, current_state, trace_probability
-                        // ));
+						trace_probability *=
+							self.crn_transition_probability(&current_state, &vas_transition);
+						// debug_message(&format!(
+						//     "Transition {} selected with reward {:.3e}. Current state updated to: {:?}, trace probability: {:.3e}",
+						//     transition, transition_reward, current_state, trace_probability
+						// ));
 					} else {
 						error(&format!("Transition ID {} not found in model.", transition));
 					}
@@ -515,11 +516,11 @@ impl<'a> RagtimerBuilder<'a> {
 					i
 				));
 			}
-            debug_message(&format!(
-                "Generated trace {}: {:?} with probability {:.3e}",
-                i, trace, trace_probability
-            ));
-            trace_probability_history.push(trace_probability);
+			debug_message(&format!(
+				"Generated trace {}: {:?} with probability {:.3e}",
+				i, trace, trace_probability
+			));
+			trace_probability_history.push(trace_probability);
 			// Store explicit prism states and transitions for this trace
 			self.store_explicit_trace(explicit_model, &trace);
 			// Update the rewards based on the trace
