@@ -88,7 +88,7 @@ impl VasTransition {
 /// The .sta file contains the state vectors and their IDs,
 /// while the .tra file contains the transitions between states with their rates.
 fn print_prism_files(
-	model: AbstractVas,
+	model: &AbstractVas,
 	prism_states: &[PrismStyleExplicitState],
 	prism_transitions: &[PrismStyleExplicitTransition],
 	output_file: &str,
@@ -146,7 +146,7 @@ fn print_prism_files(
 /// It reads a trace file, builds the state space from the trace,
 /// builds the user-specified set of concurrent and cyclical transitions,
 /// and generates the PRISM-style explicit state space files (.sta and .tra).
-pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
+pub fn cycle_commute(model: &AbstractVas, trace_file: &str, output_file: &str) {
 	// Read the trace list
 	let trace_file = match File::open(trace_file) {
 		Ok(f) => f,
@@ -256,7 +256,7 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
 	}
 	// Add commuted/parallel traces
 	commute(
-		model.clone(),
+		model,
 		&mut prism_states,
 		&mut state_trie,
 		&mut prism_transitions,
@@ -296,7 +296,7 @@ pub fn cycle_commute(model: AbstractVas, trace_file: &str, output_file: &str) {
 /// Recursively takes the model and existing state space and generates
 /// many concurrent traces, expanding the state space with parallel traces.
 fn commute(
-	model: AbstractVas,
+	model: &AbstractVas,
 	prism_states: &mut Vec<PrismStyleExplicitState>,
 	state_trie: &mut vas_trie::TrieNode,
 	prism_transitions: &mut Vec<PrismStyleExplicitTransition>,
@@ -384,7 +384,7 @@ fn commute(
 				let mut new_trace = trace[..i + 1].to_vec();
 				new_trace.push(new_transition);
 				commute(
-					model.clone(),
+					model,
 					prism_states,
 					state_trie,
 					prism_transitions,

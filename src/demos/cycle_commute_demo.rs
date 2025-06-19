@@ -10,7 +10,7 @@ use crate::model::vas_model::AbstractVas;
 pub fn cycle_commute_demo(model_file: &str, trace_file: &str, output_file: &str) {
 	if let Ok(model) = AbstractVas::from_file(model_file) {
 		debug_message("Model Parsed");
-		crate::cycle_commute::commute::cycle_commute(model, trace_file, output_file);
+		crate::cycle_commute::commute::cycle_commute(&model, trace_file, output_file);
 	} else {
 		error("Could not parse model");
 	}
