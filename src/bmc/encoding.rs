@@ -35,7 +35,7 @@ impl<'a> BMCEncoding<'a> {
 			bmc_next_variables.insert(model_variables[i].clone(), next_var.clone());
 			bmc_init_constraints.push(Ast::_eq(
 				&state_var,
-				&ast::BV::from_i64(&ctx, model_init[0].vector[i], bits),
+				&ast::BV::from_i64(&ctx, model_init[0].vector[i].try_into().unwrap(), bits),
 			));
 		}
 		debug_message(&format!(
@@ -54,9 +54,8 @@ impl<'a> BMCEncoding<'a> {
 		let model_target = model.target.clone();
 		let bmc_target_formula = ast::Ast::_eq(
 			&bmc_current_variables[&model_variables[model_target.variable_index]],
-			&ast::BV::from_i64(&ctx, model_target.target_value as i64, bits),
+			&ast::BV::from_i64(&ctx, model_target.target_value.try_into().unwrap(), bits),
 		);
-
 		// Encode the transitions one-by-one
 		let mut bmc_transition_constraints = Vec::new();
 		for transition_i in &model.transitions {
@@ -85,14 +84,14 @@ impl<'a> BMCEncoding<'a> {
 				transition_i_constraints.push(if *update > 0 {
 					ast::Ast::_eq(
 						bmc_next_variable,
-						&bmc_current_variable.bvadd(&ast::BV::from_i64(&ctx, *update as i64, bits)),
+						&bmc_current_variable.bvadd(&ast::BV::from_i64(&ctx, (*update).try_into().unwrap(), bits)),
 					)
 				} else {
 					ast::Ast::_eq(
 						bmc_next_variable,
 						&bmc_current_variable.bvsub(&ast::BV::from_i64(
 							&ctx,
-							(-*update) as i64,
+							(*update).try_into().unwrap(),
 							bits,
 						)),
 					)

@@ -2,11 +2,11 @@ use nalgebra::DVector;
 
 use crate::{
 	logging::messages::*,
-	model::vas_model::{self, AbstractVas, VasProperty, VasState, VasTransition},
+	model::vas_model::{self, AbstractVas, VasProperty, VasState, VasTransition, VasValue},
 };
 
 /// Temporary constants for debugging.
-const DEBUG_DEPTH_LIMIT: u32 = 5000;
+const DEBUG_DEPTH_LIMIT: usize = 5000;
 
 /// A node in the dependency graph.
 #[derive(Clone)]
@@ -14,7 +14,7 @@ struct GraphNode {
 	transition: VasTransition,
 	children: Vec<Box<GraphNode>>,
 	parents: Vec<VasTransition>,
-	executions: u64,
+	executions: VasValue,
 	enabled: bool,
 	node_init: VasState,
 	node_target: Vec<VasProperty>,
@@ -30,7 +30,7 @@ pub(crate) struct DependencyGraph {
 /// This trait provides methods for building and manipulating the dependency graph.
 impl GraphNode {
 	/// Creates a new dependency graph (node) with the given transition and initial state.
-	fn rec_build_graph(&mut self, vas: &AbstractVas, depth: u32) -> Result<(), String> {
+	fn rec_build_graph(&mut self, vas: &AbstractVas, depth: usize) -> Result<(), String> {
 		// Handle administrative tasks before building the node.
 		if depth > DEBUG_DEPTH_LIMIT {
 			error(&format!(
@@ -55,9 +55,7 @@ impl GraphNode {
 		// Create a new "initial state" for the child nodes.
 		// This is the state after the child's parents have been applied to the model's initial state.
 		let mut child_init = VasState::new(
-			(&self.node_init.vector.map(|x| x as i128)
-				+ (&self.transition.update_vector * self.executions as i128))
-				.map(|x| x as i64),
+			(&self.node_init.vector	+ (&self.transition.update_vector * self.executions))
 		);
 		// Compute the adjustment vector: if update_vector[i] + enabled_bounds[i] != 0, subtract enabled_bounds[i] from child_init.vector[i]
 		let adjustment = self
@@ -66,8 +64,8 @@ impl GraphNode {
 			.iter()
 			.zip(self.transition.enabled_bounds.iter())
 			.map(|(update, bound)| {
-				if *update + *bound as i128 != 0 {
-					-(*bound as i64)
+				if *update + *bound != 0 {
+					-(*bound)
 				} else {
 					0
 				}
@@ -107,7 +105,7 @@ impl GraphNode {
 						consumed_here
 					));
 					debug_message(&format!("{}initial_value {}", indentation, initial_value));
-					prop.target_value + (consumed_here * self.executions as i128)
+					prop.target_value + (consumed_here * self.executions)
 				} else {
 					let initial_value = child_init.vector.get(prop.variable_index).unwrap();
 					let consumed_here = 0 + self
@@ -122,7 +120,7 @@ impl GraphNode {
 						consumed_here
 					));
 					debug_message(&format!("{}initial_value {}", indentation, initial_value));
-					prop.target_value - (consumed_here * self.executions as i128)
+					prop.target_value - (consumed_here * self.executions)
 				};
 				if reqd != 0 {
 					debug_message(&format!("{}reqd {}", indentation, reqd));
@@ -147,7 +145,7 @@ impl GraphNode {
 				));
 				negative_targets.push(VasProperty {
 					variable_index: i,
-					target_value: -child_init.vector[i] as i128,
+					target_value: -child_init.vector[i],
 				});
 			}
 		}
@@ -185,7 +183,7 @@ impl GraphNode {
 					.all(|p| p.transition_name != trans.transition_name)
 				{
 					let mut this_child_targets: Vec<VasProperty> = Vec::new();
-					let executions: i128;
+					let executions: VasValue;
 					if (target.target_value > 0 && trans.update_vector[target.variable_index] > 0)
 						|| (target.target_value < 0
 							&& trans.update_vector[target.variable_index] < 0)
@@ -276,7 +274,7 @@ fn property_sat(prop: &VasProperty, state: &VasState) -> Result<bool, String> {
 			state.vector.len()
 		));
 	}
-	if state.vector[prop.variable_index] as i128 == prop.target_value {
+	if state.vector[prop.variable_index] == prop.target_value {
 		return Ok(true);
 	}
 	return Ok(false);
@@ -301,12 +299,12 @@ pub fn make_dependency_graph(
 	let target_variable = vas.target.variable_index;
 	let initial_value = vas.initial_states[0].vector[target_variable];
 	let target_value = vas.target.target_value;
-	let target_difference = if (initial_value as i128) < target_value {
-		target_value - (initial_value as i128)
+	let target_difference = if (initial_value) < target_value {
+		target_value - (initial_value)
 	} else {
-		(initial_value as i128) - target_value
+		(initial_value) - target_value
 	};
-	let decrement = (initial_value as i128) > target_value;
+	let decrement = (initial_value) > target_value;
 	// TODO: Handle stoichiometry greater than one.
 	debug_message(&format!("Target Executions: {}", target_difference));
 	// Build a new root (abstract transition) node
@@ -323,7 +321,7 @@ pub fn make_dependency_graph(
 				},
 				children: Vec::new(),
 				parents: Vec::new(),
-				executions: target_difference as u64,
+				executions: target_difference,
 				enabled: false,
 				node_init: initial_state.clone(),
 				node_target: vec![VasProperty {
@@ -338,7 +336,7 @@ pub fn make_dependency_graph(
 	if dependency_graph.root.decrement {
 		if let Some(first_target) = dependency_graph.root.node_target.first_mut() {
 			first_target.target_value -=
-				dependency_graph.root.node_init.vector[first_target.variable_index] as i128;
+				dependency_graph.root.node_init.vector[first_target.variable_index];
 		}
 	}
 	debug_message(&format!("decrement? {}", dependency_graph.root.decrement));

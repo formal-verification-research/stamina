@@ -5,7 +5,7 @@ use crate::*;
 use builder::*;
 use model::*;
 
-type LowerBound = Option<f64>;
+type LowerBound = Option<VasProbOrRate>;
 
 struct AffineSpace {
 	// TODO

@@ -4,15 +4,16 @@ use z3::{ast, SatResult};
 
 use crate::bmc::encoding::BMCEncoding;
 use crate::bmc::vas_bmc::MAX_BMC_STEPS;
-use crate::logging::messages::{debug_message, message};
+use crate::logging::messages::{debug_message};
+use crate::model::vas_model::VasValue;
 use crate::AbstractVas;
 
 /// Struct to hold the BMC encoding components
 pub struct BMCBounds {
-	pub lb_loose: HashMap<String, i64>,
-	pub lb_tight: HashMap<String, i64>,
-	pub ub_loose: HashMap<String, i64>,
-	pub ub_tight: HashMap<String, i64>,
+	pub lb_loose: HashMap<String, VasValue>,
+	pub lb_tight: HashMap<String, VasValue>,
+	pub ub_loose: HashMap<String, VasValue>,
+	pub ub_tight: HashMap<String, VasValue>,
 }
 
 /// Builds variable bounds for an abstract VAS model for BMC.
@@ -52,14 +53,14 @@ impl<'a> BMCBounds {
 				.iter()
 				.position(|x| x == variable_name)
 				.unwrap();
-			let mut min_bound = model.initial_states.clone()[0].vector[state_var_index];
-			let mut max_bound = (1 << bits) - 1;
-			let mut bound = 0;
+			let mut min_bound: VasValue = model.initial_states.clone()[0].vector[state_var_index];
+			let mut max_bound: VasValue = (1 << bits) - 1;
+			let mut bound: VasValue = 0;
 			// This loop does a binary search for the loosest upper bound
 			loop {
 				solver.reset();
 				let bound_formula = unroller.at_all_times_or(
-					&state_var.bvuge(&ast::BV::from_i64(&ctx, bound, bits)),
+					&state_var.bvuge(&ast::BV::from_i64(&ctx, bound.try_into().unwrap(), bits)),
 					steps,
 				);
 				let combined_formula = ast::Bool::and(&ctx, &[&bound_formula, &reachable_formula]);
@@ -95,14 +96,14 @@ impl<'a> BMCBounds {
 		for s in variable_names.iter() {
 			let state_var = &state_vars[s];
 			let state_var_index = model.variable_names.iter().position(|x| x == s).unwrap();
-			let mut min_bound = model.initial_states.clone()[0].vector[state_var_index];
-			let mut max_bound = (1 << bits) - 1;
-			let mut bound = (1 << bits) - 1;
+			let mut min_bound: VasValue = model.initial_states.clone()[0].vector[state_var_index];
+			let mut max_bound: VasValue = (1 << bits) - 1;
+			let mut bound: VasValue = (1 << bits) - 1;
 			// This loop does a binary search for the tightest upper bound
 			loop {
 				solver.reset();
 				let bound_formula = unroller.at_all_times_and(
-					&state_var.bvule(&ast::BV::from_i64(&ctx, bound, bits)),
+					&state_var.bvule(&ast::BV::from_i64(&ctx, bound.try_into().unwrap(), bits)),
 					steps,
 				);
 				let combined_formula = ast::Bool::and(&ctx, &[&bound_formula, &reachable_formula]);
@@ -137,9 +138,9 @@ impl<'a> BMCBounds {
 		for s in variable_names.iter() {
 			let state_var = &state_vars[s];
 			let state_var_index = model.variable_names.iter().position(|x| x == s).unwrap();
-			let mut min_bound = 0;
-			let mut max_bound = model.initial_states[0].vector[state_var_index];
-			let mut bound = model.initial_states[0].vector[state_var_index];
+			let mut min_bound: VasValue = 0;
+			let mut max_bound: VasValue = model.initial_states[0].vector[state_var_index];
+			let mut bound: VasValue = model.initial_states[0].vector[state_var_index];
 			loop {
 				if max_bound == 0 {
 					bound = 0;
@@ -147,7 +148,7 @@ impl<'a> BMCBounds {
 				}
 				solver.reset();
 				let bound_formula = unroller.at_all_times_or(
-					&state_var.bvule(&ast::BV::from_i64(&ctx, bound, bits)),
+					&state_var.bvule(&ast::BV::from_i64(&ctx, bound.try_into().unwrap(), bits)),
 					steps,
 				);
 				let combined_formula = ast::Bool::and(&ctx, &[&bound_formula, &reachable_formula]);
@@ -183,9 +184,9 @@ impl<'a> BMCBounds {
 		for s in variable_names.iter() {
 			let state_var = &state_vars[s];
 			let state_var_index = model.variable_names.iter().position(|x| x == s).unwrap();
-			let mut min_bound = 0;
-			let mut max_bound = model.initial_states[0].vector[state_var_index];
-			let mut bound = 0;
+			let mut min_bound: VasValue = 0;
+			let mut max_bound: VasValue = model.initial_states[0].vector[state_var_index];
+			let mut bound: VasValue = 0;
 			// This loop does a binary search for the tightest lower bound
 			loop {
 				if max_bound == 0 {
@@ -194,7 +195,7 @@ impl<'a> BMCBounds {
 				}
 				solver.reset();
 				let bound_formula = unroller.at_all_times_and(
-					&state_var.bvuge(&ast::BV::from_i64(&ctx, bound, bits)),
+					&state_var.bvuge(&ast::BV::from_i64(&ctx, bound.try_into().unwrap(), bits)),
 					steps,
 				);
 				let combined_formula = ast::Bool::and(&ctx, &[&bound_formula, &reachable_formula]);

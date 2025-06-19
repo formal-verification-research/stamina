@@ -8,7 +8,7 @@ use crate::property::property::Labeled;
 /// to have some global context so implementing structs are recommended
 /// to use lifetime parameters and contain a reference to the state
 /// space's metadata (i.e., a variable ordering in the case of a VAS)
-#[trusted]
+
 pub(crate) trait State: evalexpr::Context + Labeled + Clone + PartialEq {
 	type VariableValueType: num::Integer;
 	// type StateLabelType: Label;
@@ -17,12 +17,12 @@ pub(crate) trait State: evalexpr::Context + Labeled + Clone + PartialEq {
 	// and must be provided by derived types
 
 	/// Valuates the state by a certain variable name
-	#[trusted]
+
 	fn valuate(&self, var_name: &str) -> Self::VariableValueType;
 }
 
 /// A trait representing a transition in a model
-#[trusted]
+
 pub(crate) trait Transition: Clone + PartialEq {
 	type StateType: State;
 	type RateOrProbabilityType: num::Float;
@@ -32,11 +32,11 @@ pub(crate) trait Transition: Clone + PartialEq {
 	// and must be provided by derived types
 
 	/// The rate or probability at the state `state`, if it's enabled
-	#[trusted]
+
 	fn rate_probability_at(&self, state: &Self::StateType) -> Option<Self::RateOrProbabilityType>;
 	/// If this transition is enabled at state `state`, returns a `Some(StateType)` with the
 	/// next state in it, otherwise returns `None`. Does not return rates.
-	#[trusted]
+
 	fn next_state(&self, state: &Self::StateType) -> Option<Self::StateType>;
 
 	// Functions for which we can provide a default implementation
@@ -44,12 +44,11 @@ pub(crate) trait Transition: Clone + PartialEq {
 	/// Whether or not the transition is enabled to occur at `state`. It is recommended
 	/// that implementing structs do NOT use the default implementation which just checks
 	/// if `next_state(state)` returns a valid value.
-	#[trusted]
+
 	fn enabled(&self, state: &Self::StateType) -> bool {
 		self.next_state(state).is_some()
 	}
 
-	#[trusted]
 	fn next(
 		&self,
 		state: &Self::StateType,
@@ -64,13 +63,12 @@ pub(crate) trait Transition: Clone + PartialEq {
 	}
 }
 
-#[trusted]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ModelType {
 	ContinuousTime,
 	DiscreteTime,
 }
-#[trusted]
+
 pub(crate) trait AbstractModel {
 	type StateType: State;
 	type TransitionType: Transition;
@@ -78,12 +76,11 @@ pub(crate) trait AbstractModel {
 	// Functions for which no default implementation is provided
 	// and must be provided by derived types
 
-	#[trusted]
 	fn transitions(&self) -> impl Iterator<Item = Self::TransitionType>;
-	#[trusted]
+
 	fn initial_states(&self) -> impl Iterator<Item = (Self::StateType, usize)>;
 	/// The type of this model
-	#[trusted]
+
 	fn model_type(&self) -> ModelType;
 
 	// Functions for which we can provide a default implementation
@@ -111,31 +108,31 @@ pub(crate) trait AbstractModel {
 	// unimplemented!();
 	// }
 }
-#[trusted]
+
 pub(crate) trait ExplicitModel: Default {
 	type StateType: State;
 	type TransitionType: Transition;
 	type MatrixType; // TODO: derive shit for this nonsense
 
 	/// Maps the state to a state index (in our case just a usize)
-	#[trusted]
+
 	fn state_to_index(&self, state: &Self::StateType) -> Option<usize>;
 	/// Like `state_to_index` but if the state is not present adds it and
 	/// assigns it a new index
-	#[trusted]
+
 	fn find_or_add_index(&mut self, state: &Self::StateType) -> usize;
 	/// Reserve an index in the explicit model (useful for artificially introduced absorbing
 	/// states). Returns whether or not the index was able to be reserved.
-	#[trusted]
+
 	fn reserve_index(&mut self, index: usize) -> bool;
 	/// The number of states added to our model so far
-	#[trusted]
+
 	fn state_count(&self) -> usize;
 	/// The type of this model
-	#[trusted]
+
 	fn model_type(&self) -> ModelType;
 	/// Adds an entry to the sparse matrix
-	#[trusted]
+
 	fn add_entry(
 		&mut self,
 		from_idx: usize,
@@ -143,14 +140,14 @@ pub(crate) trait ExplicitModel: Default {
 		entry: <Self::TransitionType as Transition>::RateOrProbabilityType,
 	);
 	/// Converts this model into a sparse matrix
-	#[trusted]
+
 	fn to_matrix(&self) -> Self::MatrixType;
 	/// Whether or not this model has not been expanded yet/is empty
-	#[trusted]
-	fn empty(&self) -> bool;
+
+	fn is_empty(&self) -> bool;
 
 	/// Whether or not `state` is present in the model
-	#[trusted]
+
 	fn has_state(&self, state: &Self::StateType) -> bool {
 		self.state_to_index(state).is_some()
 	}

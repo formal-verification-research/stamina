@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::model::model::{AbstractModel, ExplicitModel};
 
 /// A trait which must be implemented by any struct that
@@ -31,7 +29,7 @@ pub(crate) trait Builder {
 	fn build(&mut self, explicit_model: &mut Self::ExplicitModelType);
 
 	/// Gets the abstract model that we're working with
-	fn get_abstract_model(&self) -> Arc<Self::AbstractModelType>;
+	fn get_abstract_model(&self) -> &Self::AbstractModelType;
 
 	// TODO
 }

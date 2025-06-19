@@ -2,7 +2,7 @@ use nalgebra::DVector;
 
 use crate::{
 	logging::messages::*,
-	model::vas_model::{AbstractVas, VasProperty, VasState, VasTransition},
+	model::vas_model::{AbstractVas, VasProperty, VasState, VasTransition, VasValue},
 };
 
 use super::graph::DependencyGraph;
@@ -11,7 +11,7 @@ use super::graph::DependencyGraph;
 /// determined by the dependency graph.
 pub fn trim_model(model: &AbstractVas, dg: DependencyGraph) -> AbstractVas {
 	let mut variable_names = Vec::<String>::new();
-	let mut initial_state = Vec::<u64>::new();
+	let mut initial_state = Vec::<VasValue>::new();
 	let mut transitions = Vec::<VasTransition>::new();
 	let dg_transitions = dg.get_transitions();
 	// Collect exactly the set of variables that are used in the dependency graph
@@ -81,7 +81,7 @@ pub fn trim_model(model: &AbstractVas, dg: DependencyGraph) -> AbstractVas {
 	let trimmed_model = AbstractVas {
 		variable_names: variable_names.into_boxed_slice(),
 		initial_states: vec![VasState::new(DVector::from_vec(
-			initial_state.into_iter().map(|x| x as i64).collect(),
+			initial_state,
 		))],
 		transitions: transitions,
 		m_type: model.m_type,
