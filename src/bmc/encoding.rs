@@ -84,7 +84,11 @@ impl<'a> BMCEncoding<'a> {
 				transition_i_constraints.push(if *update > 0 {
 					ast::Ast::_eq(
 						bmc_next_variable,
-						&bmc_current_variable.bvadd(&ast::BV::from_i64(&ctx, (*update).try_into().unwrap(), bits)),
+						&bmc_current_variable.bvadd(&ast::BV::from_i64(
+							&ctx,
+							(*update).try_into().unwrap(),
+							bits,
+						)),
 					)
 				} else {
 					ast::Ast::_eq(

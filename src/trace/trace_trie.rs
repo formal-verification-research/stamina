@@ -16,11 +16,11 @@ impl TraceTrieNode {
 	pub fn new() -> Self {
 		TraceTrieNode::Node(HashMap::new())
 	}
-	/// Inserts a transition into the trie, or adds it if it doesn't exist yet.
-	/// Returns
-	pub fn insert_if_not_exists(&mut self, trace: &Vec<Transition>) {
+	/// Inserts a trace into the trie, or adds it if it doesn't exist yet.
+	/// Returns true if the trace exists, false if it was inserted.
+	pub fn exists_or_insert(&mut self, trace: &Vec<Transition>) -> bool {
 		match self {
-			TraceTrieNode::LeafNode => (),
+			TraceTrieNode::LeafNode => true,
 			TraceTrieNode::Node(_) => {
 				let mut node = self;
 				for &transition in trace {
@@ -37,11 +37,25 @@ impl TraceTrieNode {
 					}
 				}
 				match node {
-					TraceTrieNode::LeafNode => (),
+					TraceTrieNode::LeafNode => true,
 					TraceTrieNode::Node(_) => {
 						*node = TraceTrieNode::LeafNode;
-						()
+						false
 					}
+				}
+			}
+		}
+	}
+	/// Prints the trie structure for debugging purposes.
+	pub fn print(&self, depth: usize) {
+		match self {
+			TraceTrieNode::LeafNode => {
+				println!("{:indent$}Leaf", "", indent = depth * 2);
+			}
+			TraceTrieNode::Node(children) => {
+				for (transition, child) in children {
+					println!("{:indent$}{}", "", transition, indent = depth * 2);
+					child.print(depth + 1);
 				}
 			}
 		}

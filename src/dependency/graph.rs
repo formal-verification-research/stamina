@@ -55,7 +55,7 @@ impl GraphNode {
 		// Create a new "initial state" for the child nodes.
 		// This is the state after the child's parents have been applied to the model's initial state.
 		let mut child_init = VasState::new(
-			(&self.node_init.vector	+ (&self.transition.update_vector * self.executions))
+			(&self.node_init.vector + (&self.transition.update_vector * self.executions)),
 		);
 		// Compute the adjustment vector: if update_vector[i] + enabled_bounds[i] != 0, subtract enabled_bounds[i] from child_init.vector[i]
 		let adjustment = self
@@ -63,13 +63,15 @@ impl GraphNode {
 			.update_vector
 			.iter()
 			.zip(self.transition.enabled_bounds.iter())
-			.map(|(update, bound)| {
-				if *update + *bound != 0 {
-					-(*bound)
-				} else {
-					0
-				}
-			})
+			.map(
+				|(update, bound)| {
+					if *update + *bound != 0 {
+						-(*bound)
+					} else {
+						0
+					}
+				},
+			)
 			.collect::<Vec<_>>();
 		child_init.vector += nalgebra::DVector::from_vec(adjustment);
 		debug_message(&format!(

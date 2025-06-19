@@ -80,9 +80,7 @@ pub fn trim_model(model: &AbstractVas, dg: DependencyGraph) -> AbstractVas {
 	// Create the trimmed model with the collected variables, initial state, and transitions
 	let trimmed_model = AbstractVas {
 		variable_names: variable_names.into_boxed_slice(),
-		initial_states: vec![VasState::new(DVector::from_vec(
-			initial_state,
-		))],
+		initial_states: vec![VasState::new(DVector::from_vec(initial_state))],
 		transitions: transitions,
 		m_type: model.m_type,
 		target: target,

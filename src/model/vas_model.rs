@@ -1,7 +1,13 @@
-use std::{collections::BTreeSet, fmt};
+use std::{
+	collections::{BTreeSet, HashMap},
+	fmt,
+};
 
 use crate::{
-	logging::messages::*, model::model::ExplicitModel, parser::vas_file_reader, property::property,
+	logging::messages::*,
+	model::{model::ExplicitModel, vas_trie::VasTrieNode},
+	parser::vas_file_reader,
+	property::property,
 	validator::vas_validator::validate_vas,
 };
 
@@ -111,7 +117,9 @@ pub(crate) struct VasTransition {
 }
 
 #[derive(Clone)]
-pub(crate) struct CustomRateFn(std::sync::Arc<dyn Fn(&VasState) -> VasProbOrRate + Send + Sync + 'static>);
+pub(crate) struct CustomRateFn(
+	std::sync::Arc<dyn Fn(&VasState) -> VasProbOrRate + Send + Sync + 'static>,
+);
 
 impl PartialEq for CustomRateFn {
 	fn eq(&self, _: &Self) -> bool {
@@ -168,10 +176,7 @@ impl VasTransition {
 					.zip(decrement.iter())
 					.map(|(inc, dec)| *inc - *dec),
 			),
-			enabled_bounds: DVector::from_iterator(
-				decrement.len(),
-				decrement
-			),
+			enabled_bounds: DVector::from_iterator(decrement.len(), decrement),
 			rate_const,
 			custom_rate_fn: None,
 		}
@@ -463,6 +468,7 @@ pub(crate) struct PrismVasState {
 	pub(crate) state_id: usize,
 	pub(crate) vector: DVector<i128>,
 	pub(crate) label: Option<String>, // Optional label for the state, useful for sink states
+	pub(crate) total_outgoing_rate: VasProbOrRate, // Optional total outgoing rate for the state
 }
 
 /// The data for an explicit Prism export of a VAS
@@ -472,6 +478,8 @@ pub(crate) struct PrismVasModel {
 	pub(crate) states: Vec<PrismVasState>,
 	pub(crate) transitions: Vec<PrismVasTransition>,
 	pub(crate) m_type: ModelType,
+	pub(crate) state_trie: VasTrieNode, // Optional trie for storing traces, if needed
+	pub(crate) transition_map: HashMap<usize, Vec<(usize, usize)>>, // Quick transition from-(to, transitions list index) lookup
 }
 
 /// Default implementation for PrismVasModel
@@ -482,6 +490,8 @@ impl Default for PrismVasModel {
 			states: Vec::new(),
 			transitions: Vec::new(),
 			m_type: ModelType::ContinuousTime,
+			state_trie: VasTrieNode::new(), // No trie by default
+			transition_map: HashMap::new(), // No transitions by default
 		}
 	}
 }
@@ -490,7 +500,7 @@ impl ExplicitModel for PrismVasModel {
 	type StateType = VasState;
 	type TransitionType = VasTransition;
 	type MatrixType = (); // TODO: There is no matrix type for PrismVasModel, using this placeholder
-	
+
 	/// Maps the state to a state index (in our case just a usize)
 	fn state_to_index(&self, state: &Self::StateType) -> Option<usize> {
 		for my_state in self.states.iter() {
@@ -507,13 +517,13 @@ impl ExplicitModel for PrismVasModel {
 		let index = self.state_to_index(state);
 		if let Some(idx) = index {
 			return idx; // State already exists, return its index
-		}
-		else {
+		} else {
 			let new_index = self.states.len();
 			self.states.push(PrismVasState {
 				state_id: new_index,
 				vector: state.vector.map(|v| v as i128),
-				label: None, // No label by default
+				label: None,              // No label by default
+				total_outgoing_rate: 0.0, // No outgoing rate by default
 			});
 			return new_index; // Return the newly added index
 		}
@@ -558,5 +568,29 @@ impl ExplicitModel for PrismVasModel {
 	/// Whether or not `state` is present in the model
 	fn has_state(&self, state: &Self::StateType) -> bool {
 		self.state_to_index(state).is_some()
+	}
+}
+
+impl PrismVasModel {
+	/// Creates a new empty PrismVasModel
+	pub fn new() -> Self {
+		Self::default()
+	}
+
+	pub fn from_abstract_model(abstract_model: &AbstractVas) -> Self {
+		let mut model = Self::new();
+		model.variable_names = abstract_model.variable_names.clone().into_vec();
+		model.m_type = abstract_model.m_type;
+		model
+	}
+
+	/// Adds a transition to the model
+	pub fn add_transition(&mut self, transition: PrismVasTransition) {
+		self.transitions.push(transition);
+	}
+
+	/// Adds a state to the model
+	pub fn add_state(&mut self, state: PrismVasState) {
+		self.states.push(state);
 	}
 }

@@ -1,3 +1,5 @@
+use std::default;
+
 use crate::{
 	builder::builder::Builder,
 	model::vas_model::{AbstractVas, PrismVasModel, VasProbOrRate},
@@ -7,10 +9,12 @@ pub type RewardValue = f64;
 type LowerBound = Option<VasProbOrRate>;
 
 /// Magic numbers used for RL traces in Ragtimer.
+#[derive(Debug)]
 pub struct MagicNumbers {
+	pub num_traces: usize,
 	pub dependency_reward: RewardValue,
 	pub base_reward: RewardValue,
-	pub base_trace_reward: RewardValue,
+	pub trace_reward: RewardValue,
 	pub smallest_history_window: usize,
 }
 
@@ -72,12 +76,31 @@ impl<'a> Builder for RagtimerBuilder<'a> {
 			RagtimerMethod::ReinforcementLearning(_) => {
 				// self.method = RagtimerMethod::ReinforcementLearning(self.default_magic_numbers());
 				self.add_rl_traces(explicit_model, None);
-			},
+			}
 			RagtimerMethod::DeterministicDependencyGraph => {
 				todo!()
 			}
 		}
 
 		self.model_built = true;
+	}
+}
+
+impl<'a> RagtimerBuilder<'a> {
+	/// Creates a new RagtimerBuilder with the given abstract model and method.
+	pub fn new(abstract_model: &'a AbstractVas, method: Option<RagtimerMethod>) -> Self {
+		let mut builder = RagtimerBuilder {
+			abstract_model,
+			model_built: false,
+			method: RagtimerMethod::DeterministicDependencyGraph,
+		};
+
+		if let Some(m) = method {
+			builder.method = m;
+		} else {
+			builder.method = RagtimerMethod::ReinforcementLearning(builder.default_magic_numbers());
+		}
+
+		builder
 	}
 }

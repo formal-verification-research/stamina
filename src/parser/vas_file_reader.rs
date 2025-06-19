@@ -491,9 +491,7 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 	// Return the model
 	let model = AbstractVas::new(
 		variable_names,
-		vec![VasState::new(DVector::from_vec(
-			initial_states.to_vec(),
-		))],
+		vec![VasState::new(DVector::from_vec(initial_states.to_vec()))],
 		transitions,
 		target,
 	);
