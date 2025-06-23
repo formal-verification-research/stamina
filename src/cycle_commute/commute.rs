@@ -138,7 +138,8 @@ fn print_prism_files(
 	logging::messages::message!(
 		"Check this with the following command:\n
 		prism -importtrans {}.tra -importstates {}.sta -ctmc",
-		output_file, output_file
+		output_file,
+		output_file
 	);
 }
 
@@ -559,9 +560,6 @@ fn visualize_prism_state_space(
 		.unwrap();
 	}
 	writeln!(dot_file, "}}").unwrap();
-	logging::messages::message!(
-		"Graphviz .dot file written to: {}.dot",
-		output_file
-	);
+	logging::messages::message!("Graphviz .dot file written to: {}.dot", output_file);
 	logging::messages::message!("You can visualize it with: dot -Tpng -O <file>.dot");
 }

@@ -89,7 +89,8 @@ impl<'a> BMCBounds {
 				.insert(variable_name.clone(), bound);
 			message!(
 				"{} loose upper bound is: {}",
-				variable_name, variable_bounds.ub_loose[variable_name]
+				variable_name,
+				variable_bounds.ub_loose[variable_name]
 			);
 		}
 		// Step 2: Tightest upper bounds
@@ -132,7 +133,8 @@ impl<'a> BMCBounds {
 			variable_bounds.ub_tight.insert(s.clone(), bound);
 			message!(
 				"{} tight upper bound is: {}",
-				s, variable_bounds.ub_tight[s]
+				s,
+				variable_bounds.ub_tight[s]
 			);
 		}
 		// Step 3: Loosest lower bounds
@@ -181,7 +183,8 @@ impl<'a> BMCBounds {
 			variable_bounds.lb_loose.insert(s.clone(), bound);
 			message!(
 				"{} loose lower bound is: {}",
-				s, variable_bounds.lb_loose[s]
+				s,
+				variable_bounds.lb_loose[s]
 			);
 		}
 		// Step 4: Tightest lower bounds
@@ -228,7 +231,8 @@ impl<'a> BMCBounds {
 			variable_bounds.lb_tight.insert(s.clone(), bound);
 			message!(
 				"{} tight lower bound is: {}",
-				s, variable_bounds.lb_tight[s]
+				s,
+				variable_bounds.lb_tight[s]
 			);
 		}
 
@@ -236,7 +240,11 @@ impl<'a> BMCBounds {
 		debug_message!("Summary of Bounds");
 		debug_message!(
 			"{:<20} {:<10} {:<10} {:<10} {:<10}",
-			"Variable", "LB Loose", "LB Tight", "UB Loose", "UB Tight"
+			"Variable",
+			"LB Loose",
+			"LB Tight",
+			"UB Loose",
+			"UB Tight"
 		);
 		for s in variable_names.iter() {
 			debug_message!(

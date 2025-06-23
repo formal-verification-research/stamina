@@ -38,17 +38,11 @@ impl<'a> BMCEncoding<'a> {
 				&ast::BV::from_i64(&ctx, model_init[0].vector[i], bits),
 			));
 		}
-		debug_message!(
-			"Encoded variables for BMC:\n{:?}",
-			bmc_current_variables
-		);
+		debug_message!("Encoded variables for BMC:\n{:?}", bmc_current_variables);
 		// Build the initial formula by conjoining the constraints
 		let bmc_init_formula =
 			ast::Bool::and(&ctx, &bmc_init_constraints.iter().collect::<Vec<_>>());
-		debug_message!(
-			"Encoded initial state for BMC:\n{:?}",
-			bmc_init_formula
-		);
+		debug_message!("Encoded initial state for BMC:\n{:?}", bmc_init_formula);
 
 		// Encode the target formula
 		let model_target = model.target.clone();

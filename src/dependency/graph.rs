@@ -45,7 +45,9 @@ impl GraphNode {
 		let indentation = " ".repeat(depth as usize);
 		debug_message!(
 			"{}Building graph at node {} x{}",
-			indentation, self.transition.transition_name, self.executions
+			indentation,
+			self.transition.transition_name,
+			self.executions
 		);
 		// Check if the node is already enabled.
 		if self.enabled {
@@ -177,7 +179,8 @@ impl GraphNode {
 			for trans in &vas.transitions {
 				debug_message!(
 					"{}Checking transition {}",
-					indentation, trans.transition_name
+					indentation,
+					trans.transition_name
 				);
 				if self
 					.parents
@@ -205,10 +208,7 @@ impl GraphNode {
 							/ trans.update_vector[target.variable_index])
 							.try_into()
 							.unwrap();
-						debug_message!(
-							"{}Executions calculated: {}",
-							indentation, executions
-						);
+						debug_message!("{}Executions calculated: {}", indentation, executions);
 					} else {
 						debug_message!(
 							"{}Sign mismatch for transition {} on target {}.{}",
@@ -234,7 +234,8 @@ impl GraphNode {
 						self.children.push(Box::new(child));
 						debug_message!(
 							"{}Added child node for transition {}",
-							indentation, trans.transition_name
+							indentation,
+							trans.transition_name
 						);
 					}
 				}
@@ -391,10 +392,7 @@ impl DependencyGraph {
 	pub fn pretty_print(&self, vas: &AbstractVas) {
 		fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize) {
 			let indent = " ".repeat(depth * 2);
-			message!(
-				"{}Node: {}",
-				indent, node.transition.transition_name
-			);
+			message!("{}Node: {}", indent, node.transition.transition_name);
 			message!("{}  Executions: {}", indent, node.executions);
 			message!("{}  Enabled: {}", indent, node.enabled);
 			if node.decrement {
@@ -434,7 +432,9 @@ impl DependencyGraph {
 			let indent = " ".repeat(depth * 2);
 			message!(
 				"{}Node: {} (Executions: {})",
-				indent, node.transition.transition_name, node.executions
+				indent,
+				node.transition.transition_name,
+				node.executions
 			);
 			for child in &node.children {
 				print_node(vas, child, depth + 1);
