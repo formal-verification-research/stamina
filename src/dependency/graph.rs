@@ -351,9 +351,7 @@ pub fn make_dependency_graph(
 /// TODO: These should be unified into a single printout and a single JSON format.
 impl DependencyGraph {
 	/// Prints the dependency graph in its original format.
-	/// This function uses println! instead of message to simplify Beckey's work.
-	/// Eventually, we'll all need to agree on a single dependency graph printout format,
-	/// or pass the dependency graph object around.
+	/// This uses println! instead of message to simplify Beckey's work.
 	pub fn original_print(&self, vas: &AbstractVas) {
 		fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize) {
 			let mut node_str = String::new();
