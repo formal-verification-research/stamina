@@ -479,11 +479,8 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 	let transitions = match build_transitions(transition_lines, &variable_names) {
 		Ok(result) => result,
 		Err(e) => {
-			error(&format!(
-				"ERROR DURING TRANSITION PARSING:\n{}",
-				e.to_string()
-			));
-			error(&format!("HERE"));
+			error!("ERROR DURING TRANSITION PARSING:\n{}", e.to_string());
+			error!("HERE");
 			return Err(e);
 		}
 	};

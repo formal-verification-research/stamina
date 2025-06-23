@@ -97,7 +97,7 @@ fn print_prism_files(
 	let mut sta_file = match File::create(format!("{}.sta", output_file)) {
 		Ok(f) => f,
 		Err(e) => {
-			logging::messages::error!("Error creating .sta file: {}", e);
+			error!("Error creating .sta file: {}", e);
 			return;
 		}
 	};
@@ -118,7 +118,7 @@ fn print_prism_files(
 	let mut tra_file = match File::create(format!("{}.tra", output_file)) {
 		Ok(f) => f,
 		Err(e) => {
-			logging::messages::error!("Error creating .tra file: {}", e);
+			error!("Error creating .tra file: {}", e);
 			return;
 		}
 	};
@@ -131,11 +131,11 @@ fn print_prism_files(
 		writeln!(tra_file, "{} {} {}", t.from_state, t.to_state, t.rate).unwrap();
 	}
 	// Output results to the specified output file
-	logging::messages::message!(
+	message!(
 		"Resulting explicit state space written to: {}.sta, .tra",
 		output_file
 	);
-	logging::messages::message!(
+	message!(
 		"Check this with the following command:\n
 		prism -importtrans {}.tra -importstates {}.sta -ctmc",
 		output_file,
@@ -152,7 +152,7 @@ pub fn cycle_commute(model: &AbstractVas, trace_file: &str, output_file: &str) {
 	let trace_file = match File::open(trace_file) {
 		Ok(f) => f,
 		Err(e) => {
-			logging::messages::error(&format!("Error opening trace file: {}", e));
+			error!("Error opening trace file: {}", e);
 			return;
 		}
 	};
@@ -184,7 +184,7 @@ pub fn cycle_commute(model: &AbstractVas, trace_file: &str, output_file: &str) {
 		let trace = match trace {
 			Ok(t) => t,
 			Err(e) => {
-				logging::messages::error(&format!("Error reading trace line: {}", e));
+				error!("Error reading trace line: {}", e);
 				continue;
 			}
 		};
@@ -203,7 +203,7 @@ pub fn cycle_commute(model: &AbstractVas, trace_file: &str, output_file: &str) {
 					.cast::<i64>();
 				let mut next_state_id = current_state_id + 1;
 				if next_state.iter().any(|&x| x < 0) {
-					logging::messages::error!(
+					error!(
 						"ERROR: Next state contains non-positive values: {:?}",
 						next_state
 					);
@@ -247,10 +247,7 @@ pub fn cycle_commute(model: &AbstractVas, trace_file: &str, output_file: &str) {
 				current_state = next_state.clone();
 				current_state_id = next_state_id;
 			} else {
-				logging::messages::error!(
-					"ERROR: Transition {} not found in model",
-					transition_name
-				);
+				error!("ERROR: Transition {} not found in model", transition_name);
 				return;
 			}
 		}
@@ -531,7 +528,7 @@ fn visualize_prism_state_space(
 	let mut dot_file = match File::create(format!("{}.dot", output_file)) {
 		Ok(f) => f,
 		Err(e) => {
-			logging::messages::error(&format!("Error creating .dot file: {}", e));
+			error!("Error creating .dot file: {}", e);
 			return;
 		}
 	};
@@ -560,6 +557,6 @@ fn visualize_prism_state_space(
 		.unwrap();
 	}
 	writeln!(dot_file, "}}").unwrap();
-	logging::messages::message!("Graphviz .dot file written to: {}.dot", output_file);
-	logging::messages::message!("You can visualize it with: dot -Tpng -O <file>.dot");
+	message!("Graphviz .dot file written to: {}.dot", output_file);
+	message!("You can visualize it with: dot -Tpng -O <file>.dot");
 }

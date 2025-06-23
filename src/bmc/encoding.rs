@@ -19,7 +19,7 @@ pub struct BMCEncoding<'a> {
 impl<'a> BMCEncoding<'a> {
 	/// Constructs a new BMCEncoding from the given context, config, and unroller.
 	pub fn from_vas(model: &'a AbstractVas, ctx: &'a Context, bits: u32) -> Self {
-		debug_message("Building BMC encoding for VAS model");
+		debug_message!("Building BMC encoding for VAS model");
 		// Load the state variables
 		let model_variables = model.variable_names.clone();
 		let mut bmc_current_variables = HashMap::new();

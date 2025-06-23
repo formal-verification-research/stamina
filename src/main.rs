@@ -154,29 +154,29 @@ fn main() {
 	match matches.subcommand() {
 		Some(("bounds", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
-			message(&format!("Running ragtimer with models_dir: {}", models_dir));
+			message!("Running ragtimer with models_dir: {}", models_dir);
 			let dir_path = Path::new(models_dir);
 			demos::bmc_demo::bmc_demo(dir_path);
 		}
 		Some(("dependency-graph", sub_m)) => {
 			// TODO: Move this whole thing to a demo
 			let model_file = sub_m.get_one::<String>("model").unwrap();
-			message(&format!("Running ragtimer with models: {}", model_file));
+			message!("Running ragtimer with models: {}", model_file);
 			let parsed_model = AbstractVas::from_file(model_file);
 			if !parsed_model.is_ok() {
-				error(&format!("Error parsing model file: {}", model_file));
+				error!("Error parsing model file: {}", model_file);
 				return;
 			}
 			let parsed_model = parsed_model.unwrap();
-			message(&format!("MODEL PARSED\n\n"));
-			message(&format!("{}", parsed_model.nice_print()));
+			message!("MODEL PARSED\n\n");
+			message!("{}", parsed_model.nice_print());
 			let dg = make_dependency_graph(&parsed_model);
 			if let Ok(Some(dependency_graph)) = &dg {
 				dependency_graph.pretty_print(&parsed_model);
 				dependency_graph.simple_print(&parsed_model);
 				dependency_graph.original_print(&parsed_model);
 			} else {
-				error(&format!("Error creating dependency graph."));
+				error!("Error creating dependency graph.");
 			}
 		}
 		Some(("ragtimer", sub_m)) => {
@@ -185,15 +185,15 @@ fn main() {
 				.and_then(|s| s.parse::<usize>().ok())
 				.unwrap();
 			let model_file = sub_m.get_one::<String>("model").unwrap();
-			message(&format!("Running ragtimer with models: {}", model_file));
+			message!("Running ragtimer with models: {}", model_file);
 			let parsed_model = AbstractVas::from_file(model_file);
 			if !parsed_model.is_ok() {
-				error(&format!("Error parsing model file: {}", model_file));
+				error!("Error parsing model file: {}", model_file);
 				return;
 			}
 			let parsed_model = parsed_model.unwrap();
-			message(&format!("MODEL PARSED\n\n"));
-			message(&format!("{}", parsed_model.nice_print()));
+			message!("MODEL PARSED\n\n");
+			message!("{}", parsed_model.nice_print());
 			let dg = make_dependency_graph(&parsed_model);
 			if let Ok(Some(dependency_graph)) = &dg {
 				dependency_graph.pretty_print(&parsed_model);
@@ -204,7 +204,7 @@ fn main() {
 				);
 				print_traces_to_file(&traces, "ragtimer_traces.txt");
 			} else {
-				error(&format!("Error creating dependency graph."));
+				error!("Error creating dependency graph.");
 				return;
 			}
 		}
@@ -212,34 +212,35 @@ fn main() {
 			let model = sub_m.get_one::<String>("model").unwrap();
 			let trace = sub_m.get_one::<String>("trace").unwrap();
 			let output_file = sub_m.get_one::<String>("output_file").unwrap();
-			message(&format!(
+			message!(
 				"Running cycle-commute with model: {} and trace: {}",
-				model, trace
-			));
+				model,
+				trace
+			);
 			demos::cycle_commute_demo::cycle_commute_demo(model, trace, output_file);
 		}
 		Some(("stamina", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
 			let timeout = sub_m.get_one::<String>("timeout").unwrap();
-			message(&format!(
+			message!(
 				"Running stamina with models_dir: {} and timeout: {}",
-				models_dir, timeout
-			));
+				models_dir,
+				timeout
+			);
 			unimplemented!();
 		}
 		Some(("wayfarer", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
 			let timeout = sub_m.get_one::<String>("timeout").unwrap();
-			message(&format!(
+			message!(
 				"Running wayfarer with models_dir: {} and timeout: {}",
-				models_dir, timeout
-			));
+				models_dir,
+				timeout
+			);
 			unimplemented!();
 		}
 		_ => {
-			error(&format!(
-				"No valid subcommand was used. Use --help for more information."
-			));
+			error!("No valid subcommand was used. Use --help for more information.");
 		}
 	}
 }

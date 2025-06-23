@@ -33,10 +33,7 @@ impl GraphNode {
 	fn rec_build_graph(&mut self, vas: &AbstractVas, depth: u32) -> Result<(), String> {
 		// Handle administrative tasks before building the node.
 		if depth > DEBUG_DEPTH_LIMIT {
-			error(&format!(
-				"Error: Depth limit exceeded: {}",
-				DEBUG_DEPTH_LIMIT
-			));
+			error!("Error: Depth limit exceeded: {}", DEBUG_DEPTH_LIMIT);
 			return Err(format!(
 				"Error: Depth limit exceeded: {}",
 				DEBUG_DEPTH_LIMIT
@@ -76,7 +73,7 @@ impl GraphNode {
 			})
 			.collect::<Vec<_>>();
 		child_init.vector += nalgebra::DVector::from_vec(adjustment);
-		debug_message(&format!(
+		debug_message!(
 			"{}child init {}",
 			indentation,
 			(0..child_init.vector.len())
@@ -88,7 +85,7 @@ impl GraphNode {
 					format!("{}.{} ", variable_name, child_init.vector[i])
 				})
 				.collect::<String>()
-		));
+		);
 		// Similarly, compute the target values for the child nodes.
 		// This is a set of targets that the child nodes must satisfy in order to enable its parents.
 		let child_targets: Vec<VasProperty> = self
