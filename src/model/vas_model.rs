@@ -371,11 +371,11 @@ impl AbstractVas {
 	pub fn from_file(filename: &str) -> Result<Self, String> {
 		match vas_file_reader::build_model(filename) {
 			Ok(model) => {
-				debug_message(&format!("Parsing gave OK result"));
+				debug_message!("Parsing gave OK result");
 				Ok(model)
 			}
 			Err(err) => {
-				error(&format!("ERROR DURING PARSING: {}", err));
+				error!("ERROR DURING PARSING: {}", err);
 				Err(err.to_string())
 			}
 		}

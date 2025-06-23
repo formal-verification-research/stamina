@@ -5,7 +5,7 @@ use z3::{
 	Context, SatResult, Solver,
 };
 
-use crate::{bmc::unroller::Unroller, logging::messages::debug_message, AbstractVas};
+use crate::{bmc::unroller::Unroller, logging::messages::*, AbstractVas};
 
 /// Struct to hold the BMC encoding components
 pub struct BMCEncoding<'a> {
@@ -38,17 +38,17 @@ impl<'a> BMCEncoding<'a> {
 				&ast::BV::from_i64(&ctx, model_init[0].vector[i], bits),
 			));
 		}
-		debug_message(&format!(
+		debug_message!(
 			"Encoded variables for BMC:\n{:?}",
 			bmc_current_variables
-		));
+		);
 		// Build the initial formula by conjoining the constraints
 		let bmc_init_formula =
 			ast::Bool::and(&ctx, &bmc_init_constraints.iter().collect::<Vec<_>>());
-		debug_message(&format!(
+		debug_message!(
 			"Encoded initial state for BMC:\n{:?}",
 			bmc_init_formula
-		));
+		);
 
 		// Encode the target formula
 		let model_target = model.target.clone();
@@ -103,11 +103,11 @@ impl<'a> BMCEncoding<'a> {
 				&ctx,
 				&transition_i_constraints.iter().collect::<Vec<_>>(),
 			));
-			debug_message(&format!(
+			debug_message!(
 				"Encoded transition {}:\n{:?}",
 				transition_i.transition_name,
 				bmc_transition_constraints.last()
-			));
+			);
 		}
 		let bmc_transition_formula =
 			ast::Bool::or(&ctx, &bmc_transition_constraints.iter().collect::<Vec<_>>());
@@ -130,7 +130,7 @@ impl<'a> BMCEncoding<'a> {
 	/// `target_formula`: The formula identifying the target
 	/// `unroller`: The unroller used
 	pub fn run_bmc(&self, ctx: &'a Context, max_steps: u32) -> (ast::Bool<'a>, u32) {
-		debug_message(&format!("Bounded Model Checking to {} steps", max_steps));
+		debug_message!("Bounded Model Checking to {} steps", max_steps);
 		let (init_formula, transition_formula, target_formula, unroller) = (
 			&self.init_formula,
 			&self.transition_formula,
@@ -144,7 +144,7 @@ impl<'a> BMCEncoding<'a> {
 		// Do the full unrolling to k steps
 		for k in 0..max_steps {
 			max_k = k;
-			debug_message(&format!("-- TIME {:3} --", k));
+			debug_message!("-- TIME {:3} --", k);
 
 			let step_formula =
 				&ast::Bool::and(&ctx, &[&formula, &unroller.at_time(&target_formula, k)]);
@@ -163,7 +163,7 @@ impl<'a> BMCEncoding<'a> {
 					ast::Bool::and(&ctx, &[&formula, &unroller.at_time(&transition_formula, k)]);
 			}
 		}
-		debug_message(&format!("Finished BMC with actual step count of {}", max_k));
+		debug_message!("Finished BMC with actual step count of {}", max_k);
 		(formula, max_k)
 	}
 }

@@ -1,6 +1,6 @@
 use std::process::exit;
 
-macro_rules! message {
+pub macro_rules! message {
     ($($arg:tt)*) => {
         eprintln!("[MESSAGE] {}", format!($($arg)*));
     };

@@ -22,7 +22,7 @@ impl TrieNode {
 	/// If the state is not found, it inserts the state with the given ID and returns None.
 	pub fn insert_if_not_exists(&mut self, state: &DVector<i64>, id: usize) -> Option<usize> {
 		if id == 0 {
-			error(&format!("Error: ID 0 inserted for state {:?}", state));
+			error!("Error: ID 0 inserted for state {:?}", state);
 		}
 		match self {
 			TrieNode::LeafNode(existing_id) => Some(*existing_id),
