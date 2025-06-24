@@ -49,7 +49,7 @@ impl<'a> RagtimerBuilder<'a> {
 	) -> HashMap<usize, RewardValue> {
 		let mut rewards = HashMap::new();
 		let magic_numbers = match &self.method {
-			ReinforcementLearning(magic_numbers) => magic_numbers.clone(),
+			ReinforcementLearning(magic_numbers) => magic_numbers,
 			_ => panic!("RagtimerBuilder::add_rl_traces called with non-RL method"),
 		};
 		let model = self.abstract_model;

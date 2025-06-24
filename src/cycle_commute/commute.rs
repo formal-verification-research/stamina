@@ -9,11 +9,11 @@ use std::{
 use nalgebra::DVector;
 
 use crate::{
-	logging::{self, messages::*},
 	model::{
 		vas_model::{AbstractVas, VasProbOrRate, VasStateVector, VasTransition, VasValue},
 		vas_trie,
 	},
+	*,
 };
 use itertools::Itertools;
 use std::io::Write;
@@ -316,7 +316,7 @@ fn commute(
 		.filter(|t| t.enabled_vector(&current_state))
 		.collect();
 	let mut universally_enabled_transitions: Vec<&VasTransition> = enabled_transitions.clone();
-	for transition in trace {
+	for _transition in trace {
 		current_state = initial_state_vector.clone(); // Start from the initial state
 		enabled_transitions = model
 			.transitions
@@ -466,7 +466,7 @@ fn add_cycles(
 							}
 							// Compute next state
 							let next_state =
-								(current_state.clone() + transition.update_vector.clone());
+								current_state.clone() + transition.update_vector.clone();
 							// Insert or get the state ID
 							let mut next_state_id = prism_states.len();
 							if let Some(existing_id) =
