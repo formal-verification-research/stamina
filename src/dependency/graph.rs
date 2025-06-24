@@ -107,7 +107,6 @@ impl GraphNode {
 					);
 					debug_message!("{}initial_value {}", indentation, initial_value);
 					prop.target_value + (consumed_here * self.executions)
-
 				} else {
 					let initial_value = child_init.vector.get(prop.variable_index).unwrap();
 					let consumed_here = 0 + self
@@ -120,7 +119,6 @@ impl GraphNode {
 						indentation,
 						vas.variable_names.get(prop.variable_index).unwrap(),
 						consumed_here
-
 					);
 					debug_message!("{}initial_value {}", indentation, initial_value);
 					prop.target_value - (consumed_here * self.executions)

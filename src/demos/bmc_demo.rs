@@ -1,8 +1,8 @@
 use crate::bmc::vas_bmc::AbstractVasBmc;
 use crate::dependency;
 use crate::dependency::graph::make_dependency_graph;
-use crate::*;
 use crate::model::vas_model::AbstractVas;
+use crate::*;
 
 use std::fs;
 use std::path::Path;

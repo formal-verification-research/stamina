@@ -4,9 +4,9 @@ use z3::{ast, SatResult};
 
 use crate::bmc::encoding::BMCEncoding;
 use crate::bmc::vas_bmc::MAX_BMC_STEPS;
-use crate::*;
 use crate::model::vas_model::VasValue;
 use crate::AbstractVas;
+use crate::*;
 
 /// Struct to hold the BMC encoding components
 pub struct BMCBounds {

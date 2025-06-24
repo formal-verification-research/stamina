@@ -1,5 +1,5 @@
-use crate::*;
 use crate::model::vas_model::AbstractVas;
+use crate::*;
 
 /// This function runs the cycle commute demo for a given model and trace file.
 /// It reads the model from the specified file, processes the trace file,
