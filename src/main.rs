@@ -8,16 +8,24 @@ mod logging;
 mod model;
 mod parser;
 mod property;
-mod ragtimer;
+// mod ragtimer;
+mod builder;
+mod trace;
 mod util;
 mod validator;
 
 use clap::{Arg, Command};
 use dependency::graph::make_dependency_graph;
 use model::vas_model::AbstractVas;
-use std::path::Path;
+use std::{default, path::Path};
 
-use crate::ragtimer::rl_traces::print_traces_to_file;
+
+use crate::{
+	builder::{builder::Builder, ragtimer::ragtimer::RagtimerBuilder},
+	model::{model::ExplicitModel, vas_model::PrismVasModel},
+};
+
+// use crate::ragtimer::rl_traces::print_traces_to_file;
 const TIMEOUT_MINUTES: &str = "10"; //
 
 fn main() {
@@ -178,6 +186,7 @@ fn main() {
 			}
 		}
 		Some(("ragtimer", sub_m)) => {
+			message(&format!("Ragtimer under development..."));
 			let num_traces = sub_m
 				.get_one::<String>("qty")
 				.and_then(|s| s.parse::<usize>().ok())
@@ -195,12 +204,9 @@ fn main() {
 			let dg = make_dependency_graph(&parsed_model);
 			if let Ok(Some(dependency_graph)) = &dg {
 				dependency_graph.pretty_print(&parsed_model);
-				let traces = ragtimer::rl_traces::generate_traces(
-					&parsed_model,
-					dependency_graph,
-					num_traces,
-				);
-				print_traces_to_file(&traces, "ragtimer_traces.txt");
+				let mut explicit_model = PrismVasModel::from_abstract_model(&parsed_model);
+				let mut ragtimer_builder = RagtimerBuilder::new(&parsed_model, None);
+				ragtimer_builder.build(&mut explicit_model);
 			} else {
 				error!("Error creating dependency graph.");
 				return;

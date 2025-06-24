@@ -11,7 +11,7 @@ use nalgebra::DVector;
 use crate::{
 	logging::{self, messages::*},
 	model::{
-		vas_model::{AbstractVas, VasTransition},
+		vas_model::{AbstractVas, VasProbOrRate, VasStateVector, VasTransition, VasValue},
 		vas_trie,
 	},
 };
@@ -27,9 +27,9 @@ const MAX_CYCLE_LENGTH: usize = 2;
 #[derive(Debug, Clone)]
 struct PrismStyleExplicitState {
 	/// The VAS state vector
-	state_vector: DVector<i64>,
+	state_vector: VasStateVector,
 	/// The total outgoing rate of the state, used to calculate the absorbing rate and mean residence time
-	total_rate: f64,
+	total_rate: VasProbOrRate,
 	/// Label for the state, currently unused
 	label: String,
 	/// Vector of next states, here only for convenience in lookup while building the state space.
@@ -39,8 +39,8 @@ struct PrismStyleExplicitState {
 impl PrismStyleExplicitState {
 	/// Creates a new PrismStyleExplicitState from the given parameters.
 	fn from_state(
-		state_vector: DVector<i64>,
-		total_rate: f64,
+		state_vector: VasStateVector,
+		total_rate: VasProbOrRate,
 		label: String,
 		next_states: Vec<usize>,
 	) -> Self {
@@ -62,7 +62,7 @@ struct PrismStyleExplicitTransition {
 	/// The ID (in Prism) of the state to which the transition goes
 	to_state: usize,
 	/// The CTMC rate (for Prism) of the transition
-	rate: f64,
+	rate: VasProbOrRate,
 }
 
 /// This function calculates the outgoing rate of a transition.
@@ -73,14 +73,14 @@ impl VasTransition {
 	/// This function is temporary and intended only for quick C&C result generation ---
 	/// it will eventually be replaced by a system-wide more-powerful rate calculation
 	/// that allows for more complex rate calculations.
-	fn get_sck_rate(&self) -> f64 {
+	fn get_sck_rate(&self) -> VasProbOrRate {
 		self.rate_const
 			* self
 				.enabled_bounds
 				.iter()
 				.filter(|&&r| r != 0)
-				.map(|&r| (r as f64))
-				.product::<f64>()
+				.map(|&r| (r as VasProbOrRate))
+				.product::<VasProbOrRate>()
 	}
 }
 
@@ -163,7 +163,7 @@ pub fn cycle_commute(model: &AbstractVas, trace_file: &str, output_file: &str) {
 	let mut prism_transitions: Vec<PrismStyleExplicitTransition> = Vec::new();
 	let mut seed_trace: Vec<PrismStyleExplicitTransition> = Vec::new();
 	// State trie for super quick lookups
-	let mut state_trie = vas_trie::TrieNode::new();
+	let mut state_trie = vas_trie::VasTrieNode::new();
 	state_trie.insert_if_not_exists(&current_state, current_state_id);
 	// Create the absorbing state
 	let absorbing_state = DVector::from_element(current_state.len(), -1);
@@ -198,9 +198,8 @@ pub fn cycle_commute(model: &AbstractVas, trace_file: &str, output_file: &str) {
 			let transition = model.get_transition_from_name(transition_name);
 			if let Some(t) = transition {
 				// Update the current state based on the transition
-				let next_state = (current_state.clone().cast::<i128>() + t.update_vector.clone())
-					.clone()
-					.cast::<i64>();
+				let next_state =
+					(current_state.clone().cast::<VasValue>() + t.update_vector.clone()).clone();
 				let mut next_state_id = current_state_id + 1;
 				if next_state.iter().any(|&x| x < 0) {
 					error!(
@@ -283,7 +282,7 @@ pub fn cycle_commute(model: &AbstractVas, trace_file: &str, output_file: &str) {
 							&& prism_states[i].next_states.contains(&tr.to_state)
 					})
 					.map(|tr| tr.rate)
-					.sum::<f64>(),
+					.sum::<VasProbOrRate>(),
 		};
 		prism_transitions.push(transition_to_absorbing);
 	}
@@ -296,7 +295,7 @@ pub fn cycle_commute(model: &AbstractVas, trace_file: &str, output_file: &str) {
 fn commute(
 	model: &AbstractVas,
 	prism_states: &mut Vec<PrismStyleExplicitState>,
-	state_trie: &mut vas_trie::TrieNode,
+	state_trie: &mut vas_trie::VasTrieNode,
 	prism_transitions: &mut Vec<PrismStyleExplicitTransition>,
 	trace: &Vec<PrismStyleExplicitTransition>,
 	depth: usize,
@@ -343,10 +342,7 @@ fn commute(
 		let state_vector = prism_states[state_id].state_vector.clone();
 		for transition in &universally_enabled_transitions {
 			// Compute the next state
-			let next_state = (state_vector.clone().cast::<i128>()
-				+ transition.update_vector.clone())
-			.clone()
-			.cast::<i64>();
+			let next_state = (state_vector.clone() + transition.update_vector.clone()).clone();
 			// Skip if next state has negative entries
 			if next_state.iter().any(|&x| x < 0) {
 				continue;
@@ -400,7 +396,7 @@ fn commute(
 fn add_cycles(
 	model: &AbstractVas,
 	prism_states: &mut Vec<PrismStyleExplicitState>,
-	state_trie: &mut vas_trie::TrieNode,
+	state_trie: &mut vas_trie::VasTrieNode,
 	prism_transitions: &mut Vec<PrismStyleExplicitTransition>,
 	max_cycle_length: usize,
 ) {
@@ -412,12 +408,9 @@ fn add_cycles(
 		for cycle in Itertools::combinations_with_replacement(transition_indices.iter(), cycle_len)
 		{
 			// For each multiset, check if the sum of update vectors is zero
-			let mut sum_update = model.transitions[*cycle[0]]
-				.update_vector
-				.clone()
-				.cast::<i128>();
+			let mut sum_update = model.transitions[*cycle[0]].update_vector.clone();
 			for &idx in &cycle[1..] {
-				sum_update += model.transitions[*idx].update_vector.clone().cast::<i128>();
+				sum_update += model.transitions[*idx].update_vector.clone();
 			}
 			if sum_update.iter().all(|&x| x == 0) {
 				// This is a cycle
@@ -455,7 +448,7 @@ fn add_cycles(
 						let enabled = state_vector
 							.iter()
 							.zip(min_vector.iter())
-							.all(|(&s, &m)| (s as i128) + m >= 0);
+							.all(|(&s, &m)| (s) + m >= 0);
 						if !enabled {
 							continue;
 						}
@@ -465,17 +458,15 @@ fn add_cycles(
 						for &&idx in perm {
 							let transition = &model.transitions[idx];
 							// Check if enabled: min_vector + update_vector must be non-negative
-							if (current_state.clone().cast::<i128>()
-								+ transition.update_vector.clone().cast::<i128>())
-							.iter()
-							.any(|&x| x < 0)
+							if (current_state.clone() + transition.update_vector.clone())
+								.iter()
+								.any(|&x| x < 0)
 							{
 								break;
 							}
 							// Compute next state
-							let next_state = (current_state.clone().cast::<i128>()
-								+ transition.update_vector.clone())
-							.cast::<i64>();
+							let next_state =
+								(current_state.clone() + transition.update_vector.clone());
 							// Insert or get the state ID
 							let mut next_state_id = prism_states.len();
 							if let Some(existing_id) =
