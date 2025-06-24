@@ -37,3 +37,10 @@ macro_rules! debug_message {
         }
     };
 }
+
+pub use message;
+pub use warning;
+pub use error;
+pub use error_and_exit;
+pub use debug_message;
+

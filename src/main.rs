@@ -14,12 +14,10 @@ mod validator;
 
 use clap::{Arg, Command};
 use dependency::graph::make_dependency_graph;
-use logging::messages::*;
 use model::vas_model::AbstractVas;
 use std::path::Path;
 
 use crate::ragtimer::rl_traces::print_traces_to_file;
-
 const TIMEOUT_MINUTES: &str = "10"; //
 
 fn main() {

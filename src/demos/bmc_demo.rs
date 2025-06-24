@@ -1,7 +1,7 @@
 use crate::bmc::vas_bmc::AbstractVasBmc;
 use crate::dependency;
 use crate::dependency::graph::make_dependency_graph;
-use crate::logging::messages::*;
+use crate::*;
 use crate::model::vas_model::AbstractVas;
 
 use std::fs;

@@ -4,7 +4,7 @@ use z3::{ast, SatResult};
 
 use crate::bmc::encoding::BMCEncoding;
 use crate::bmc::vas_bmc::MAX_BMC_STEPS;
-use crate::logging::messages::*;
+use crate::*;
 use crate::AbstractVas;
 
 /// Struct to hold the BMC encoding components

@@ -1,4 +1,4 @@
-use crate::logging::messages::*;
+use crate::*;
 use crate::model::vas_model::AbstractVas;
 
 /// This function runs the cycle commute demo for a given model and trace file.

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use nalgebra::DVector;
 
-use crate::logging::messages::*;
+use crate::*;
 
 /// A node in the VAS state trie.
 pub enum TrieNode {
