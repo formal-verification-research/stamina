@@ -33,23 +33,22 @@ impl GraphNode {
 	fn rec_build_graph(&mut self, vas: &AbstractVas, depth: usize) -> Result<(), String> {
 		// Handle administrative tasks before building the node.
 		if depth > DEBUG_DEPTH_LIMIT {
-			error(&format!(
-				"Error: Depth limit exceeded: {}",
-				DEBUG_DEPTH_LIMIT
-			));
+			error!("Error: Depth limit exceeded: {}", DEBUG_DEPTH_LIMIT);
 			return Err(format!(
 				"Error: Depth limit exceeded: {}",
 				DEBUG_DEPTH_LIMIT
 			));
 		}
 		let indentation = " ".repeat(depth as usize);
-		debug_message(&format!(
+		debug_message!(
 			"{}Building graph at node {} x{}",
-			indentation, self.transition.transition_name, self.executions
-		));
+			indentation,
+			self.transition.transition_name,
+			self.executions
+		);
 		// Check if the node is already enabled.
 		if self.enabled {
-			debug_message(&format!("{}Node Enabled? {}", indentation, self.enabled));
+			debug_message!("{}Node Enabled? {}", indentation, self.enabled);
 			return Ok(());
 		}
 		// Create a new "initial state" for the child nodes.
@@ -74,7 +73,7 @@ impl GraphNode {
 			)
 			.collect::<Vec<_>>();
 		child_init.vector += nalgebra::DVector::from_vec(adjustment);
-		debug_message(&format!(
+		debug_message!(
 			"{}child init {}",
 			indentation,
 			(0..child_init.vector.len())
@@ -86,7 +85,7 @@ impl GraphNode {
 					format!("{}.{} ", variable_name, child_init.vector[i])
 				})
 				.collect::<String>()
-		));
+		);
 		// Similarly, compute the target values for the child nodes.
 		// This is a set of targets that the child nodes must satisfy in order to enable its parents.
 		let child_targets: Vec<VasProperty> = self
@@ -100,13 +99,13 @@ impl GraphNode {
 						.update_vector
 						.get(prop.variable_index)
 						.unwrap();
-					debug_message(&format!(
+					debug_message!(
 						"{}consumed_here {}.{}",
 						indentation,
 						vas.variable_names.get(prop.variable_index).unwrap(),
 						consumed_here
-					));
-					debug_message(&format!("{}initial_value {}", indentation, initial_value));
+					);
+					debug_message!("{}initial_value {}", indentation, initial_value);
 					prop.target_value + (consumed_here * self.executions)
 				} else {
 					let initial_value = child_init.vector.get(prop.variable_index).unwrap();
@@ -115,17 +114,17 @@ impl GraphNode {
 						.update_vector
 						.get(prop.variable_index)
 						.unwrap();
-					debug_message(&format!(
+					debug_message!(
 						"{}produced_here {}.{}",
 						indentation,
 						vas.variable_names.get(prop.variable_index).unwrap(),
 						consumed_here
-					));
-					debug_message(&format!("{}initial_value {}", indentation, initial_value));
+					);
+					debug_message!("{}initial_value {}", indentation, initial_value);
 					prop.target_value - (consumed_here * self.executions)
 				};
 				if reqd != 0 {
-					debug_message(&format!("{}reqd {}", indentation, reqd));
+					debug_message!("{}reqd {}", indentation, reqd);
 					Some(VasProperty {
 						variable_index: prop.variable_index,
 						target_value: reqd,
@@ -139,12 +138,12 @@ impl GraphNode {
 		let mut negative_targets: Vec<VasProperty> = Vec::new();
 		for i in 0..child_init.vector.len() {
 			if child_init.vector[i] < 0 {
-				debug_message(&format!(
+				debug_message!(
 					"{}negative_target {}.{}",
 					indentation,
 					vas.variable_names.get(i).unwrap(),
 					child_init.vector[i]
-				));
+				);
 				negative_targets.push(VasProperty {
 					variable_index: i,
 					target_value: -child_init.vector[i],
@@ -154,7 +153,7 @@ impl GraphNode {
 		// Combine all the targets into a single vector.
 		let mut all_targets = child_targets;
 		all_targets.extend(negative_targets);
-		debug_message(&format!(
+		debug_message!(
 			"{}child targets {}",
 			indentation,
 			all_targets
@@ -165,20 +164,21 @@ impl GraphNode {
 					mm.target_value
 				))
 				.collect::<String>()
-		));
+		);
 		// For all targets, try and add children nodes that meet that target.
 		for target in &all_targets {
-			debug_message(&format!(
+			debug_message!(
 				"{}Processing target {}.{}",
 				indentation,
 				vas.variable_names.get(target.variable_index).unwrap(),
 				target.target_value
-			));
+			);
 			for trans in &vas.transitions {
-				debug_message(&format!(
+				debug_message!(
 					"{}Checking transition {}",
-					indentation, trans.transition_name
-				));
+					indentation,
+					trans.transition_name
+				);
 				if self
 					.parents
 					.iter()
@@ -190,13 +190,13 @@ impl GraphNode {
 						|| (target.target_value < 0
 							&& trans.update_vector[target.variable_index] < 0)
 					{
-						debug_message(&format!(
+						debug_message!(
 							"{}Sign match for transition {} on target {}.{}",
 							indentation,
 							trans.transition_name,
 							vas.variable_names.get(target.variable_index).unwrap(),
 							target.target_value
-						));
+						);
 						this_child_targets.push(VasProperty {
 							variable_index: target.variable_index,
 							target_value: target.target_value,
@@ -205,18 +205,15 @@ impl GraphNode {
 							/ trans.update_vector[target.variable_index])
 							.try_into()
 							.unwrap();
-						debug_message(&format!(
-							"{}Executions calculated: {}",
-							indentation, executions
-						));
+						debug_message!("{}Executions calculated: {}", indentation, executions);
 					} else {
-						debug_message(&format!(
+						debug_message!(
 							"{}Sign mismatch for transition {} on target {}.{}",
 							indentation,
 							trans.transition_name,
 							vas.variable_names.get(target.variable_index).unwrap(),
 							target.target_value
-						));
+						);
 						continue;
 					}
 					if executions > 0 {
@@ -232,10 +229,11 @@ impl GraphNode {
 						};
 						child.parents.push(self.transition.clone());
 						self.children.push(Box::new(child));
-						debug_message(&format!(
+						debug_message!(
 							"{}Added child node for transition {}",
-							indentation, trans.transition_name
-						));
+							indentation,
+							trans.transition_name
+						);
 					}
 				}
 			}
@@ -286,7 +284,7 @@ fn property_sat(prop: &VasProperty, state: &VasState) -> Result<bool, String> {
 pub fn make_dependency_graph(
 	vas: &vas_model::AbstractVas,
 ) -> Result<Option<DependencyGraph>, String> {
-	debug_message(&format!("Building a dependency graph."));
+	debug_message!("Building a dependency graph.");
 	// check if target is satisfied in the initial state; if not, build a root node.
 	let initial_state = VasState::new(vas.initial_states[0].vector.clone());
 	let initially_sat = property_sat(&vas.target, &initial_state);
@@ -308,7 +306,7 @@ pub fn make_dependency_graph(
 	};
 	let decrement = (initial_value) > target_value;
 	// TODO: Handle stoichiometry greater than one.
-	debug_message(&format!("Target Executions: {}", target_difference));
+	debug_message!("Target Executions: {}", target_difference);
 	// Build a new root (abstract transition) node
 	let mut dependency_graph = DependencyGraph {
 		root: {
@@ -341,7 +339,7 @@ pub fn make_dependency_graph(
 				dependency_graph.root.node_init.vector[first_target.variable_index];
 		}
 	}
-	debug_message(&format!("decrement? {}", dependency_graph.root.decrement));
+	debug_message!("decrement? {}", dependency_graph.root.decrement);
 	// Start building the graph from the root node.
 	let _ = dependency_graph.root.rec_build_graph(vas, 1);
 	Ok(Some(dependency_graph))
@@ -351,9 +349,7 @@ pub fn make_dependency_graph(
 /// TODO: These should be unified into a single printout and a single JSON format.
 impl DependencyGraph {
 	/// Prints the dependency graph in its original format.
-	/// This function uses println! instead of message to simplify Beckey's work.
-	/// Eventually, we'll all need to agree on a single dependency graph printout format,
-	/// or pass the dependency graph object around.
+	/// This uses println! instead of message to simplify Beckey's work.
 	pub fn original_print(&self, vas: &AbstractVas) {
 		fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize) {
 			let mut node_str = String::new();
@@ -393,16 +389,13 @@ impl DependencyGraph {
 	pub fn pretty_print(&self, vas: &AbstractVas) {
 		fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize) {
 			let indent = " ".repeat(depth * 2);
-			message(&format!(
-				"{}Node: {}",
-				indent, node.transition.transition_name
-			));
-			message(&format!("{}  Executions: {}", indent, node.executions));
-			message(&format!("{}  Enabled: {}", indent, node.enabled));
+			message!("{}Node: {}", indent, node.transition.transition_name);
+			message!("{}  Executions: {}", indent, node.executions);
+			message!("{}  Enabled: {}", indent, node.enabled);
 			if node.decrement {
-				message(&format!("{}  Decrement", indent));
+				message!("{}  Decrement", indent);
 			}
-			message(&format!(
+			message!(
 				"{}  Init Variables: [{}]",
 				indent,
 				node.node_init
@@ -411,15 +404,15 @@ impl DependencyGraph {
 					.map(|v| v.to_string())
 					.collect::<Vec<_>>()
 					.join(", ")
-			));
-			message(&format!("{}  Target Variables:", indent));
+			);
+			message!("{}  Target Variables:", indent);
 			for target in node.node_target.iter() {
-				message(&format!(
+				message!(
 					"{}    {}: {}",
 					indent,
 					vas.variable_names.get(target.variable_index).unwrap(),
 					target.target_value
-				));
+				);
 			}
 			for child in &node.children {
 				print_node(vas, child, depth + 1);
@@ -430,20 +423,22 @@ impl DependencyGraph {
 
 	/// Prints a simple representation of the dependency graph.
 	pub fn simple_print(&self, vas: &AbstractVas) {
-		message(&format!("==================="));
-		message(&format!("Dependency Graph"));
+		message!("===================");
+		message!("Dependency Graph");
 		fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize) {
 			let indent = " ".repeat(depth * 2);
-			message(&format!(
+			message!(
 				"{}Node: {} (Executions: {})",
-				indent, node.transition.transition_name, node.executions
-			));
+				indent,
+				node.transition.transition_name,
+				node.executions
+			);
 			for child in &node.children {
 				print_node(vas, child, depth + 1);
 			}
 		}
 		print_node(vas, &self.root, 0);
-		message(&format!("===================\n"));
+		message!("===================\n");
 	}
 
 	/// Nicely formats the dependency graph as a string for better readability.

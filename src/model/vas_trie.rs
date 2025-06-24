@@ -2,10 +2,8 @@ use std::collections::HashMap;
 
 use nalgebra::DVector;
 
-use crate::{
-	logging::messages::*,
-	model::vas_model::{VasStateVector, VasValue},
-};
+use crate::model::vas_model::{VasStateVector, VasValue};
+use crate::*;
 
 /// A node in the VAS state trie.
 pub enum VasTrieNode {
@@ -23,22 +21,15 @@ impl VasTrieNode {
 	}
 	/// Inserts a state into the trie, or returns the first ID associated with the state if it exists.
 	/// If the state is not found, it inserts the state with the given ID and returns None.
-	pub fn insert_if_not_exists(
-		&mut self,
-		state_vector: &VasStateVector,
-		id: usize,
-	) -> Option<usize> {
+	pub fn insert_if_not_exists(&mut self, state: &VasStateVector, id: usize) -> Option<usize> {
 		if id == 0 {
-			error(&format!(
-				"Error: ID 0 inserted for state {:?}",
-				state_vector
-			));
+			error!("Error: ID 0 inserted for state {:?}", state);
 		}
 		match self {
 			VasTrieNode::LeafNode(existing_id) => Some(*existing_id),
 			VasTrieNode::Node(_) => {
 				let mut node = self;
-				for &val in state_vector {
+				for &val in state {
 					match node {
 						VasTrieNode::Node(children) => {
 							node = children.entry(val).or_insert_with(VasTrieNode::new);

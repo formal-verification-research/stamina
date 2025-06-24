@@ -80,10 +80,11 @@ impl<'a> RagtimerBuilder<'a> {
 		};
 		let latest_probability = trace_probability_history.last().cloned().unwrap_or(0.0);
 		if trace.len() == 0 || latest_probability <= 0.0 {
-			debug_message(&format!(
+			debug_message!(
 				"Skipping reward update for trace {:?} with probability {:.3e}",
-				trace, latest_probability
-			));
+				trace,
+				latest_probability
+			);
 			return;
 		}
 		// Use the last 10% of entries to compute the average probability
@@ -119,12 +120,9 @@ impl<'a> RagtimerBuilder<'a> {
 		for &transition_id in trace {
 			if let Some(reward) = rewards.get_mut(&transition_id) {
 				*reward += trace_reward;
-				// debug_message(&format!("Updated reward for transition {}: {:.3e}", transition_id, *reward));
+				// debug_message!("Updated reward for transition {}: {:.3e}", transition_id, *reward));
 			} else {
-				error(&format!(
-					"Transition ID {} not found in rewards map.",
-					transition_id
-				));
+				error!("Transition ID {} not found in rewards map.", transition_id);
 			}
 		}
 	}
@@ -164,7 +162,7 @@ impl<'a> RagtimerBuilder<'a> {
 			})
 			.map(|t| t.transition_id)
 			.collect();
-		// debug_message(&format!("Available transitions: {:?}", x));
+		// debug_message!("Available transitions: {:?}", x));
 		x
 	}
 
@@ -190,7 +188,7 @@ impl<'a> RagtimerBuilder<'a> {
 		transition: &VasTransition,
 	) -> VasProbOrRate {
 		let total_outgoing_rate = self.crn_total_outgoing_rate(current_state);
-		// debug_message(&format!(
+		// debug_message!(
 		//     "Transition probability {:.3e} for transition {:?} in state {:?} with total outgoing rate {:.3e}",
 		//     self.crn_transition_rate(current_state, transition) / total_outgoing_rate, transition, current_state, total_outgoing_rate
 		// ));
@@ -206,11 +204,11 @@ impl<'a> RagtimerBuilder<'a> {
 			if let Some(vas_transition) = self.abstract_model.get_transition_from_id(t) {
 				total_outgoing_rate += self.crn_transition_rate(current_state, vas_transition);
 			} else {
-				error(&format!("Transition ID {} not found in model.", t));
+				error!("Transition ID {} not found in model.", t);
 				return 0.0; // If the transition is not found, return 0 probability
 			}
 		}
-		// debug_message(&format!(
+		// debug_message!(
 		//     "Total outgoing rate for state {:?} is {:.3e}",
 		//     current_state, total_outgoing_rate
 		// ));
@@ -235,7 +233,7 @@ impl<'a> RagtimerBuilder<'a> {
 				{
 					current_state_id = existing_id;
 				} else {
-					warning(&format!("During exploration, current state {:?} does not already exist in the model, but it should. Adding it under ID {}", current_state, available_state_id));
+					warning!("During exploration, current state {:?} does not already exist in the model, but it should. Adding it under ID {}", current_state, available_state_id);
 					current_state_id = available_state_id;
 					let current_outgoing_rate = self.crn_total_outgoing_rate(&current_state);
 					explicit_model.add_state(PrismVasState {
@@ -300,10 +298,7 @@ impl<'a> RagtimerBuilder<'a> {
 						.push((0, explicit_model.transitions.len() - 1));
 				}
 			} else {
-				error(&format!(
-					"Transition ID {} not found in model.",
-					transition_id
-				));
+				error!("Transition ID {} not found in model.", transition_id);
 			}
 			// Add the transition to the explicit model
 			let transition_exists = explicit_model.transition_map.get(&current_state_id).map_or(
@@ -320,10 +315,7 @@ impl<'a> RagtimerBuilder<'a> {
 				{
 					self.crn_transition_rate(&current_state, vas_transition)
 				} else {
-					error(&format!(
-						"Transition ID {} not found in model.",
-						transition_id
-					));
+					error!("Transition ID {} not found in model.", transition_id);
 					0.0
 				};
 				explicit_model.add_transition(PrismVasTransition {
@@ -354,7 +346,7 @@ impl<'a> RagtimerBuilder<'a> {
 						absorbing_transition.rate -= transition_rate;
 					}
 				} else {
-					error(&format!("No outgoing transitions found for state ID {}. Something probably went wrong with its absorbing state.", current_state_id));
+					error!("No outgoing transitions found for state ID {}. Something probably went wrong with its absorbing state.", current_state_id);
 				}
 			}
 			current_state = next_state.clone();
@@ -380,20 +372,20 @@ impl<'a> RagtimerBuilder<'a> {
 					break;
 				}
 			} else {
-				error(&format!(
+				error!(
 					"Current state length {} is less than target variable index {}",
 					current_state.len(),
 					vas_target.variable_index
-				));
+				);
 			}
 			// Get available transitions
 			let available_transitions = self.get_available_transitions(&current_state);
 			if available_transitions.is_empty() {
 				// No available transitions, warn the user and break out of the loop
-				warning(&format!(
+				warning!(
 					"No available transitions found in state {:?}. Ending trace generation.",
 					current_state
-				));
+				);
 				break;
 			}
 			// Shuffle the available transitions to add randomness
@@ -406,9 +398,9 @@ impl<'a> RagtimerBuilder<'a> {
 				.sum();
 			// Pick a transition based on the rewards and magic numbers
 			for (_, &transition) in shuffled_transitions.iter().enumerate() {
-				// debug_message(&format!("Considering transition {} ({}/{})", transition, index + 1, shuffled_transitions.len()));
+				// debug_message!("Considering transition {} ({}/{})", transition, index + 1, shuffled_transitions.len()));
 				let transition_reward = rewards.get(&transition).unwrap_or(&0.0);
-				// debug_message(&format!("Considering transition {} with reward {}", transition, transition_reward));
+				// debug_message!("Considering transition {} with reward {}", transition, transition_reward));
 				let selection_probability: RewardValue = if total_reward > 0.0 {
 					transition_reward / total_reward
 				} else {
@@ -420,15 +412,15 @@ impl<'a> RagtimerBuilder<'a> {
 					{
 						current_state = current_state + vas_transition.update_vector.clone();
 						trace.push(transition);
-						// debug_message(&format!("Transition {} selected with reward {:.3e}. Current state updated to: {:?}", transition, transition_reward, current_state));
+						// debug_message!("Transition {} selected with reward {:.3e}. Current state updated to: {:?}", transition, transition_reward, current_state));
 						trace_probability *=
 							self.crn_transition_probability(&current_state, &vas_transition);
-						// debug_message(&format!(
+						// debug_message!(
 						//     "Transition {} selected with reward {:.3e}. Current state updated to: {:?}, trace probability: {:.3e}",
 						//     transition, transition_reward, current_state, trace_probability
 						// ));
 					} else {
-						error(&format!("Transition ID {} not found in model.", transition));
+						error!("Transition ID {} not found in model.", transition);
 					}
 					break;
 				}
@@ -489,11 +481,11 @@ impl<'a> RagtimerBuilder<'a> {
 						owned_dep_graph.as_ref().unwrap()
 					}
 					Ok(None) => {
-						error("No dependency graph could be constructed.");
+						error!("No dependency graph could be constructed.");
 						return;
 					}
 					Err(e) => {
-						error(&format!("Error constructing dependency graph: {}", e));
+						error!("Error constructing dependency graph: {}", e);
 						return;
 					}
 				}
@@ -511,15 +503,14 @@ impl<'a> RagtimerBuilder<'a> {
 				if !trace_trie.exists_or_insert(&trace) && !trace.is_empty() {
 					break;
 				}
-				debug_message(&format!(
-					"Trace {} already exists, generating a new one.",
-					i
-				));
+				debug_message!("Trace {} already exists, generating a new one.", i);
 			}
-			debug_message(&format!(
+			debug_message!(
 				"Generated trace {}: {:?} with probability {:.3e}",
-				i, trace, trace_probability
-			));
+				i,
+				trace,
+				trace_probability
+			);
 			trace_probability_history.push(trace_probability);
 			// Store explicit prism states and transitions for this trace
 			self.store_explicit_trace(explicit_model, &trace);

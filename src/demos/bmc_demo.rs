@@ -1,8 +1,8 @@
 use crate::bmc::vas_bmc::AbstractVasBmc;
 use crate::dependency;
 use crate::dependency::graph::make_dependency_graph;
-use crate::logging::messages::*;
 use crate::model::vas_model::AbstractVas;
+use crate::*;
 
 use std::fs;
 use std::path::Path;
@@ -36,7 +36,7 @@ fn get_crn_files(dir_path: &Path) -> Vec<String> {
 /// or proof of concept for the BMC functionality.
 pub fn bmc_demo(crn_model_directory: &Path) {
 	// This function is a placeholder for the actual BMC demo logic
-	message(&format!("Running BMC demo..."));
+	message!("Running BMC demo...");
 	// Collect all .crn files in the directory and its subdirectories
 	let crn_files: Vec<String> = get_crn_files(crn_model_directory);
 	// Uncomment the following lines to test specific models manually instead of all models in the directory:
@@ -45,38 +45,38 @@ pub fn bmc_demo(crn_model_directory: &Path) {
 	// crn_files.push("EnzymaticFutileCycle/EnzymaticFutileCycle.crn".to_string());
 	for m in crn_files {
 		// Parse each model file
-		message(&format!("Model: {}", m));
+		message!("Model: {}", m);
 		let model_path = crn_model_directory.join(&m);
 		let parsed_model = AbstractVas::from_file(model_path.to_str().unwrap());
 		if parsed_model.is_ok() {
 			let mut model = parsed_model.unwrap();
-			message(&format!("Finished parsing model: {}", m));
-			debug_message(&format!("Model: {}", model.nice_print()));
+			message!("Finished parsing model: {}", m);
+			debug_message!("Model: {}", model.nice_print());
 			// Build the dependency graph
 			let dg = make_dependency_graph(&model);
 			// dg.unwrap().pretty_print();
 			if let Ok(Some(dependency_graph)) = &dg {
-				message(&format!("Dependency graph created for model: {}", m));
-				debug_message(&format!(
+				message!("Dependency graph created for model: {}", m);
+				debug_message!(
 					"Dependency graph: {:?}",
 					dependency_graph.nice_print(&model)
-				));
+				);
 
 				model.setup_z3();
 				let bmc_encoding = model.bmc_encoding();
 				let _ = model.variable_bounds(&bmc_encoding);
-				message("Bounding completed successfully on original model.");
+				message!("Bounding completed successfully on original model.");
 
 				// Trim the model using the dependency graph
 				let mut trimmed_model =
 					dependency::trimmer::trim_model(&model, dependency_graph.clone());
-				message(&format!("Trimmed model created for model: {}", m));
-				debug_message(&format!("{}", trimmed_model.nice_print()));
+				message!("Trimmed model created for model: {}", m);
+				debug_message!("{}", trimmed_model.nice_print());
 
 				trimmed_model.setup_z3();
 				let bmc_encoding = trimmed_model.bmc_encoding();
 				let _ = trimmed_model.variable_bounds(&bmc_encoding);
-				message("Bounding completed successfully on trimmed model.");
+				message!("Bounding completed successfully on trimmed model.");
 			}
 		}
 	}

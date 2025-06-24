@@ -17,11 +17,11 @@ pub fn trim_model(model: &AbstractVas, dg: DependencyGraph) -> AbstractVas {
 	// Collect exactly the set of variables that are used in the dependency graph
 	for i in 0..model.variable_names.len() {
 		let mut is_used = false;
-		debug_message(&format!("{}: ", model.variable_names[i]));
+		debug_message!("{}: ", model.variable_names[i]);
 		for t in dg_transitions.iter() {
 			if t.update_vector[i] != 0 || t.enabled_bounds[i] != 0 {
 				is_used = true;
-				debug_message(&format!("used by transition {}", t.transition_name));
+				debug_message!("used by transition {}", t.transition_name);
 				break;
 			}
 		}
@@ -29,7 +29,7 @@ pub fn trim_model(model: &AbstractVas, dg: DependencyGraph) -> AbstractVas {
 			variable_names.push(model.variable_names[i].clone());
 			initial_state.push(model.initial_states[0].vector[i].try_into().unwrap());
 		} else {
-			debug_message(&format!("unused"));
+			debug_message!("unused");
 		}
 	}
 	// Collect the transitions that are used in the dependency graph,

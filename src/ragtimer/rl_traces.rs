@@ -18,7 +18,7 @@ const SMALLEST_HISTORY_WINDOW: usize = 100; // Minimum size of the history windo
 /// Prints the rewards for each transition in the model to the debug log.
 fn debug_print_rewards(model: &AbstractVas, rewards: &HashMap<usize, f64>) {
 	for (transition_id, reward) in rewards {
-		debug_message(&format!(
+		debug_message!(
 			"{}.{}: {}",
 			model
 				.get_transition_from_id(*transition_id)
@@ -26,7 +26,7 @@ fn debug_print_rewards(model: &AbstractVas, rewards: &HashMap<usize, f64>) {
 				.transition_name,
 			transition_id,
 			reward
-		));
+		);
 	}
 }
 
@@ -97,30 +97,24 @@ pub fn generate_traces(
 		);
 		if i % (num_traces / 10).max(1).min(500) == 0 {
 			let width = num_traces.to_string().len();
-			debug_message(&format!(
+			debug_message!(
 				"Generated trace {:>width$}/{} with cumulative probability {:.6e}",
 				i,
 				num_traces,
 				trace_probability_history.iter().sum::<f64>(),
 				width = width,
-			));
+			);
 			let mut sorted_rewards: Vec<_> = rewards.iter().collect();
 			sorted_rewards.sort_by_key(|(id, _)| *id);
 			for (transition_id, reward) in sorted_rewards {
-				debug_message(&format!(
-					"\tTransition {}: reward = {:.6e}",
-					transition_id, reward
-				));
+				debug_message!("\tTransition {}: reward = {:.6e}", transition_id, reward);
 			}
-			// debug_message(&format!("Running probability: {:.6e}", trace_probability_history.iter().sum::<f64>()));
+			// debug_message!("Running probability: {:.6e}", trace_probability_history.iter().sum::<f64>()));
 		}
 	}
 
 	let total_probability: f64 = trace_probability_history.iter().sum();
-	debug_message(&format!(
-		"Total trace probability sum: {:.6e}",
-		total_probability
-	));
+	debug_message!("Total trace probability sum: {:.6e}", total_probability);
 
 	traces
 }
@@ -142,7 +136,7 @@ fn generate_unique_trace(
 
 	// Safety check to prevent infinite recursion
 	if depth > MAX_DEPTH {
-		warning("Maximum recursion depth exceeded while generating unique trace. Aborting.");
+		warning!("Maximum recursion depth exceeded while generating unique trace. Aborting.");
 		return (trace, trace_probability);
 	}
 
@@ -150,10 +144,10 @@ fn generate_unique_trace(
 	loop {
 		// Safety check to prevent infinite loops
 		if trace_length > MAX_TRACE_LENGTH {
-			warning(&format!(
+			warning!(
 				"Trace length exceeded maximum of {}. Stopping generation.",
 				MAX_TRACE_LENGTH
-			));
+			);
 			break; // Prevent infinite loops
 		}
 		trace_length += 1;
@@ -161,22 +155,22 @@ fn generate_unique_trace(
 		// Check if we have reached a target state
 		// TODO: Accept more kinds of target states, not just equality to a specific value
 		let target = model.target.clone();
-		// debug_message(&format!("Checking target state: {:?}", target));
+		// debug_message!("Checking target state: {:?}", target));
 		if let Some(&val) = current_state.get(target.variable_index) {
 			if val == target.target_value.try_into().unwrap() {
-				// debug_message(&format!("Reached target state: {:?}. Ending trace generation.", current_state));
-				// debug_message(&format!("Reached target state\t[\t{}\t]", current_state.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("\t")));
+				// debug_message!("Reached target state: {:?}. Ending trace generation.", current_state));
+				// debug_message!("Reached target state\t[\t{}\t]", current_state.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("\t")));
 				break;
 			}
 		} else {
-			error(&format!("Current state {:?} does not have a value for target variable index {}. Cannot check for target state.", current_state, target.variable_index));
+			error!("Current state {:?} does not have a value for target variable index {}. Cannot check for target state.", current_state, target.variable_index);
 		}
 
 		// Get all the available transitions from the current state
 		let mut rng = rand::rng();
 		let available_transitions = get_available_transitions(&model, &current_state);
 		if available_transitions.is_empty() {
-			warning(&format!("No available transitions from state: {:?}. Cannot continue trace generation from this state.", current_state));
+			warning!("No available transitions from state: {:?}. Cannot continue trace generation from this state.", current_state);
 			break; // No more transitions available, end the trace
 		}
 		let mut shuffled_transitions: Vec<usize> = available_transitions.clone();
@@ -186,15 +180,15 @@ fn generate_unique_trace(
 			.map(|t| rewards.get(t).unwrap_or(&0.0))
 			.sum();
 
-		// debug_message(&format!("Shuffled transitions: {:?}", shuffled_transitions));
+		// debug_message!("Shuffled transitions: {:?}", shuffled_transitions));
 
-		// debug_message(&format!("Current state: {:?}, Available transitions: {:?}, Total reward: {}", current_state, shuffled_transitions, total_reward));
+		// debug_message!("Current state: {:?}, Available transitions: {:?}, Total reward: {}", current_state, shuffled_transitions, total_reward));
 
 		// Pick the next transition based on the rewards
 		for (_, &transition) in shuffled_transitions.iter().enumerate() {
-			// debug_message(&format!("Considering transition {} ({}/{})", transition, index + 1, shuffled_transitions.len()));
+			// debug_message!("Considering transition {} ({}/{})", transition, index + 1, shuffled_transitions.len()));
 			let transition_reward = rewards.get(&transition).unwrap_or(&0.0);
-			// debug_message(&format!("Considering transition {} with reward {}", transition, transition_reward));
+			// debug_message!("Considering transition {} with reward {}", transition, transition_reward));
 			let selection_probability = if total_reward > 0.0 {
 				transition_reward / total_reward
 			} else {
@@ -205,11 +199,11 @@ fn generate_unique_trace(
 					current_state =
 						current_state + vas_transition.update_vector.clone().map(|x| x as i64);
 					trace.push(transition);
-					// debug_message(&format!("Transition {} selected with reward {:.3e}. Current state updated to: {:?}", transition, transition_reward, current_state));
+					// debug_message!("Transition {} selected with reward {:.3e}. Current state updated to: {:?}", transition, transition_reward, current_state));
 					trace_probability *=
 						crn_transition_probability(model, vas_transition, &current_state);
 				} else {
-					error(&format!("Transition ID {} not found in model.", transition));
+					error!("Transition ID {} not found in model.", transition);
 				}
 				break;
 			}
@@ -217,7 +211,7 @@ fn generate_unique_trace(
 	}
 	if trace_trie.contains_or_insert(&trace) {
 		// If the trace is unique, we can continue
-		debug_message(&format!("Found duplicate trace. Trying again.",));
+		debug_message!("Found duplicate trace. Trying again.",);
 		return generate_unique_trace(
 			model,
 			trace_trie,
@@ -229,7 +223,7 @@ fn generate_unique_trace(
 
 	if trace_probability.is_finite() && trace_probability < 1.0 {
 		trace_probability_history.push(trace_probability);
-		// debug_message(&format!("Probability: {:.3e}", trace_probability));
+		// debug_message!("Probability: {:.3e}", trace_probability));
 	}
 
 	(trace, trace_probability)
@@ -278,12 +272,9 @@ fn update_rewards(
 	for &transition_id in trace {
 		if let Some(reward) = rewards.get_mut(&transition_id) {
 			*reward += trace_reward;
-			// debug_message(&format!("Updated reward for transition {}: {:.3e}", transition_id, *reward));
+			// debug_message!("Updated reward for transition {}: {:.3e}", transition_id, *reward));
 		} else {
-			error(&format!(
-				"Transition ID {} not found in rewards map.",
-				transition_id
-			));
+			error!("Transition ID {} not found in rewards map.", transition_id);
 		}
 	}
 
@@ -292,15 +283,15 @@ fn update_rewards(
 	//     if old_reward == *reward {
 	//         continue;
 	//     }
-	//     debug_message(&format!(
+	//     debug_message!(
 	//         "Transition {}: old reward = {:.3e}, new reward = {:.3e}",
 	//         transition_id, old_reward, reward
 	//     ));
 	// }
 
-	// debug_message(&format!("Change reward by\t{:.3e}", trace_reward));
-	// debug_message(&format!("Latest probability: {:.3e}", latest_probability));
-	// debug_message(&format!("Recent probability: {:.3e}", avg_recent_prob));
+	// debug_message!("Change reward by\t{:.3e}", trace_reward));
+	// debug_message!("Latest probability: {:.3e}", latest_probability));
+	// debug_message!("Recent probability: {:.3e}", avg_recent_prob));
 	// debug_message("Not yet implemented: update_rewards function");
 }
 
@@ -312,7 +303,7 @@ fn get_available_transitions(model: &AbstractVas, current_state: &DVector<i64>) 
 	//         .map(|(bound, &val)| format!("({} >= {})", val, bound))
 	//         .collect::<Vec<_>>()
 	//         .join("\t");
-	//     debug_message(&format!(
+	//     debug_message!(
 	//         "Transition {}: enabled_bounds vs current_state: [{}]",
 	//         t.transition_id, enabled
 	//     ));
@@ -328,7 +319,7 @@ fn get_available_transitions(model: &AbstractVas, current_state: &DVector<i64>) 
 		})
 		.map(|t| t.transition_id)
 		.collect();
-	// debug_message(&format!("Available transitions: {:?}", x));
+	// debug_message!("Available transitions: {:?}", x));
 	x
 }
 
@@ -366,7 +357,7 @@ fn crn_transition_probability(
 
 			total_outgoing_rate += this_transition_rate;
 		} else {
-			error(&format!("Transition ID {} not found in model.", t));
+			error!("Transition ID {} not found in model.", t);
 			return 0.0; // If the transition is not found, return 0 probability
 		}
 	}
