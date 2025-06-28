@@ -6,8 +6,8 @@ use nalgebra::DVector;
 use crate::{
 	logging::messages::*,
 	model::{
-		model::AbstractModel,
-		vas_model::{AbstractVas, VasProbOrRate, VasProperty, VasState, VasTransition, VasValue},
+		model::{AbstractModel, ProbabilityOrRate},
+		vas_model::{AbstractVas, VasProperty, VasState, VasTransition, VasValue},
 	},
 	util::util::read_lines,
 };
@@ -222,7 +222,7 @@ fn build_transitions(
 		let mut transition_name = String::new();
 		let mut increment = vec![VasValue::from(0); num_variables].into_boxed_slice();
 		let mut decrement = vec![VasValue::from(0); num_variables].into_boxed_slice();
-		let mut rate_const: VasProbOrRate = 0.0;
+		let mut rate_const: ProbabilityOrRate = 0.0;
 
 		for line in declaration.iter() {
 			let words: &[&str] = &line.1.split_whitespace().collect::<Vec<&str>>()[..];
@@ -329,7 +329,7 @@ fn build_transitions(
 				}
 			} else if RATE_TERMS.contains(first_word) {
 				if words.len() == 2 {
-					if let Ok(rate) = words[1].parse::<VasProbOrRate>() {
+					if let Ok(rate) = words[1].parse::<ProbabilityOrRate>() {
 						rate_const = rate;
 					} else {
 						return Err(ModelParseError::expected_float(

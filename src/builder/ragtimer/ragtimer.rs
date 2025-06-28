@@ -2,11 +2,11 @@ use std::default;
 
 use crate::{
 	builder::builder::Builder,
-	model::vas_model::{AbstractVas, PrismVasModel, VasProbOrRate},
+	model::{model::ProbabilityOrRate, vas_model::{AbstractVas, PrismVasModel}},
 };
 
 pub type RewardValue = f64;
-type LowerBound = Option<VasProbOrRate>;
+type LowerBound = Option<ProbabilityOrRate>;
 
 /// Magic numbers used for RL traces in Ragtimer.
 #[derive(Debug)]

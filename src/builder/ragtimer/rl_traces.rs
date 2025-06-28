@@ -10,9 +10,9 @@ use crate::{
 	dependency::graph::{make_dependency_graph, DependencyGraph},
 	logging::messages::{debug_message, error, warning},
 	model::{
-		model::ExplicitModel,
+		model::{ExplicitModel, ProbabilityOrRate},
 		vas_model::{
-			PrismVasModel, PrismVasState, PrismVasTransition, VasProbOrRate, VasStateVector,
+			PrismVasModel, PrismVasState, PrismVasTransition, VasStateVector,
 			VasTransition, VasValue,
 		},
 		vas_trie::VasTrieNode,
@@ -73,7 +73,7 @@ impl<'a> RagtimerBuilder<'a> {
 		&mut self,
 		rewards: &mut HashMap<usize, RewardValue>,
 		trace: &Vec<usize>,
-		trace_probability_history: &Vec<VasProbOrRate>,
+		trace_probability_history: &Vec<ProbabilityOrRate>,
 	) {
 		let magic_numbers = match &self.method {
 			ReinforcementLearning(magic_numbers) => magic_numbers,
@@ -173,10 +173,10 @@ impl<'a> RagtimerBuilder<'a> {
 		&self,
 		current_state: &VasStateVector,
 		transition: &VasTransition,
-	) -> VasProbOrRate {
+	) -> ProbabilityOrRate {
 		let mut transition_rate = 0.0;
 		for (_, &current_value) in current_state.iter().enumerate() {
-			transition_rate += transition.rate_const * (current_value as VasProbOrRate);
+			transition_rate += transition.rate_const * (current_value as ProbabilityOrRate);
 		}
 		transition_rate
 	}
@@ -187,7 +187,7 @@ impl<'a> RagtimerBuilder<'a> {
 		&self,
 		current_state: &VasStateVector,
 		transition: &VasTransition,
-	) -> VasProbOrRate {
+	) -> ProbabilityOrRate {
 		let total_outgoing_rate = self.crn_total_outgoing_rate(current_state);
 		// debug_message!(
 		//     "Transition probability {:.3e} for transition {:?} in state {:?} with total outgoing rate {:.3e}",
@@ -198,7 +198,7 @@ impl<'a> RagtimerBuilder<'a> {
 
 	/// Calculates the transition probability for a given transition in the context
 	/// of the current state under the SCK assumption for CRN models.
-	fn crn_total_outgoing_rate(&self, current_state: &VasStateVector) -> VasProbOrRate {
+	fn crn_total_outgoing_rate(&self, current_state: &VasStateVector) -> ProbabilityOrRate {
 		let mut total_outgoing_rate = 0.0;
 		let available_transitions = self.get_available_transitions(current_state);
 		for t in available_transitions {
@@ -359,7 +359,7 @@ impl<'a> RagtimerBuilder<'a> {
 	fn generate_single_trace(
 		&mut self,
 		rewards: &HashMap<usize, RewardValue>,
-	) -> (Vec<usize>, VasProbOrRate) {
+	) -> (Vec<usize>, ProbabilityOrRate) {
 		let mut trace = Vec::new();
 		let mut trace_probability = 1.0;
 		let vas_target = &self.abstract_model.target;
@@ -443,7 +443,7 @@ impl<'a> RagtimerBuilder<'a> {
 		};
 		// Set up trace generation structures
 		let mut trace_trie = TraceTrieNode::new();
-		let mut trace_probability_history: Vec<VasProbOrRate> = Vec::new();
+		let mut trace_probability_history: Vec<ProbabilityOrRate> = Vec::new();
 
 		// Set up state space storage structures
 		explicit_model.state_trie = VasTrieNode::new();

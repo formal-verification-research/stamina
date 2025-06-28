@@ -14,12 +14,11 @@ use crate::{
 use metaverify::trusted;
 use nalgebra::DVector;
 
-use super::model::{AbstractModel, ModelType, State, Transition};
+use super::model::{AbstractModel, ModelType, ProbabilityOrRate, State, Transition};
 
 /// Type alias for a VAS variable valuation
 pub type VasValue = i128;
 pub type VasStateVector = DVector<VasValue>;
-pub type VasProbOrRate = f64;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct StateLabel {
@@ -108,7 +107,7 @@ pub(crate) struct VasTransition {
 	// The minimum elementwise count for a transition to be enabled
 	pub(crate) enabled_bounds: VasStateVector,
 	// The rate constant used in CRNs
-	pub(crate) rate_const: VasProbOrRate,
+	pub(crate) rate_const: ProbabilityOrRate,
 	// An override function to find the rate probability
 	// (when this is not provided defaults to the implemenation in
 	// rate_probability_at). The override must be stored in static
@@ -118,7 +117,7 @@ pub(crate) struct VasTransition {
 
 #[derive(Clone)]
 pub(crate) struct CustomRateFn(
-	std::sync::Arc<dyn Fn(&VasState) -> VasProbOrRate + Send + Sync + 'static>,
+	std::sync::Arc<dyn Fn(&VasState) -> ProbabilityOrRate + Send + Sync + 'static>,
 );
 
 impl PartialEq for CustomRateFn {
@@ -136,7 +135,7 @@ impl std::fmt::Debug for CustomRateFn {
 impl CustomRateFn {
 	fn set_custom_rate_fn(
 		&mut self,
-		rate_fn: std::sync::Arc<dyn Fn(&VasState) -> VasProbOrRate + Send + Sync + 'static>,
+		rate_fn: std::sync::Arc<dyn Fn(&VasState) -> ProbabilityOrRate + Send + Sync + 'static>,
 	) {
 		self.0 = rate_fn;
 	}
@@ -147,13 +146,13 @@ impl VasTransition {
 	// 	self.update_vector = increment - decrement;
 	// 	self.enabled_bounds = decrement;
 	// }
-	// pub fn set_rate(&mut self, rate: VasProbOrRate) {
+	// pub fn set_rate(&mut self, rate: ProbabilityOrRate) {
 	// 	self.rate_const = rate;
 	// }
 
 	pub fn set_custom_rate_fn(
 		&mut self,
-		rate_fn: std::sync::Arc<dyn Fn(&VasState) -> VasProbOrRate + Send + Sync + 'static>,
+		rate_fn: std::sync::Arc<dyn Fn(&VasState) -> ProbabilityOrRate + Send + Sync + 'static>,
 	) {
 		self.custom_rate_fn = Some(CustomRateFn(rate_fn));
 	}
@@ -163,7 +162,7 @@ impl VasTransition {
 		transition_name: String,
 		increment: Box<[VasValue]>,
 		decrement: Box<[VasValue]>,
-		rate_const: VasProbOrRate,
+		rate_const: ProbabilityOrRate,
 	) -> Self {
 		Self {
 			transition_id,
@@ -206,7 +205,7 @@ impl VasTransition {
 
 impl Transition for VasTransition {
 	type StateType = VasState;
-	type RateOrProbabilityType = VasProbOrRate;
+	type RateOrProbabilityType = ProbabilityOrRate;
 
 	/// Check to see if our state is above every bound in the enabled
 	/// bound. We use try-fold to short circuit and return false if we
@@ -226,7 +225,7 @@ impl Transition for VasTransition {
 			.is_some()
 	}
 
-	fn rate_probability_at(&self, state: &VasState) -> Option<VasProbOrRate> {
+	fn rate_probability_at(&self, state: &VasState) -> Option<ProbabilityOrRate> {
 		let enabled = self.enabled(state);
 		if enabled {
 			let rate = if let Some(rate_fn) = &self.custom_rate_fn {
@@ -238,8 +237,8 @@ impl Transition for VasTransition {
 					* self
 						.update_vector
 						.zip_fold(&state.vector, 1.0, |acc, state_i, update_i| {
-							if (update_i as VasProbOrRate) <= 0.0 {
-								acc * (state_i as VasProbOrRate).powf(-(update_i as VasProbOrRate))
+							if (update_i as ProbabilityOrRate) <= 0.0 {
+								acc * (state_i as ProbabilityOrRate).powf(-(update_i as ProbabilityOrRate))
 							} else {
 								acc
 							}
@@ -459,7 +458,7 @@ pub(crate) struct PrismVasTransition {
 	pub(crate) transition_id: usize,
 	pub(crate) from_state: usize,
 	pub(crate) to_state: usize,
-	pub(crate) rate: VasProbOrRate,
+	pub(crate) rate: ProbabilityOrRate,
 }
 
 /// Transition data for Prism export of a VAS
@@ -467,7 +466,7 @@ pub(crate) struct PrismVasState {
 	pub(crate) state_id: usize,
 	pub(crate) vector: DVector<i128>,
 	pub(crate) label: Option<String>, // Optional label for the state, useful for sink states
-	pub(crate) total_outgoing_rate: VasProbOrRate, // Optional total outgoing rate for the state
+	pub(crate) total_outgoing_rate: ProbabilityOrRate, // Optional total outgoing rate for the state
 }
 
 /// The data for an explicit Prism export of a VAS

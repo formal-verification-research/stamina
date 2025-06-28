@@ -1,6 +1,6 @@
 pub(crate) enum ModelCheckingResult {
 	NoResult, // checking has not yet been performed or was unable to occur
-	LowerBound(VasProbOrRate), // A lower bound (Pmin)
+	LowerBound(f64), // A lower bound (Pmin)
 	UpperBound(f64), // An upper bound (Pmax)
 	ExactProbability(f64), // The exact probability
 	ProbabilityRange(f64, f64), // A probabilistic range of Pmin to Pmax

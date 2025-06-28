@@ -10,8 +10,7 @@ use nalgebra::DVector;
 
 use crate::{
 	model::{
-		vas_model::{AbstractVas, VasProbOrRate, VasStateVector, VasTransition, VasValue},
-		vas_trie,
+		model::ProbabilityOrRate, vas_model::{AbstractVas, VasStateVector, VasTransition, VasValue}, vas_trie
 	},
 	*,
 };
@@ -29,7 +28,7 @@ struct PrismStyleExplicitState {
 	/// The VAS state vector
 	state_vector: VasStateVector,
 	/// The total outgoing rate of the state, used to calculate the absorbing rate and mean residence time
-	total_rate: VasProbOrRate,
+	total_rate: ProbabilityOrRate,
 	/// Label for the state, currently unused
 	label: String,
 	/// Vector of next states, here only for convenience in lookup while building the state space.
@@ -40,7 +39,7 @@ impl PrismStyleExplicitState {
 	/// Creates a new PrismStyleExplicitState from the given parameters.
 	fn from_state(
 		state_vector: VasStateVector,
-		total_rate: VasProbOrRate,
+		total_rate: ProbabilityOrRate,
 		label: String,
 		next_states: Vec<usize>,
 	) -> Self {
@@ -62,7 +61,7 @@ struct PrismStyleExplicitTransition {
 	/// The ID (in Prism) of the state to which the transition goes
 	to_state: usize,
 	/// The CTMC rate (for Prism) of the transition
-	rate: VasProbOrRate,
+	rate: ProbabilityOrRate,
 }
 
 /// This function calculates the outgoing rate of a transition.
@@ -73,14 +72,14 @@ impl VasTransition {
 	/// This function is temporary and intended only for quick C&C result generation ---
 	/// it will eventually be replaced by a system-wide more-powerful rate calculation
 	/// that allows for more complex rate calculations.
-	fn get_sck_rate(&self) -> VasProbOrRate {
+	fn get_sck_rate(&self) -> ProbabilityOrRate {
 		self.rate_const
 			* self
 				.enabled_bounds
 				.iter()
 				.filter(|&&r| r != 0)
-				.map(|&r| (r as VasProbOrRate))
-				.product::<VasProbOrRate>()
+				.map(|&r| (r as ProbabilityOrRate))
+				.product::<ProbabilityOrRate>()
 	}
 }
 
@@ -282,7 +281,7 @@ pub fn cycle_commute(model: &AbstractVas, trace_file: &str, output_file: &str) {
 							&& prism_states[i].next_states.contains(&tr.to_state)
 					})
 					.map(|tr| tr.rate)
-					.sum::<VasProbOrRate>(),
+					.sum::<ProbabilityOrRate>(),
 		};
 		prism_transitions.push(transition_to_absorbing);
 	}

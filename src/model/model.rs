@@ -2,6 +2,8 @@ use metaverify::trusted;
 
 use crate::property::property::Labeled;
 
+pub type ProbabilityOrRate = f64;
+
 // TODO: should we include the skeleton code for nondeterministic actions?
 
 /// A trait representing a state object. Generally these will need
