@@ -480,7 +480,6 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 		Ok(result) => result,
 		Err(e) => {
 			error!("ERROR DURING TRANSITION PARSING:\n{}", e.to_string());
-			error!("HERE");
 			return Err(e);
 		}
 	};
