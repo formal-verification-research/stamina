@@ -238,7 +238,8 @@ impl Transition for VasTransition {
 						.update_vector
 						.zip_fold(&state.vector, 1.0, |acc, state_i, update_i| {
 							if (update_i as ProbabilityOrRate) <= 0.0 {
-								acc * (state_i as ProbabilityOrRate).powf(-(update_i as ProbabilityOrRate))
+								acc * (state_i as ProbabilityOrRate)
+									.powf(-(update_i as ProbabilityOrRate))
 							} else {
 								acc
 							}

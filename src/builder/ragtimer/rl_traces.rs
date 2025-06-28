@@ -12,8 +12,8 @@ use crate::{
 	model::{
 		model::{ExplicitModel, ProbabilityOrRate},
 		vas_model::{
-			PrismVasModel, PrismVasState, PrismVasTransition, VasStateVector,
-			VasTransition, VasValue,
+			PrismVasModel, PrismVasState, PrismVasTransition, VasStateVector, VasTransition,
+			VasValue,
 		},
 		vas_trie::VasTrieNode,
 	},
@@ -114,8 +114,9 @@ impl<'a> RagtimerBuilder<'a> {
 			0.0
 		};
 		// Scale to a reasonable range
-		let trace_reward =
-			(log_ratio).clamp(-magic_numbers.clamp, magic_numbers.clamp) / trace.len() as f64 * magic_numbers.trace_reward;
+		let trace_reward = (log_ratio).clamp(-magic_numbers.clamp, magic_numbers.clamp)
+			/ trace.len() as f64
+			* magic_numbers.trace_reward;
 
 		// Update the rewards for each transition in the trace
 		for &transition_id in trace {

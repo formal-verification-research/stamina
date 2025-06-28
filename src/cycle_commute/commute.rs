@@ -10,7 +10,9 @@ use nalgebra::DVector;
 
 use crate::{
 	model::{
-		model::ProbabilityOrRate, vas_model::{AbstractVas, VasStateVector, VasTransition, VasValue}, vas_trie
+		model::ProbabilityOrRate,
+		vas_model::{AbstractVas, VasStateVector, VasTransition, VasValue},
+		vas_trie,
 	},
 	*,
 };

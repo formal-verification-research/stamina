@@ -2,7 +2,10 @@ use std::default;
 
 use crate::{
 	builder::builder::Builder,
-	model::{model::ProbabilityOrRate, vas_model::{AbstractVas, PrismVasModel}},
+	model::{
+		model::ProbabilityOrRate,
+		vas_model::{AbstractVas, PrismVasModel},
+	},
 };
 
 pub type RewardValue = f64;
