@@ -16,6 +16,7 @@ pub struct MagicNumbers {
 	pub base_reward: RewardValue,
 	pub trace_reward: RewardValue,
 	pub smallest_history_window: usize,
+	pub clamp: f64,
 }
 
 pub enum RagtimerMethod {

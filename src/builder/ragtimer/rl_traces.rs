@@ -37,6 +37,7 @@ impl<'a> RagtimerBuilder<'a> {
 			base_reward: 0.1,
 			trace_reward: 0.01,
 			smallest_history_window: 50,
+			clamp: 10.0,
 		}
 	}
 
@@ -112,9 +113,9 @@ impl<'a> RagtimerBuilder<'a> {
 		} else {
 			0.0
 		};
-		// Scale to roughly [-20, 20] range
+		// Scale to a reasonable range
 		let trace_reward =
-			(log_ratio).clamp(-10.0, 10.0) / trace.len() as f64 * magic_numbers.trace_reward;
+			(log_ratio).clamp(-magic_numbers.clamp, magic_numbers.clamp) / trace.len() as f64 * magic_numbers.trace_reward;
 
 		// Update the rewards for each transition in the trace
 		for &transition_id in trace {
