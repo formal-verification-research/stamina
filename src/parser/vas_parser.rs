@@ -29,7 +29,6 @@ impl Parser for VasParser {
 // Ensure ModelType is properly imported or defined
 use crate::model::model::ModelType;
 impl From<AbstractVas> for ModelType {
-
 	fn from(_abstract_vas: AbstractVas) -> Self {
 		unimplemented!("Conversion from AbstractVas to ModelType is not implemented yet");
 	}
@@ -42,24 +41,20 @@ pub(crate) struct VasParseError {
 	message: String,
 }
 impl VasParseError {
-
 	pub fn new(line: u64, message: String) -> Self {
 		Self { line, message }
 	}
 }
 impl ModelParseError for VasParseError {
-
 	fn line(&self) -> (u64, String) {
 		unimplemented!();
 	}
-
 
 	fn column(&self) -> Option<u64> {
 		unimplemented!();
 	}
 }
 impl ToString for VasParseError {
-
 	fn to_string(&self) -> String {
 		self.message.clone()
 	}

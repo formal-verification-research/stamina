@@ -12,12 +12,8 @@ nalgebra = "0.33.2"
 num = "0.4.3"
 z3 = "0.12.1"
 
-metaverify = { git = "https://github.com/formal-verification-research/multiverify-rs" }
 itertools = "0.14.0"
 rand = "0.9.1"
-# creusot-contracts = { path = "/home/landon/creusot/creusot-contracts"}
-# prusti-contracts = "0.2.0"
-# serde = { version = "1.0.215", features = ["derive"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(creusot)'] }

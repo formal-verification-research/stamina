@@ -72,7 +72,6 @@ impl Label for StateFormula {
 		todo!()
 	}
 
-
 	fn compose(&self, _label: &Self) -> Self {
 		todo!()
 	}

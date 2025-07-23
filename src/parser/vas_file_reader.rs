@@ -80,7 +80,6 @@ impl fmt::Display for ModelParseError {
 	}
 }
 impl ModelParseError {
-
 	fn line(&self) -> (usize, String) {
 		(self.line, self.etype.to_string())
 	}

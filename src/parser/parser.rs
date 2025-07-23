@@ -39,9 +39,7 @@ pub(crate) trait Parser {
 	type ModelType: AbstractModel + Into<ModelType>;
 	type ParserErrorType: ModelParseError + fmt::Debug;
 
-
 	fn parse(filename: &str) -> Result<Self::ModelType, Self::ParserErrorType>;
-
 
 	fn parse_or_panic(filename: &str) -> ModelType {
 		let model = Self::parse(filename);
