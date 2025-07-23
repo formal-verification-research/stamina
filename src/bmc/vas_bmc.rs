@@ -9,10 +9,6 @@ use crate::{
 	AbstractVas,
 };
 
-// TODO: make this configurable by the user or calculated with the dependency graph.
-// const NUM_BITS: u32 = 9; // Default number of bits for variable representation
-// pub const max_steps: u32 = 1000; // Maximum number of BMC steps to take before giving up
-
 /// Trait for Abstract VAS models to provide BMC-related functionality.
 pub(crate) trait AbstractVasBmc<'a>: AbstractModel {
 	/// Sets up the Z3 context for BMC.
@@ -72,6 +68,7 @@ impl<'a> AbstractVasBmc<'a> for AbstractVas {
 		BMCBounds::from_encoding(self, bmc_encoding, ctx, bits, max_steps, backward)
 	}
 
+	/// Runs general BMC for the given number of steps.
 	fn run_bmc(
 		&'a self,
 		bmc_encoding: &BMCEncoding<'a>,

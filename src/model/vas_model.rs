@@ -24,6 +24,7 @@ struct StateLabel {
 	// Add fields as needed
 }
 
+/// A state in a Vector Addition System (VAS)
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct VasState {
 	// The state values
@@ -35,6 +36,7 @@ pub(crate) struct VasState {
 impl VasState {
 	// TODO: Maybe this shouldn't be none labels, or have an init label?
 
+	/// Creates a new VasState with the given vector
 	pub fn new(vector: VasStateVector) -> Self {
 		Self {
 			vector,
@@ -97,6 +99,7 @@ impl State for VasState {
 	}
 }
 
+/// A transition in a Vector Addition System (VAS)
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct VasTransition {
 	pub(crate) transition_id: usize,
