@@ -220,8 +220,8 @@ fn build_transitions(
 
 	for declaration in raw_data {
 		let mut transition_name = String::new();
-		let mut increment = vec![VasValue::from(0); num_variables].into_boxed_slice();
-		let mut decrement = vec![VasValue::from(0); num_variables].into_boxed_slice();
+		let mut increment = [0; 64][..num_variables].to_vec().into_boxed_slice();
+		let mut decrement = [0; 64][..num_variables].to_vec().into_boxed_slice();
 		let mut rate_const: ProbabilityOrRate = 0.0;
 
 		for line in declaration.iter() {
@@ -444,12 +444,10 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 		if VARIABLE_TERMS.contains(first_word) {
 			variable_lines.push((num, line));
 		} else if TRANSITION_TERMS.contains(first_word) {
-			if current_transition.is_empty() {
-				current_transition = vec![(num, line)];
-			} else {
+			if !current_transition.is_empty() {
 				transition_lines.push(current_transition);
-				current_transition = vec![(num, line)];
 			}
+			current_transition = Vec::from([(num, line)]);
 		} else if DECREASE_TERMS.contains(first_word) || INCREASE_TERMS.contains(first_word) {
 			current_transition.push((num, line));
 		} else if RATE_TERMS.contains(first_word) {
@@ -487,7 +485,7 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 	// Return the model
 	let model = AbstractVas::new(
 		variable_names,
-		vec![VasState::new(DVector::from_vec(initial_states.to_vec()))],
+		[VasState::new(DVector::from_vec(initial_states.to_vec()))].to_vec(),
 		transitions,
 		target,
 	);

@@ -32,14 +32,14 @@ impl<'ctx> Unroller<'ctx> {
 	}
 
 	pub fn at_all_times_or(&mut self, term: &ast::Bool<'ctx>, k: u32) -> ast::Bool<'ctx> {
-		let mut terms = vec![];
+		let mut terms = Vec::new();
 		for i in 0..=k {
 			terms.push(self.at_time(term, i));
 		}
 		ast::Bool::or(term.get_ctx(), &terms.iter().collect::<Vec<_>>())
 	}
 	pub fn at_all_times_and(&mut self, term: &ast::Bool<'ctx>, k: u32) -> ast::Bool<'ctx> {
-		let mut terms = vec![];
+		let mut terms = Vec::new();
 		for i in 0..=k {
 			terms.push(self.at_time(term, i));
 		}

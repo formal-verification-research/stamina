@@ -324,10 +324,10 @@ pub fn make_dependency_graph(
 				executions: target_difference,
 				enabled: false,
 				node_init: initial_state.clone(),
-				node_target: vec![VasProperty {
+				node_target: Vec::from([VasProperty {
 					variable_index: target_variable,
 					target_value: target_difference,
-				}],
+				}]),
 				decrement,
 			})
 		},
