@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use z3::{ast, SatResult};
 
 use crate::bmc::encoding::BMCEncoding;
-use crate::bmc::vas_bmc::MAX_BMC_STEPS;
 use crate::model::vas_model::VasValue;
 use crate::AbstractVas;
 use crate::*;
@@ -24,6 +23,8 @@ impl<'a> BMCBounds {
 		encoding: &'a BMCEncoding<'a>,
 		ctx: &'a z3::Context,
 		bits: u32,
+		max_steps: u32,
+		backward: bool,
 	) -> Self {
 		// Initialize the bounds
 		let mut variable_bounds = BMCBounds {
@@ -33,8 +34,8 @@ impl<'a> BMCBounds {
 			ub_tight: HashMap::new(),
 		};
 		// Do BMC to get the k-step reachable formula
-		let (reachable_formula, steps) = encoding.run_bmc(ctx, MAX_BMC_STEPS);
-		if steps == 0 || steps >= MAX_BMC_STEPS {
+		let (reachable_formula, steps) = encoding.run_bmc(ctx, max_steps, backward);
+		if steps == 0 || steps >= max_steps {
 			debug_message!("Steps: {}", steps);
 			debug_message!("Reachable formula: {:?}", reachable_formula);
 			panic!("BMC failed to find a reachable state within the maximum steps.");

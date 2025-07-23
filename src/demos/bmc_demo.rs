@@ -34,9 +34,14 @@ fn get_crn_files(dir_path: &Path) -> Vec<String> {
 /// The directory should contain subdirectories with .crn files.
 /// This is not meant to be used by an end user, but rather as a demo
 /// or proof of concept for the BMC functionality.
-pub fn bmc_demo(crn_model_directory: &Path) {
+pub fn bmc_demo(crn_model_directory: &Path, bits: u32, max_steps: u32, backward: bool) {
 	// This function is a placeholder for the actual BMC demo logic
 	message!("Running BMC demo...");
+	if backward {
+		message!("Running in backward mode.");
+	} else {
+		message!("Running in forward mode.");
+	}
 	// Collect all .crn files in the directory and its subdirectories
 	let crn_files: Vec<String> = get_crn_files(crn_model_directory);
 	// Uncomment the following lines to test specific models manually instead of all models in the directory:
@@ -63,8 +68,9 @@ pub fn bmc_demo(crn_model_directory: &Path) {
 				);
 
 				model.setup_z3();
-				let bmc_encoding = model.bmc_encoding();
-				let _ = model.variable_bounds(&bmc_encoding);
+				let bmc_encoding = model.bmc_encoding(bits, backward);
+
+				let _ = model.variable_bounds(&bmc_encoding, bits, max_steps, backward);
 				message!("Bounding completed successfully on original model.");
 
 				// Trim the model using the dependency graph
@@ -74,8 +80,8 @@ pub fn bmc_demo(crn_model_directory: &Path) {
 				debug_message!("{}", trimmed_model.nice_print());
 
 				trimmed_model.setup_z3();
-				let bmc_encoding = trimmed_model.bmc_encoding();
-				let _ = trimmed_model.variable_bounds(&bmc_encoding);
+				let bmc_encoding = trimmed_model.bmc_encoding(bits, backward);
+				let _ = trimmed_model.variable_bounds(&bmc_encoding, bits, max_steps, backward);
 				message!("Bounding completed successfully on trimmed model.");
 			}
 		}

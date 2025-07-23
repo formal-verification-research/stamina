@@ -43,6 +43,28 @@ fn main() {
 						.help("Sets the directory containing model folders")
 						.default_value("models"),
 				)
+				.arg(
+					Arg::new("bits")
+						.short('b')
+						.long("bits")
+						.value_name("BITS")
+						.help("Sets the number of bits for variable representation (default 9)")
+						.default_value("9"),
+				)
+				.arg(
+					Arg::new("max_steps")
+						.short('m')
+						.long("max-steps")
+						.value_name("MAX_STEPS")
+						.help("Sets the maximum number of BMC steps to take (default 500)")
+						.default_value("500"),
+				)
+				.arg(
+					Arg::new("backward")
+						.long("backward")
+						.help("Run in backward mode if specified")
+						.action(clap::ArgAction::SetTrue),
+				),
 		)
 		.subcommand(
 			Command::new("dependency-graph")
@@ -161,7 +183,17 @@ fn main() {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
 			message!("Running ragtimer with models_dir: {}", models_dir);
 			let dir_path = Path::new(models_dir);
-			demos::bmc_demo::bmc_demo(dir_path);
+			let backward = sub_m.get_flag("backward");
+			let bits = sub_m
+				.get_one::<String>("bits")
+				.and_then(|s| s.parse::<u32>().ok())
+				.unwrap();
+			let max_steps = sub_m
+				.get_one::<String>("max_steps")
+				.and_then(|s| s.parse::<u32>().ok())
+				.unwrap();
+			message!("Bits: {}, Max Steps: {}", bits, max_steps);
+			demos::bmc_demo::bmc_demo(dir_path, bits, max_steps, backward);
 		}
 		Some(("dependency-graph", sub_m)) => {
 			// TODO: Move this whole thing to a demo
