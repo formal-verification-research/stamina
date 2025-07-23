@@ -10,7 +10,7 @@ impl Parser for VasParser {
 	type ModelType = AbstractVas;
 	type ParserErrorType = VasParseError;
 	#[trusted]
-	fn parse(filename: &str) -> Result<Self::ModelType, Self::ParserErrorType> {
+	fn parse(_filename: &str) -> Result<Self::ModelType, Self::ParserErrorType> {
 		// Implement the parsing logic here
 		// For now, we'll return an error as a placeholder
 		Err(VasParseError::new(1, "Placeholder error".to_string()))
@@ -34,7 +34,7 @@ use crate::model::model::ModelType;
 #[trusted]
 impl From<AbstractVas> for ModelType {
 	#[trusted]
-	fn from(abstract_vas: AbstractVas) -> Self {
+	fn from(_abstract_vas: AbstractVas) -> Self {
 		unimplemented!("Conversion from AbstractVas to ModelType is not implemented yet");
 	}
 }

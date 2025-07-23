@@ -1,4 +1,3 @@
-use evalexpr::*;
 use metaverify::trusted;
 
 use std::fmt::{Display, Error, Formatter};
@@ -78,18 +77,18 @@ pub(crate) enum StateFormula {
 impl Label for StateFormula {
 	type LabeledType = StateFormula;
 	#[trusted]
-	fn contains(&self, label: &Self) {
+	fn contains(&self, _label: &Self) {
 		todo!()
 	}
 
 	#[trusted]
-	fn compose(&self, label: &Self) -> Self {
+	fn compose(&self, _label: &Self) -> Self {
 		todo!()
 	}
 }
 
 impl Display for StateFormula {
-	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+	fn fmt(&self, _f: &mut Formatter<'_>) -> Result<(), Error> {
 		todo!()
 	}
 }

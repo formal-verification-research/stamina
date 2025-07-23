@@ -1,44 +1,51 @@
-use std::{collections::BTreeSet, fmt};
+use std::{
+	collections::{BTreeSet, HashMap},
+	fmt,
+};
 
 use crate::{
-	logging::messages::*, parser::vas_file_reader, property::property,
+	logging::messages::*,
+	model::{model::ExplicitModel, vas_trie::VasTrieNode},
+	parser::vas_file_reader,
+	property::property,
 	validator::vas_validator::validate_vas,
 };
 
-use metaverify::trusted;
 use nalgebra::DVector;
 
-use super::model::{AbstractModel, ModelType, State, Transition};
+use super::model::{AbstractModel, ModelType, ProbabilityOrRate, State, Transition};
 
-#[trusted]
+/// Type alias for a VAS variable valuation
+pub type VasValue = i128;
+pub type VasStateVector = DVector<VasValue>;
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct StateLabel {
 	// Add fields as needed
 }
-#[trusted]
+
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct VasState {
 	// The state values
-	pub(crate) vector: DVector<i64>,
+	pub(crate) vector: VasStateVector,
 	// The labelset for this state
 	labels: Option<BTreeSet<property::StateFormula>>,
 }
-#[trusted]
+
 impl VasState {
 	// TODO: Maybe this shouldn't be none labels, or have an init label?
-	#[trusted]
-	pub fn new(vector: DVector<i64>) -> Self {
+
+	pub fn new(vector: VasStateVector) -> Self {
 		Self {
 			vector,
 			labels: None,
 		}
 	}
 }
-#[trusted]
+
 impl property::Labeled for VasState {
 	type LabelType = property::StateFormula;
 
-	#[trusted]
 	fn labels(&self) -> impl Iterator<Item = &property::StateFormula> {
 		self.labels
 			.as_ref()
@@ -47,7 +54,6 @@ impl property::Labeled for VasState {
 			.flatten()
 	}
 
-	#[trusted]
 	fn has_label(&self, label: &Self::LabelType) -> bool {
 		self.labels
 			.as_ref()
@@ -55,60 +61,52 @@ impl property::Labeled for VasState {
 	}
 }
 
-#[trusted]
 impl evalexpr::Context for VasState {
 	type NumericTypes = evalexpr::DefaultNumericTypes; // Use the default numeric types provided by evalexpr
 
-	#[trusted]
-	fn get_value(&self, identifier: &str) -> Option<&evalexpr::Value<Self::NumericTypes>> {
+	fn get_value(&self, _identifier: &str) -> Option<&evalexpr::Value<Self::NumericTypes>> {
 		todo!()
 	}
 
-	#[trusted]
 	fn call_function(
 		&self,
-		identifier: &str,
-		argument: &evalexpr::Value<Self::NumericTypes>,
+		_identifier: &str,
+		_argument: &evalexpr::Value<Self::NumericTypes>,
 	) -> evalexpr::error::EvalexprResultValue<Self::NumericTypes> {
 		todo!()
 	}
 
-	#[trusted]
 	fn are_builtin_functions_disabled(&self) -> bool {
 		todo!()
 	}
 
-	#[trusted]
 	fn set_builtin_functions_disabled(
 		&mut self,
-		disabled: bool,
+		_disabled: bool,
 	) -> evalexpr::EvalexprResult<(), Self::NumericTypes> {
 		todo!()
 	}
 	// Implement required methods for evalexpr::Context
 }
 
-#[trusted]
 impl State for VasState {
 	type VariableValueType = u64;
 
-	#[trusted]
-	fn valuate(&self, var_name: &str) -> Self::VariableValueType {
+	fn valuate(&self, _var_name: &str) -> Self::VariableValueType {
 		todo!()
 	}
 }
 
-#[trusted]
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct VasTransition {
 	pub(crate) transition_id: usize,
 	pub(crate) transition_name: String,
 	// The update vector
-	pub(crate) update_vector: DVector<i128>,
+	pub(crate) update_vector: VasStateVector,
 	// The minimum elementwise count for a transition to be enabled
-	pub(crate) enabled_bounds: DVector<u64>,
+	pub(crate) enabled_bounds: VasStateVector,
 	// The rate constant used in CRNs
-	pub(crate) rate_const: f64,
+	pub(crate) rate_const: ProbabilityOrRate,
 	// An override function to find the rate probability
 	// (when this is not provided defaults to the implemenation in
 	// rate_probability_at). The override must be stored in static
@@ -116,56 +114,54 @@ pub(crate) struct VasTransition {
 	pub(crate) custom_rate_fn: Option<CustomRateFn>,
 }
 
-#[trusted]
 #[derive(Clone)]
-pub(crate) struct CustomRateFn(std::sync::Arc<dyn Fn(&VasState) -> f64 + Send + Sync + 'static>);
-#[trusted]
+pub(crate) struct CustomRateFn(
+	std::sync::Arc<dyn Fn(&VasState) -> ProbabilityOrRate + Send + Sync + 'static>,
+);
+
 impl PartialEq for CustomRateFn {
-	#[trusted]
 	fn eq(&self, _: &Self) -> bool {
 		false // Custom equality logic can be implemented if needed
 	}
 }
-#[trusted]
+
 impl std::fmt::Debug for CustomRateFn {
-	#[trusted]
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.write_str("CustomRateFn")
 	}
 }
-#[trusted]
+
 impl CustomRateFn {
-	#[trusted]
 	fn set_custom_rate_fn(
 		&mut self,
-		rate_fn: std::sync::Arc<dyn Fn(&VasState) -> f64 + Send + Sync + 'static>,
+		rate_fn: std::sync::Arc<dyn Fn(&VasState) -> ProbabilityOrRate + Send + Sync + 'static>,
 	) {
 		self.0 = rate_fn;
 	}
 }
-#[trusted]
+
 impl VasTransition {
 	// pub fn set_vectors(&mut self, increment: Box<[u64]>, decrement: Box<[u64]>) {
 	// 	self.update_vector = increment - decrement;
 	// 	self.enabled_bounds = decrement;
 	// }
-	// pub fn set_rate(&mut self, rate: f64) {
+	// pub fn set_rate(&mut self, rate: ProbabilityOrRate) {
 	// 	self.rate_const = rate;
 	// }
-	#[trusted]
+
 	pub fn set_custom_rate_fn(
 		&mut self,
-		rate_fn: std::sync::Arc<dyn Fn(&VasState) -> f64 + Send + Sync + 'static>,
+		rate_fn: std::sync::Arc<dyn Fn(&VasState) -> ProbabilityOrRate + Send + Sync + 'static>,
 	) {
 		self.custom_rate_fn = Some(CustomRateFn(rate_fn));
 	}
-	#[trusted]
+
 	pub fn new(
 		transition_id: usize,
 		transition_name: String,
-		increment: Box<[u64]>,
-		decrement: Box<[u64]>,
-		rate_const: f64,
+		increment: Box<[VasValue]>,
+		decrement: Box<[VasValue]>,
+		rate_const: ProbabilityOrRate,
 	) -> Self {
 		Self {
 			transition_id,
@@ -176,12 +172,9 @@ impl VasTransition {
 				increment
 					.iter()
 					.zip(decrement.iter())
-					.map(|(inc, dec)| *inc as i128 - *dec as i128),
+					.map(|(inc, dec)| *inc - *dec),
 			),
-			enabled_bounds: DVector::from_iterator(
-				decrement.len(),
-				decrement.iter().map(|dec| *dec as u64),
-			),
+			enabled_bounds: DVector::from_iterator(decrement.len(), decrement),
 			rate_const,
 			custom_rate_fn: None,
 		}
@@ -193,13 +186,13 @@ impl VasTransition {
 	/// bound. We use try-fold to short circuit and return false if we
 	/// encounter at least one value that does not satisfy.
 	/// This function is used with a plain state vector rather than object.
-	#[trusted]
-	pub fn enabled_vector(&self, state: &DVector<i64>) -> bool {
+
+	pub fn enabled_vector(&self, state: &VasStateVector) -> bool {
 		self.enabled_bounds
 			.iter()
 			.zip(state.iter())
 			.try_fold(true, |_, (bound, state_val)| {
-				if *state_val >= *bound as i64 {
+				if *state_val >= *bound {
 					Some(true)
 				} else {
 					None
@@ -209,21 +202,20 @@ impl VasTransition {
 	}
 }
 
-#[trusted]
 impl Transition for VasTransition {
 	type StateType = VasState;
-	type RateOrProbabilityType = f64;
+	type RateOrProbabilityType = ProbabilityOrRate;
 
 	/// Check to see if our state is above every bound in the enabled
 	/// bound. We use try-fold to short circuit and return false if we
 	/// encounter at least one value that does not satisfy.
-	#[trusted]
+
 	fn enabled(&self, state: &VasState) -> bool {
 		self.enabled_bounds
 			.iter()
 			.zip(state.vector.iter())
 			.try_fold(true, |_, (bound, state_val)| {
-				if *state_val >= *bound as i64 {
+				if *state_val >= *bound {
 					Some(true)
 				} else {
 					None
@@ -232,8 +224,7 @@ impl Transition for VasTransition {
 			.is_some()
 	}
 
-	#[trusted]
-	fn rate_probability_at(&self, state: &VasState) -> Option<f64> {
+	fn rate_probability_at(&self, state: &VasState) -> Option<ProbabilityOrRate> {
 		let enabled = self.enabled(state);
 		if enabled {
 			let rate = if let Some(rate_fn) = &self.custom_rate_fn {
@@ -245,8 +236,9 @@ impl Transition for VasTransition {
 					* self
 						.update_vector
 						.zip_fold(&state.vector, 1.0, |acc, state_i, update_i| {
-							if (update_i as f64) <= 0.0 {
-								acc * (state_i as f64).powf(-update_i as f64)
+							if (update_i as ProbabilityOrRate) <= 0.0 {
+								acc * (state_i as ProbabilityOrRate)
+									.powf(-(update_i as ProbabilityOrRate))
 							} else {
 								acc
 							}
@@ -258,12 +250,11 @@ impl Transition for VasTransition {
 		}
 	}
 
-	#[trusted]
 	fn next_state(&self, state: &VasState) -> Option<Self::StateType> {
 		let enabled = self.enabled(state);
 		if enabled {
 			Some(VasState {
-				vector: &state.vector + &self.update_vector.map(|val| val as i64),
+				vector: &state.vector + &self.update_vector.map(|val| val),
 				labels: state.labels.clone(),
 			})
 		} else {
@@ -271,7 +262,6 @@ impl Transition for VasTransition {
 		}
 	}
 
-	#[trusted]
 	fn next(
 		&self,
 		state: &Self::StateType,
@@ -289,11 +279,10 @@ impl Transition for VasTransition {
 #[derive(Clone, Debug)]
 pub struct VasProperty {
 	pub(crate) variable_index: usize,
-	pub(crate) target_value: i128,
+	pub(crate) target_value: VasValue,
 }
 
 /// The data for an abstract Vector Addition System
-// #[derive(Clone)]
 pub(crate) struct AbstractVas {
 	pub(crate) variable_names: Box<[String]>,
 	pub(crate) initial_states: Vec<VasState>,
@@ -303,17 +292,14 @@ pub(crate) struct AbstractVas {
 	pub(crate) z3_context: Option<z3::Context>, // Removed because z3::Context and z3::Config do not implement Clone
 }
 
-#[trusted]
 impl AbstractModel for AbstractVas {
 	type TransitionType = VasTransition;
 	type StateType = VasState;
 
-	#[trusted]
 	fn transitions(&self) -> impl Iterator<Item = VasTransition> {
 		self.transitions.iter().cloned()
 	}
 
-	#[trusted]
 	fn initial_states(&self) -> impl Iterator<Item = (VasState, usize)> {
 		self.initial_states
 			.iter()
@@ -322,20 +308,18 @@ impl AbstractModel for AbstractVas {
 			.map(|(i, state)| (state, i))
 	}
 
-	#[trusted]
 	fn model_type(&self) -> ModelType {
 		self.m_type
 	}
 }
-#[trusted]
+
 pub enum AllowedRelation {
 	Equal,
 	LessThan,
 	GreaterThan,
 }
-#[trusted]
+
 impl fmt::Display for AllowedRelation {
-	#[trusted]
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		let relation_str = match self {
 			AllowedRelation::Equal => "=",
@@ -348,7 +332,7 @@ impl fmt::Display for AllowedRelation {
 
 // TODO: May need to allow discrete/continuous time models
 // for now we will just use continuous time models
-#[trusted]
+
 impl AbstractVas {
 	pub fn new(
 		variable_names: Box<[String]>,
@@ -367,29 +351,29 @@ impl AbstractVas {
 	}
 
 	/// Calls a parser to get a VAS model from a file
-	#[trusted]
+
 	pub fn from_file(filename: &str) -> Result<Self, String> {
 		match vas_file_reader::build_model(filename) {
 			Ok(model) => {
-				debug_message(&format!("Parsing gave OK result"));
+				debug_message!("Parsing gave OK result");
 				Ok(model)
 			}
 			Err(err) => {
-				error(&format!("ERROR DURING PARSING: {}", err));
+				error!("ERROR DURING PARSING: {}", err);
 				Err(err.to_string())
 			}
 		}
 	}
 
 	/// Runs the validator on the model and its property
-	#[trusted]
+
 	pub fn validate_model(&self, property: VasProperty) -> Result<String, String> {
 		let result = validate_vas(self, &property);
 		result
 	}
 
 	/// Look up the index/ID of a transition by its name
-	#[trusted]
+
 	pub fn get_transition_from_name(&self, transition_name: &str) -> Option<&VasTransition> {
 		self.transitions
 			.iter()
@@ -397,7 +381,7 @@ impl AbstractVas {
 	}
 
 	/// Look up the name of a transition by its index
-	#[trusted]
+
 	pub fn get_transition_from_id(&self, transition_id: usize) -> Option<&VasTransition> {
 		self.transitions
 			.iter()
@@ -405,7 +389,7 @@ impl AbstractVas {
 	}
 
 	/// Outputs a model in a debuggable string format
-	#[trusted]
+
 	pub fn debug_print(&self) -> String {
 		let mut output = String::new();
 		output.push_str(&format!("VasModel:"));
@@ -416,7 +400,7 @@ impl AbstractVas {
 	}
 
 	/// Outputs a model in a human-readable string format
-	#[trusted]
+
 	pub fn nice_print(&self) -> String {
 		let mut output = String::new();
 		output.push_str("==========================================\n");
@@ -466,5 +450,145 @@ impl AbstractVas {
 		output.push_str("               END VAS MODEL              \n");
 		output.push_str("==========================================\n");
 		output
+	}
+}
+
+/// Transition data for Prism export of a VAS
+pub(crate) struct PrismVasTransition {
+	pub(crate) transition_id: usize,
+	pub(crate) from_state: usize,
+	pub(crate) to_state: usize,
+	pub(crate) rate: ProbabilityOrRate,
+}
+
+/// Transition data for Prism export of a VAS
+pub(crate) struct PrismVasState {
+	pub(crate) state_id: usize,
+	pub(crate) vector: DVector<i128>,
+	pub(crate) label: Option<String>, // Optional label for the state, useful for sink states
+	pub(crate) total_outgoing_rate: ProbabilityOrRate, // Optional total outgoing rate for the state
+}
+
+/// The data for an explicit Prism export of a VAS
+// TODO: Do we want to have a target stored here?
+pub(crate) struct PrismVasModel {
+	pub(crate) variable_names: Vec<String>,
+	pub(crate) states: Vec<PrismVasState>,
+	pub(crate) transitions: Vec<PrismVasTransition>,
+	pub(crate) m_type: ModelType,
+	pub(crate) state_trie: VasTrieNode, // Optional trie for storing traces, if needed
+	pub(crate) transition_map: HashMap<usize, Vec<(usize, usize)>>, // Quick transition from-(to, transitions list index) lookup
+}
+
+/// Default implementation for PrismVasModel
+impl Default for PrismVasModel {
+	fn default() -> Self {
+		PrismVasModel {
+			variable_names: Vec::new(),
+			states: Vec::new(),
+			transitions: Vec::new(),
+			m_type: ModelType::ContinuousTime,
+			state_trie: VasTrieNode::new(), // No trie by default
+			transition_map: HashMap::new(), // No transitions by default
+		}
+	}
+}
+
+impl ExplicitModel for PrismVasModel {
+	type StateType = VasState;
+	type TransitionType = VasTransition;
+	type MatrixType = (); // TODO: There is no matrix type for PrismVasModel, using this placeholder
+
+	/// Maps the state to a state index (in our case just a usize)
+	fn state_to_index(&self, state: &Self::StateType) -> Option<usize> {
+		for my_state in self.states.iter() {
+			if my_state.vector == state.vector.map(|v| v as i128) {
+				return Some(my_state.state_id);
+			}
+		}
+		None
+	}
+
+	/// Like `state_to_index` but if the state is not present adds it and
+	/// assigns it a new index
+	fn find_or_add_index(&mut self, state: &Self::StateType) -> usize {
+		let index = self.state_to_index(state);
+		if let Some(idx) = index {
+			return idx; // State already exists, return its index
+		} else {
+			let new_index = self.states.len();
+			self.states.push(PrismVasState {
+				state_id: new_index,
+				vector: state.vector.map(|v| v as i128),
+				label: None,              // No label by default
+				total_outgoing_rate: 0.0, // No outgoing rate by default
+			});
+			return new_index; // Return the newly added index
+		}
+	}
+
+	/// Reserve an index in the explicit model (useful for artificially introduced absorbing
+	/// states). Returns whether or not the index was able to be reserved.
+	fn reserve_index(&mut self, _index: usize) -> bool {
+		todo!()
+	}
+
+	/// The number of states added to our model so far
+	fn state_count(&self) -> usize {
+		todo!()
+	}
+
+	/// The type of this model
+	fn model_type(&self) -> ModelType {
+		todo!()
+	}
+
+	/// Adds an entry to the sparse matrix
+	fn add_entry(
+		&mut self,
+		_from_idx: usize,
+		_to_idx: usize,
+		_entry: <Self::TransitionType as Transition>::RateOrProbabilityType,
+	) {
+		todo!()
+	}
+
+	/// Converts this model into a sparse matrix
+	fn to_matrix(&self) -> Self::MatrixType {
+		todo!()
+	}
+
+	/// Whether or not this model has not been expanded yet/is empty
+	fn is_empty(&self) -> bool {
+		self.states.is_empty() && self.transitions.is_empty()
+	}
+
+	/// Whether or not `state` is present in the model
+	fn has_state(&self, state: &Self::StateType) -> bool {
+		self.state_to_index(state).is_some()
+	}
+}
+
+impl PrismVasModel {
+	/// Creates a new empty PrismVasModel
+	pub fn new() -> Self {
+		Self::default()
+	}
+
+	pub fn from_abstract_model(abstract_model: &AbstractVas) -> Self {
+		let mut model = Self::new();
+		model.variable_names = abstract_model.variable_names.clone().into_vec();
+		model.m_type = abstract_model.m_type;
+		model
+	}
+
+	/// Adds a transition to the model
+	pub fn add_transition(&mut self, transition: PrismVasTransition) {
+		self.transitions.push(transition);
+	}
+
+	/// Adds a state to the model
+	pub fn add_state(&mut self, state: PrismVasState) {
+		self.states.push(state);
 	}
 }

@@ -6,8 +6,8 @@ use nalgebra::DVector;
 use crate::{
 	logging::messages::*,
 	model::{
-		model::AbstractModel,
-		vas_model::{AbstractVas, VasProperty, VasState, VasTransition},
+		model::{AbstractModel, ProbabilityOrRate},
+		vas_model::{AbstractVas, VasProperty, VasState, VasTransition, VasValue},
 	},
 	util::util::read_lines,
 };
@@ -57,7 +57,7 @@ impl ToString for ModelParseErrorType {
 #[trusted]
 #[derive(Clone, Debug)]
 pub struct ModelParseError {
-	line: u32,
+	line: usize,
 	etype: ModelParseErrorType,
 }
 #[trusted]
@@ -87,7 +87,7 @@ impl fmt::Display for ModelParseError {
 #[trusted]
 impl ModelParseError {
 	#[trusted]
-	fn line(&self) -> (u32, String) {
+	fn line(&self) -> (usize, String) {
 		(self.line, self.etype.to_string())
 	}
 	#[trusted]
@@ -95,56 +95,56 @@ impl ModelParseError {
 		None
 	}
 	#[trusted]
-	fn invalid_init(line: u32, count: &dyn ToString) -> Self {
+	fn invalid_init(line: usize, count: &dyn ToString) -> Self {
 		Self {
 			line,
 			etype: ModelParseErrorType::InvalidInitialVariableCount(count.to_string()),
 		}
 	}
 	#[trusted]
-	fn init_unspecified(line: u32, name: &dyn ToString) -> Self {
+	fn init_unspecified(line: usize, name: &dyn ToString) -> Self {
 		Self {
 			line,
 			etype: ModelParseErrorType::InitUnspecified(name.to_string()),
 		}
 	}
 	#[trusted]
-	fn unexpected_token(line: u32, token: &dyn ToString) -> Self {
+	fn unexpected_token(line: usize, token: &dyn ToString) -> Self {
 		Self {
 			line,
 			etype: ModelParseErrorType::UnexpextedTokenError(token.to_string()),
 		}
 	}
 	#[trusted]
-	fn expected_integer(line: u32, value: &dyn ToString) -> Self {
+	fn expected_integer(line: usize, value: &dyn ToString) -> Self {
 		Self {
 			line,
 			etype: ModelParseErrorType::ExpectedInteger(value.to_string()),
 		}
 	}
 	#[trusted]
-	fn expected_float(line: u32, value: &dyn ToString) -> Self {
+	fn expected_float(line: usize, value: &dyn ToString) -> Self {
 		Self {
 			line,
 			etype: ModelParseErrorType::ExpectedFloat(value.to_string()),
 		}
 	}
 	#[trusted]
-	fn unspecified_transition(line: u32, tname: &dyn ToString) -> Self {
+	fn unspecified_transition(line: usize, tname: &dyn ToString) -> Self {
 		Self {
 			line,
 			etype: ModelParseErrorType::UnspecifiedTransitionError(tname.to_string()),
 		}
 	}
 	#[trusted]
-	fn unspecified_variable(line: u32, vname: &dyn ToString) -> Self {
+	fn unspecified_variable(line: usize, vname: &dyn ToString) -> Self {
 		Self {
 			line,
 			etype: ModelParseErrorType::UnspecifiedVariableError(vname.to_string()),
 		}
 	}
 	#[trusted]
-	fn general(line: u32, desc: &dyn ToString) -> Self {
+	fn general(line: usize, desc: &dyn ToString) -> Self {
 		Self {
 			line,
 			etype: ModelParseErrorType::GeneralParseError(desc.to_string()),
@@ -160,9 +160,9 @@ fn get_variable_id(v: &[String], name: &str) -> Option<usize> {
 // Build two variable objects (names and initial values)
 fn build_variables(
 	raw_data: Vec<(usize, String)>,
-) -> Result<(Box<[String]>, Box<[u64]>), ModelParseError> {
+) -> Result<(Box<[String]>, Box<[VasValue]>), ModelParseError> {
 	let mut variable_names = Vec::<String>::new();
-	let mut initial_state = Vec::<u64>::new();
+	let mut initial_state = Vec::<VasValue>::new();
 	for declaration in raw_data.iter() {
 		let words: &[&str] = &declaration.1.split_whitespace().collect::<Vec<&str>>()[..];
 		let variable_name;
@@ -177,7 +177,7 @@ fn build_variables(
 				// Handle case with initialization (i.e., initial value follows word "init")
 				if INITIAL_TERMS.contains(&words[2]) {
 					variable_name = words[1].to_string();
-					if let Ok(count) = words[3].parse::<u64>() {
+					if let Ok(count) = words[3].parse::<VasValue>() {
 						variable_init = count;
 					} else {
 						return Err(ModelParseError::invalid_init(
@@ -220,9 +220,9 @@ fn build_transitions(
 
 	for declaration in raw_data {
 		let mut transition_name = String::new();
-		let mut increment = vec![0u64; num_variables].into_boxed_slice();
-		let mut decrement = vec![0u64; num_variables].into_boxed_slice();
-		let mut rate_const: f64 = 0.0;
+		let mut increment = vec![VasValue::from(0); num_variables].into_boxed_slice();
+		let mut decrement = vec![VasValue::from(0); num_variables].into_boxed_slice();
+		let mut rate_const: ProbabilityOrRate = 0.0;
 
 		for line in declaration.iter() {
 			let words: &[&str] = &line.1.split_whitespace().collect::<Vec<&str>>()[..];
@@ -238,7 +238,7 @@ fn build_transitions(
 				}
 			} else if DECREASE_TERMS.contains(first_word) {
 				let variable_name;
-				let decrease_count;
+				let decrease_count: VasValue;
 				match words.len() {
 					2 => {
 						variable_name = words[1].to_string();
@@ -246,7 +246,7 @@ fn build_transitions(
 					}
 					3 => {
 						variable_name = words[1].to_string();
-						if let Ok(count) = words[2].parse::<i128>() {
+						if let Ok(count) = words[2].parse::<VasValue>() {
 							if count < 0 {
 								// TODO: This error, and presumably others, just cause a stack overflow. Need to fix this.
 								return Err(ModelParseError::unexpected_token(
@@ -254,7 +254,7 @@ fn build_transitions(
 									&line.1,
 								));
 							} else {
-								decrease_count = count as u64
+								decrease_count = count;
 							};
 						} else {
 							return Err(ModelParseError::unexpected_token(
@@ -292,14 +292,14 @@ fn build_transitions(
 					}
 					3 => {
 						variable_name = words[1].to_string();
-						if let Ok(count) = words[2].parse::<i128>() {
+						if let Ok(count) = words[2].parse::<VasValue>() {
 							increase_count = if count < 0 {
 								return Err(ModelParseError::unexpected_token(
 									line.0.try_into().unwrap(),
 									&line.1,
 								));
 							} else {
-								count as u64
+								count
 							};
 						} else {
 							return Err(ModelParseError::unexpected_token(
@@ -329,7 +329,7 @@ fn build_transitions(
 				}
 			} else if RATE_TERMS.contains(first_word) {
 				if words.len() == 2 {
-					if let Ok(rate) = words[1].parse::<f64>() {
+					if let Ok(rate) = words[1].parse::<ProbabilityOrRate>() {
 						rate_const = rate;
 					} else {
 						return Err(ModelParseError::expected_float(
@@ -389,7 +389,7 @@ fn build_property(
 	}
 	let variable_index = variable_index.unwrap();
 	let target_value = if words.len() == 4 {
-		if let Ok(value) = words[3].parse::<i128>() {
+		if let Ok(value) = words[3].parse::<VasValue>() {
 			value
 		} else {
 			return Err(ModelParseError::expected_integer(
@@ -479,11 +479,7 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 	let transitions = match build_transitions(transition_lines, &variable_names) {
 		Ok(result) => result,
 		Err(e) => {
-			error(&format!(
-				"ERROR DURING TRANSITION PARSING:\n{}",
-				e.to_string()
-			));
-			error(&format!("HERE"));
+			error!("ERROR DURING TRANSITION PARSING:\n{}", e.to_string());
 			return Err(e);
 		}
 	};
@@ -491,9 +487,7 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 	// Return the model
 	let model = AbstractVas::new(
 		variable_names,
-		vec![VasState::new(DVector::from_vec(
-			initial_states.iter().map(|&x| x as i64).collect(),
-		))],
+		vec![VasState::new(DVector::from_vec(initial_states.to_vec()))],
 		transitions,
 		target,
 	);

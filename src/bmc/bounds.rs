@@ -3,16 +3,16 @@ use std::collections::HashMap;
 use z3::{ast, SatResult};
 
 use crate::bmc::encoding::BMCEncoding;
-use crate::bmc::vas_bmc::MAX_BMC_STEPS;
-use crate::logging::messages::{debug_message, message};
+use crate::model::vas_model::VasValue;
 use crate::AbstractVas;
+use crate::*;
 
 /// Struct to hold the BMC encoding components
 pub struct BMCBounds {
-	pub lb_loose: HashMap<String, i64>,
-	pub lb_tight: HashMap<String, i64>,
-	pub ub_loose: HashMap<String, i64>,
-	pub ub_tight: HashMap<String, i64>,
+	pub lb_loose: HashMap<String, VasValue>,
+	pub lb_tight: HashMap<String, VasValue>,
+	pub ub_loose: HashMap<String, VasValue>,
+	pub ub_tight: HashMap<String, VasValue>,
 }
 
 /// Builds variable bounds for an abstract VAS model for BMC.
@@ -23,6 +23,8 @@ impl<'a> BMCBounds {
 		encoding: &'a BMCEncoding<'a>,
 		ctx: &'a z3::Context,
 		bits: u32,
+		max_steps: u32,
+		backward: bool,
 	) -> Self {
 		// Initialize the bounds
 		let mut variable_bounds = BMCBounds {
@@ -32,10 +34,10 @@ impl<'a> BMCBounds {
 			ub_tight: HashMap::new(),
 		};
 		// Do BMC to get the k-step reachable formula
-		let (reachable_formula, steps) = encoding.run_bmc(ctx, MAX_BMC_STEPS);
-		if steps == 0 || steps >= MAX_BMC_STEPS {
-			debug_message(&format!("Steps: {}", steps));
-			debug_message(&format!("Reachable formula: {:?}", reachable_formula));
+		let (reachable_formula, steps) = encoding.run_bmc(ctx, max_steps, backward);
+		if steps == 0 || steps >= max_steps {
+			debug_message!("Steps: {}", steps);
+			debug_message!("Reachable formula: {:?}", reachable_formula);
 			panic!("BMC failed to find a reachable state within the maximum steps.");
 		}
 		// Get variable names and encodings
@@ -52,15 +54,15 @@ impl<'a> BMCBounds {
 				.iter()
 				.position(|x| x == variable_name)
 				.unwrap();
-			let mut min_bound = model.initial_states.clone()[0].vector[state_var_index];
-			let mut max_bound = (1 << bits) - 1;
-			let mut bound = 0;
-			debug_message(&format!("Checking loose upper bound for {}", variable_name));
+			debug_message!("Checking loose upper bound for {}", variable_name);
+			let mut min_bound: VasValue = model.initial_states.clone()[0].vector[state_var_index];
+			let mut max_bound: VasValue = (1 << bits) - 1;
+			let mut bound: VasValue = 0;
 			// This loop does a binary search for the loosest upper bound
 			loop {
 				solver.reset();
 				let bound_formula = unroller.at_all_times_or(
-					&state_var.bvuge(&ast::BV::from_i64(&ctx, bound, bits)),
+					&state_var.bvuge(&ast::BV::from_i64(&ctx, bound.try_into().unwrap(), bits)),
 					steps,
 				);
 				let combined_formula = ast::Bool::and(&ctx, &[&bound_formula, &reachable_formula]);
@@ -87,24 +89,25 @@ impl<'a> BMCBounds {
 			variable_bounds
 				.ub_loose
 				.insert(variable_name.clone(), bound);
-			message(&format!(
+			message!(
 				"{} loose upper bound is: {}",
-				variable_name, variable_bounds.ub_loose[variable_name]
-			));
+				variable_name,
+				variable_bounds.ub_loose[variable_name]
+			);
 		}
 		// Step 2: Tightest upper bounds
 		for s in variable_names.iter() {
 			let state_var = &state_vars[s];
 			let state_var_index = model.variable_names.iter().position(|x| x == s).unwrap();
-			let mut min_bound = model.initial_states.clone()[0].vector[state_var_index];
-			let mut max_bound = (1 << bits) - 1;
-			let mut bound = (1 << bits) - 1;
-			debug_message(&format!("Checking tight upper bound for {}", s));
+			debug_message!("Checking tight upper bound for {}", s);
+			let mut min_bound: VasValue = model.initial_states.clone()[0].vector[state_var_index];
+			let mut max_bound: VasValue = (1 << bits) - 1;
+			let mut bound: VasValue = (1 << bits) - 1;
 			// This loop does a binary search for the tightest upper bound
 			loop {
 				solver.reset();
 				let bound_formula = unroller.at_all_times_and(
-					&state_var.bvule(&ast::BV::from_i64(&ctx, bound, bits)),
+					&state_var.bvule(&ast::BV::from_i64(&ctx, bound.try_into().unwrap(), bits)),
 					steps,
 				);
 				let combined_formula = ast::Bool::and(&ctx, &[&bound_formula, &reachable_formula]);
@@ -130,20 +133,20 @@ impl<'a> BMCBounds {
 				}
 			}
 			variable_bounds.ub_tight.insert(s.clone(), bound);
-			message(&format!(
+			message!(
 				"{} tight upper bound is: {}",
-				s, variable_bounds.ub_tight[s]
-			));
+				s,
+				variable_bounds.ub_tight[s]
+			);
 		}
 		// Step 3: Loosest lower bounds
 		for s in variable_names.iter() {
 			let state_var = &state_vars[s];
 			let state_var_index = model.variable_names.iter().position(|x| x == s).unwrap();
-			let mut min_bound = 0;
-			let mut max_bound = model.initial_states[0].vector[state_var_index];
-			let mut bound = model.initial_states[0].vector[state_var_index];
-
-			debug_message(&format!("Checking loose lower bound for {}", s));
+			debug_message!("Checking loose lower bound for {}", s);
+			let mut min_bound: VasValue = 0;
+			let mut max_bound: VasValue = model.initial_states[0].vector[state_var_index];
+			let mut bound: VasValue = model.initial_states[0].vector[state_var_index];
 
 			loop {
 				if max_bound == 0 {
@@ -152,7 +155,7 @@ impl<'a> BMCBounds {
 				}
 				solver.reset();
 				let bound_formula = unroller.at_all_times_or(
-					&state_var.bvule(&ast::BV::from_i64(&ctx, bound, bits)),
+					&state_var.bvule(&ast::BV::from_i64(&ctx, bound.try_into().unwrap(), bits)),
 					steps,
 				);
 				let combined_formula = ast::Bool::and(&ctx, &[&bound_formula, &reachable_formula]);
@@ -179,19 +182,20 @@ impl<'a> BMCBounds {
 				}
 			}
 			variable_bounds.lb_loose.insert(s.clone(), bound);
-			message(&format!(
+			message!(
 				"{} loose lower bound is: {}",
-				s, variable_bounds.lb_loose[s]
-			));
+				s,
+				variable_bounds.lb_loose[s]
+			);
 		}
 		// Step 4: Tightest lower bounds
 		for s in variable_names.iter() {
 			let state_var = &state_vars[s];
 			let state_var_index = model.variable_names.iter().position(|x| x == s).unwrap();
-			let mut min_bound = 0;
-			let mut max_bound = model.initial_states[0].vector[state_var_index];
-			let mut bound = 0;
-			debug_message(&format!("Checking tight lower bound for {}", s));
+			debug_message!("Checking tight lower bound for {}", s);
+			let mut min_bound: VasValue = 0;
+			let mut max_bound: VasValue = model.initial_states[0].vector[state_var_index];
+			let mut bound: VasValue = 0;
 			// This loop does a binary search for the tightest lower bound
 			loop {
 				if max_bound == 0 {
@@ -200,7 +204,7 @@ impl<'a> BMCBounds {
 				}
 				solver.reset();
 				let bound_formula = unroller.at_all_times_and(
-					&state_var.bvuge(&ast::BV::from_i64(&ctx, bound, bits)),
+					&state_var.bvuge(&ast::BV::from_i64(&ctx, bound.try_into().unwrap(), bits)),
 					steps,
 				);
 				let combined_formula = ast::Bool::and(&ctx, &[&bound_formula, &reachable_formula]);
@@ -226,29 +230,32 @@ impl<'a> BMCBounds {
 				}
 			}
 			variable_bounds.lb_tight.insert(s.clone(), bound);
-			message(&format!(
+			message!(
 				"{} tight lower bound is: {}",
-				s, variable_bounds.lb_tight[s]
-			));
+				s,
+				variable_bounds.lb_tight[s]
+			);
 		}
-
 		// Print summary
-		debug_message(&format!("Summary of Bounds"));
-		debug_message(&format!(
+		debug_message!("Summary of Bounds");
+		debug_message!(
 			"{:<20} {:<10} {:<10} {:<10} {:<10}",
-			"Variable", "LB Loose", "LB Tight", "UB Loose", "UB Tight"
-		));
+			"Variable",
+			"LB Loose",
+			"LB Tight",
+			"UB Loose",
+			"UB Tight"
+		);
 		for s in variable_names.iter() {
-			debug_message(&format!(
+			debug_message!(
 				"{:<20} {:<10} {:<10} {:<10} {:<10}",
 				s,
 				variable_bounds.lb_loose[s],
 				variable_bounds.lb_tight[s],
 				variable_bounds.ub_loose[s],
 				variable_bounds.ub_tight[s],
-			));
+			);
 		}
-
 		variable_bounds
 	}
 }

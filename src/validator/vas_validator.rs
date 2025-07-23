@@ -1,6 +1,6 @@
 use metaverify::*;
 
-use crate::model::vas_model::{AbstractVas, VasProperty, VasTransition};
+use crate::model::vas_model::{AbstractVas, VasProperty, VasTransition, VasValue};
 use ::std::collections::HashMap;
 use colored::{ColoredString, Colorize};
 
@@ -27,7 +27,7 @@ fn check_variable_names(variable_names: &Box<[String]>) -> Vec<String> {
 	let duplicates: Vec<_> = name_counts
 		.iter()
 		.filter(|&(_, &count)| count > 1)
-		.map(|(name, _)| name.clone())
+		.map(|(name, _)| (*name).clone())
 		.collect();
 	if !duplicates.is_empty() {
 		errors.push(format!("Duplicate variable names found: {:?}", duplicates));
@@ -36,9 +36,9 @@ fn check_variable_names(variable_names: &Box<[String]>) -> Vec<String> {
 }
 
 #[trusted]
-fn initial_state_neq_target(initial_state: Box<[u64]>, property: &VasProperty) -> Vec<String> {
+fn initial_state_neq_target(initial_state: Box<[VasValue]>, property: &VasProperty) -> Vec<String> {
 	let mut errors = Vec::new();
-	if initial_state[property.variable_index] as i128 == property.target_value {
+	if initial_state[property.variable_index] == property.target_value {
 		errors.push(format!(
 			"Initial state [ {} ] satisfies target with value {}",
 			initial_state
@@ -58,7 +58,7 @@ fn check_sck_assumption(transitions: Vec<VasTransition>) -> Vec<String> {
 	let mut errors = Vec::new();
 
 	for transition in transitions {
-		let total_update: i128 = transition.update_vector.iter().map(|&val| val).sum();
+		let total_update: VasValue = transition.update_vector.iter().map(|&val| val).sum();
 		if total_update > 3 || total_update < -3 {
 			errors.push(format!(
 				"Transition {} has an update vector with total change > 3",
@@ -124,11 +124,11 @@ pub fn validate_vas(model: &AbstractVas, property: &VasProperty) -> Result<Strin
 		"Check Variable Names",
 		check_variable_names(&model.variable_names),
 	));
-	let initial_state: Box<[u64]> = model.initial_states[0]
+	let initial_state: Box<[VasValue]> = model.initial_states[0]
 		.vector
 		.iter()
-		.map(|&val| val as u64)
-		.collect::<Vec<u64>>()
+		.map(|&val| val)
+		.collect::<Vec<VasValue>>()
 		.into_boxed_slice();
 	result.push_str(&write_outcome(
 		"Check Initial State != Target",
@@ -147,7 +147,7 @@ pub fn validate_vas(model: &AbstractVas, property: &VasProperty) -> Result<Strin
 }
 
 #[trusted]
-pub fn validate_vas_property(property: VasProperty) -> Result<String, String> {
+pub fn validate_vas_property(_property: VasProperty) -> Result<String, String> {
 	// Implement the validation logic for the VAS property
 	Ok("Property validation successful".to_string())
 }

@@ -1,27 +1,42 @@
-use std::process::exit;
+#[macro_export]
+macro_rules! message {
+    ($($arg:tt)*) => {
+        eprintln!("[MESSAGE] {}", format!($($arg)*));
+    };
+}
 
-use metaverify::trusted;
+#[macro_export]
+macro_rules! warning {
+    ($($arg:tt)*) => {
+        eprintln!("[WARNING] {}", format!($($arg)*));
+    };
+}
 
-#[trusted]
-pub fn message(s: &str) {
-	eprintln!("[MESSAGE] {}", s);
+#[macro_export]
+macro_rules! error {
+    ($($arg:tt)*) => {
+        eprintln!("[ERROR] {}", format!($($arg)*));
+    };
 }
-#[trusted]
-pub fn warning(s: &str) {
-	eprintln!("[WARNING] {}", s);
+
+#[macro_export]
+macro_rules! error_and_exit {
+    ($($arg:tt)*) => {
+        error!($($arg)*);
+        exit(1);
+    };
 }
-#[trusted]
-pub fn error(s: &str) {
-	eprintln!("[ERROR] {}", s);
+
+#[macro_export]
+macro_rules! debug_message {
+    ($($arg:tt)*) => {
+        if cfg!(debug_assertions) {
+            eprintln!("[DEBUG MESSAGE] {}", format!($($arg)*));
+        }
+    };
 }
-#[trusted]
-pub fn error_and_exit(s: &str) {
-	error(s);
-	exit(1);
-}
-#[trusted]
-pub fn debug_message(s: &str) {
-	if cfg!(debug_assertions) {
-		eprintln!("[DEBUG MESSAGE] {}", s);
-	}
-}
+
+pub use debug_message;
+pub use error;
+pub use message;
+pub use warning;
