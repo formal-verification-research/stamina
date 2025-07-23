@@ -18,7 +18,7 @@ pub struct BMCEncoding<'a> {
 /// Builds an encoding for an abstract VAS model for BMC.
 impl<'a> BMCEncoding<'a> {
 	/// Constructs a new BMCEncoding from the given context, config, and unroller.
-	pub fn from_vas(model: &'a AbstractVas, ctx: &'a Context, bits: u32, backward: bool) -> Self {
+	pub fn from_vas(model: &'a AbstractVas, ctx: &'a Context, bits: u32) -> Self {
 		debug_message!("Building BMC encoding for VAS model");
 		// Load the state variables
 		let model_variables = model.variable_names.clone();
@@ -40,7 +40,8 @@ impl<'a> BMCEncoding<'a> {
 		}
 		debug_message!("Encoded variables for BMC:\n{:?}", bmc_current_variables);
 		// Build the initial formula by conjoining the constraints
-		let bmc_init_formula = ast::Bool::and(&ctx, &bmc_init_constraints.iter().collect::<Vec<_>>());
+		let bmc_init_formula =
+			ast::Bool::and(&ctx, &bmc_init_constraints.iter().collect::<Vec<_>>());
 		debug_message!("Encoded initial state for BMC:\n{:?}", bmc_init_formula);
 
 		// Encode the target formula
@@ -125,7 +126,12 @@ impl<'a> BMCEncoding<'a> {
 	/// `transition_formula`: The transition formula modifying the system
 	/// `target_formula`: The formula identifying the target
 	/// `unroller`: The unroller used
-	pub fn run_bmc(&self, ctx: &'a Context, max_steps: u32, backward: bool) -> (ast::Bool<'a>, u32) {
+	pub fn run_bmc(
+		&self,
+		ctx: &'a Context,
+		max_steps: u32,
+		backward: bool,
+	) -> (ast::Bool<'a>, u32) {
 		debug_message!("Bounded Model Checking to {} steps", max_steps);
 		let (init_formula, transition_formula, target_formula, unroller) = (
 			&self.init_formula,
@@ -137,10 +143,10 @@ impl<'a> BMCEncoding<'a> {
 		let solver = Solver::new(&ctx);
 		let mut max_k = 0;
 		let mut formula;
-		
+
 		// Do the full unrolling to k steps
 		if backward {
-			formula = unroller.at_time(target_formula, max_steps-1);
+			formula = unroller.at_time(target_formula, max_steps - 1);
 			for k in (0..max_steps).rev() {
 				max_k = max_steps - k;
 				debug_message!("-- TIME {:3} --", k);
@@ -154,35 +160,41 @@ impl<'a> BMCEncoding<'a> {
 
 				if status == SatResult::Sat {
 					// println!("Status: SAT");
-					formula = ast::Bool::and(&ctx, &[&formula, &unroller.at_time(&init_formula, k)]);
+					formula =
+						ast::Bool::and(&ctx, &[&formula, &unroller.at_time(&init_formula, k)]);
 					break;
 				} else {
 					// println!("Status: UNSAT");
-					formula = ast::Bool::and(&ctx, &[&formula, &unroller.at_time(&transition_formula, k)]);
+					formula = ast::Bool::and(
+						&ctx,
+						&[&formula, &unroller.at_time(&transition_formula, k)],
+					);
 				}
 			}
-		}
-		else {
+		} else {
 			formula = unroller.at_time(init_formula, 0);
 			for k in 0..max_steps {
 				max_k = k;
 				debug_message!("-- TIME {:3} --", k);
-				
-			let step_formula =
-				&ast::Bool::and(&ctx, &[&formula, &unroller.at_time(&target_formula, k)]);
-			// println!("Step formula:\n{:?}", step_formula);
-			solver.reset();
-			solver.assert(step_formula);
-			let status = solver.check();
 
-			if status == SatResult::Sat {
-				// println!("Status: SAT");
-				formula = ast::Bool::and(&ctx, &[&formula, &unroller.at_time(&target_formula, k)]);
-				break;
-			} else {
-				// println!("Status: UNSAT");
-				formula =
-					ast::Bool::and(&ctx, &[&formula, &unroller.at_time(&transition_formula, k)]);
+				let step_formula =
+					&ast::Bool::and(&ctx, &[&formula, &unroller.at_time(&target_formula, k)]);
+				// println!("Step formula:\n{:?}", step_formula);
+				solver.reset();
+				solver.assert(step_formula);
+				let status = solver.check();
+
+				if status == SatResult::Sat {
+					// println!("Status: SAT");
+					formula =
+						ast::Bool::and(&ctx, &[&formula, &unroller.at_time(&target_formula, k)]);
+					break;
+				} else {
+					// println!("Status: UNSAT");
+					formula = ast::Bool::and(
+						&ctx,
+						&[&formula, &unroller.at_time(&transition_formula, k)],
+					);
 				}
 			}
 		}

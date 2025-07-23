@@ -1,4 +1,4 @@
-use std::{collections::HashMap, i16::MAX, thread::current};
+use std::collections::HashMap;
 
 use nalgebra::DVector;
 use rand::{seq::SliceRandom, Rng};
@@ -10,17 +10,13 @@ use crate::{
 	dependency::graph::{make_dependency_graph, DependencyGraph},
 	logging::messages::{debug_message, error, warning},
 	model::{
-		model::{ExplicitModel, ProbabilityOrRate},
+		model::ProbabilityOrRate,
 		vas_model::{
 			PrismVasModel, PrismVasState, PrismVasTransition, VasStateVector, VasTransition,
-			VasValue,
 		},
 		vas_trie::VasTrieNode,
 	},
-	trace::{
-		self,
-		trace_trie::{self, TraceTrieNode},
-	},
+	trace::trace_trie::TraceTrieNode,
 };
 
 const MAX_TRACE_LENGTH: usize = 10000;
@@ -472,7 +468,7 @@ impl<'a> RagtimerBuilder<'a> {
 		});
 
 		// If the dependency graph is not provided, we try to construct it from the abstract model.
-		let mut owned_dep_graph = None;
+		let owned_dep_graph;
 		let dependency_graph_ref: &DependencyGraph = match dependency_graph {
 			Some(dep_graph) => dep_graph,
 			None => {

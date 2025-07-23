@@ -11,7 +11,6 @@ use crate::{
 	validator::vas_validator::validate_vas,
 };
 
-use metaverify::trusted;
 use nalgebra::DVector;
 
 use super::model::{AbstractModel, ModelType, ProbabilityOrRate, State, Transition};
@@ -65,14 +64,14 @@ impl property::Labeled for VasState {
 impl evalexpr::Context for VasState {
 	type NumericTypes = evalexpr::DefaultNumericTypes; // Use the default numeric types provided by evalexpr
 
-	fn get_value(&self, identifier: &str) -> Option<&evalexpr::Value<Self::NumericTypes>> {
+	fn get_value(&self, _identifier: &str) -> Option<&evalexpr::Value<Self::NumericTypes>> {
 		todo!()
 	}
 
 	fn call_function(
 		&self,
-		identifier: &str,
-		argument: &evalexpr::Value<Self::NumericTypes>,
+		_identifier: &str,
+		_argument: &evalexpr::Value<Self::NumericTypes>,
 	) -> evalexpr::error::EvalexprResultValue<Self::NumericTypes> {
 		todo!()
 	}
@@ -83,7 +82,7 @@ impl evalexpr::Context for VasState {
 
 	fn set_builtin_functions_disabled(
 		&mut self,
-		disabled: bool,
+		_disabled: bool,
 	) -> evalexpr::EvalexprResult<(), Self::NumericTypes> {
 		todo!()
 	}
@@ -93,7 +92,7 @@ impl evalexpr::Context for VasState {
 impl State for VasState {
 	type VariableValueType = u64;
 
-	fn valuate(&self, var_name: &str) -> Self::VariableValueType {
+	fn valuate(&self, _var_name: &str) -> Self::VariableValueType {
 		todo!()
 	}
 }
@@ -530,7 +529,7 @@ impl ExplicitModel for PrismVasModel {
 
 	/// Reserve an index in the explicit model (useful for artificially introduced absorbing
 	/// states). Returns whether or not the index was able to be reserved.
-	fn reserve_index(&mut self, index: usize) -> bool {
+	fn reserve_index(&mut self, _index: usize) -> bool {
 		todo!()
 	}
 
@@ -547,9 +546,9 @@ impl ExplicitModel for PrismVasModel {
 	/// Adds an entry to the sparse matrix
 	fn add_entry(
 		&mut self,
-		from_idx: usize,
-		to_idx: usize,
-		entry: <Self::TransitionType as Transition>::RateOrProbabilityType,
+		_from_idx: usize,
+		_to_idx: usize,
+		_entry: <Self::TransitionType as Transition>::RateOrProbabilityType,
 	) {
 		todo!()
 	}

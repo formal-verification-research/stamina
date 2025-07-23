@@ -1,5 +1,3 @@
-use metaverify::trusted;
-
 use crate::property::property::Labeled;
 
 pub type ProbabilityOrRate = f64;

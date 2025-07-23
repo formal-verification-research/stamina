@@ -17,11 +17,11 @@ mod validator;
 use clap::{Arg, Command};
 use dependency::graph::make_dependency_graph;
 use model::vas_model::AbstractVas;
-use std::{default, path::Path};
+use std::path::Path;
 
 use crate::{
 	builder::{builder::Builder, ragtimer::ragtimer::RagtimerBuilder},
-	model::{model::ExplicitModel, vas_model::PrismVasModel},
+	model::vas_model::PrismVasModel,
 };
 
 // use crate::ragtimer::rl_traces::print_traces_to_file;
@@ -218,7 +218,7 @@ fn main() {
 		}
 		Some(("ragtimer", sub_m)) => {
 			message!("Ragtimer under development...");
-			let num_traces = sub_m
+			let _num_traces = sub_m
 				.get_one::<String>("qty")
 				.and_then(|s| s.parse::<usize>().ok())
 				.unwrap();

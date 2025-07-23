@@ -1,5 +1,3 @@
-use std::default;
-
 use crate::{
 	builder::builder::Builder,
 	model::{
@@ -59,7 +57,7 @@ impl<'a> Builder for RagtimerBuilder<'a> {
 
 	/// Whether or not we are finished or should continue. We only build once so this returns
 	/// `false` if `build()` has not yet been called, and `true` if `build()` has been called.
-	fn finished(&mut self, result: &Self::ResultType) -> bool {
+	fn finished(&mut self, _result: &Self::ResultType) -> bool {
 		self.model_built
 	}
 

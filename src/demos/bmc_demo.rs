@@ -68,7 +68,7 @@ pub fn bmc_demo(crn_model_directory: &Path, bits: u32, max_steps: u32, backward:
 				);
 
 				model.setup_z3();
-				let bmc_encoding = model.bmc_encoding(bits, backward);
+				let bmc_encoding = model.bmc_encoding(bits);
 
 				let _ = model.variable_bounds(&bmc_encoding, bits, max_steps, backward);
 				message!("Bounding completed successfully on original model.");
@@ -80,7 +80,7 @@ pub fn bmc_demo(crn_model_directory: &Path, bits: u32, max_steps: u32, backward:
 				debug_message!("{}", trimmed_model.nice_print());
 
 				trimmed_model.setup_z3();
-				let bmc_encoding = trimmed_model.bmc_encoding(bits, backward);
+				let bmc_encoding = trimmed_model.bmc_encoding(bits);
 				let _ = trimmed_model.variable_bounds(&bmc_encoding, bits, max_steps, backward);
 				message!("Bounding completed successfully on trimmed model.");
 			}

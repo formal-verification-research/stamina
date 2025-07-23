@@ -27,7 +27,7 @@ fn check_variable_names(variable_names: &Box<[String]>) -> Vec<String> {
 	let duplicates: Vec<_> = name_counts
 		.iter()
 		.filter(|&(_, &count)| count > 1)
-		.map(|(name, _)| name.clone())
+		.map(|(name, _)| (*name).clone())
 		.collect();
 	if !duplicates.is_empty() {
 		errors.push(format!("Duplicate variable names found: {:?}", duplicates));
@@ -147,7 +147,7 @@ pub fn validate_vas(model: &AbstractVas, property: &VasProperty) -> Result<Strin
 }
 
 #[trusted]
-pub fn validate_vas_property(property: VasProperty) -> Result<String, String> {
+pub fn validate_vas_property(_property: VasProperty) -> Result<String, String> {
 	// Implement the validation logic for the VAS property
 	Ok("Property validation successful".to_string())
 }

@@ -1,5 +1,3 @@
-use std::process::exit;
-
 #[macro_export]
 macro_rules! message {
     ($($arg:tt)*) => {
@@ -40,6 +38,5 @@ macro_rules! debug_message {
 
 pub use debug_message;
 pub use error;
-pub use error_and_exit;
 pub use message;
 pub use warning;
