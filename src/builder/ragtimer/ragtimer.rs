@@ -20,11 +20,14 @@ pub struct MagicNumbers {
 	pub clamp: f64,
 }
 
+/// Enum representing the method used by Ragtimer to build the model.
 pub enum RagtimerMethod {
 	ReinforcementLearning(MagicNumbers),
 	DeterministicDependencyGraph,
 }
 
+/// Builder for Ragtimer, which builds an abstracted model using the specified method.
+/// It implements the Builder trait and is used to create a probability lower bound P_min
 pub(crate) struct RagtimerBuilder<'a> {
 	pub abstract_model: &'a AbstractVas,
 	pub model_built: bool,

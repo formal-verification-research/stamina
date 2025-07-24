@@ -1,10 +1,8 @@
-use metaverify::*;
 
 use crate::model::vas_model::{AbstractVas, VasProperty, VasTransition, VasValue};
 use ::std::collections::HashMap;
 use colored::{ColoredString, Colorize};
 
-#[trusted]
 fn check_variable_names(variable_names: &Box<[String]>) -> Vec<String> {
 	let mut errors = Vec::new();
 	let empty_variable_names = variable_names.iter().filter(|name| name.is_empty()).count();
@@ -35,7 +33,6 @@ fn check_variable_names(variable_names: &Box<[String]>) -> Vec<String> {
 	errors
 }
 
-#[trusted]
 fn initial_state_neq_target(initial_state: Box<[VasValue]>, property: &VasProperty) -> Vec<String> {
 	let mut errors = Vec::new();
 	if initial_state[property.variable_index] == property.target_value {
@@ -52,7 +49,6 @@ fn initial_state_neq_target(initial_state: Box<[VasValue]>, property: &VasProper
 	errors
 }
 
-#[trusted]
 // TODO: To check the SCK assumption, I think we actually need the increment/decrement vectors
 fn check_sck_assumption(transitions: Vec<VasTransition>) -> Vec<String> {
 	let mut errors = Vec::new();
@@ -76,7 +72,6 @@ fn check_sck_assumption(transitions: Vec<VasTransition>) -> Vec<String> {
 	errors
 }
 
-#[trusted]
 fn check_rate_constant(transitions: Vec<VasTransition>) -> Vec<String> {
 	let mut errors = Vec::new();
 	for transition in transitions {
@@ -90,7 +85,6 @@ fn check_rate_constant(transitions: Vec<VasTransition>) -> Vec<String> {
 	errors
 }
 
-#[trusted]
 pub fn write_outcome(test_name: &str, errors: Vec<String>) -> String {
 	let fail = "FAIL".red();
 	let pass = "PASS".green();
@@ -111,7 +105,6 @@ pub fn write_outcome(test_name: &str, errors: Vec<String>) -> String {
 	result
 }
 
-#[trusted]
 pub fn validate_vas(model: &AbstractVas, property: &VasProperty) -> Result<String, String> {
 	let mut result = String::new();
 
@@ -146,7 +139,6 @@ pub fn validate_vas(model: &AbstractVas, property: &VasProperty) -> Result<Strin
 	Ok(result)
 }
 
-#[trusted]
 pub fn validate_vas_property(_property: VasProperty) -> Result<String, String> {
 	// Implement the validation logic for the VAS property
 	Ok("Property validation successful".to_string())

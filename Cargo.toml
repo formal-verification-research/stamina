@@ -3,6 +3,7 @@ name = "practice"
 version = "0.1.0"
 edition = "2021"
 description = "PRobabilistic Research and Analysis of C(RN|TMC) (and VAS) Tool Integration for Checking and Evaluation"
+build = "build.rs"
 
 [dependencies]
 clap = { version = "4.5.21", features = ["derive"] }
@@ -12,12 +13,8 @@ nalgebra = "0.33.2"
 num = "0.4.3"
 z3 = "0.13.3"
 
-metaverify = { git = "https://github.com/formal-verification-research/multiverify-rs" }
 itertools = "0.14.0"
 rand = "0.9.1"
-# creusot-contracts = { path = "/home/landon/creusot/creusot-contracts"}
-# prusti-contracts = "0.2.0"
-# serde = { version = "1.0.215", features = ["derive"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(creusot)'] }

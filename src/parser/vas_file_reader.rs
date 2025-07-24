@@ -1,6 +1,5 @@
 use std::fmt;
 
-use metaverify::trusted;
 use nalgebra::DVector;
 
 use crate::{
@@ -20,7 +19,6 @@ const INCREASE_TERMS: &[&str] = &["produce", "increase", "increment"];
 const RATE_TERMS: &[&str] = &["rate", "const"];
 const TARGET_TERMS: &[&str] = &["target", "goal", "prop", "check"];
 
-#[trusted]
 #[derive(Clone, Debug)]
 enum ModelParseErrorType {
 	InvalidInitialVariableCount(String), // Variable name
@@ -32,9 +30,8 @@ enum ModelParseErrorType {
 	UnspecifiedVariableError(String),    // The name of the variable
 	GeneralParseError(String),           // Description
 }
-#[trusted]
 impl ToString for ModelParseErrorType {
-	#[trusted]
+	/// Converts the error type to a string representation
 	fn to_string(&self) -> String {
 		match self {
 			Self::InvalidInitialVariableCount(count) => {
@@ -54,15 +51,13 @@ impl ToString for ModelParseErrorType {
 		}
 	}
 }
-#[trusted]
 #[derive(Clone, Debug)]
 pub struct ModelParseError {
 	line: usize,
 	etype: ModelParseErrorType,
 }
-#[trusted]
 impl fmt::Display for ModelParseError {
-	#[trusted]
+	/// Formats the error for display
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		let (line_num, line_content) = self.line();
 		let col = self.column();
@@ -84,66 +79,64 @@ impl fmt::Display for ModelParseError {
 		)
 	}
 }
-#[trusted]
 impl ModelParseError {
-	#[trusted]
 	fn line(&self) -> (usize, String) {
 		(self.line, self.etype.to_string())
 	}
-	#[trusted]
+
 	fn column(&self) -> Option<u32> {
 		None
 	}
-	#[trusted]
+
 	fn invalid_init(line: usize, count: &dyn ToString) -> Self {
 		Self {
 			line,
 			etype: ModelParseErrorType::InvalidInitialVariableCount(count.to_string()),
 		}
 	}
-	#[trusted]
+
 	fn init_unspecified(line: usize, name: &dyn ToString) -> Self {
 		Self {
 			line,
 			etype: ModelParseErrorType::InitUnspecified(name.to_string()),
 		}
 	}
-	#[trusted]
+
 	fn unexpected_token(line: usize, token: &dyn ToString) -> Self {
 		Self {
 			line,
 			etype: ModelParseErrorType::UnexpextedTokenError(token.to_string()),
 		}
 	}
-	#[trusted]
+
 	fn expected_integer(line: usize, value: &dyn ToString) -> Self {
 		Self {
 			line,
 			etype: ModelParseErrorType::ExpectedInteger(value.to_string()),
 		}
 	}
-	#[trusted]
+
 	fn expected_float(line: usize, value: &dyn ToString) -> Self {
 		Self {
 			line,
 			etype: ModelParseErrorType::ExpectedFloat(value.to_string()),
 		}
 	}
-	#[trusted]
+
 	fn unspecified_transition(line: usize, tname: &dyn ToString) -> Self {
 		Self {
 			line,
 			etype: ModelParseErrorType::UnspecifiedTransitionError(tname.to_string()),
 		}
 	}
-	#[trusted]
+
 	fn unspecified_variable(line: usize, vname: &dyn ToString) -> Self {
 		Self {
 			line,
 			etype: ModelParseErrorType::UnspecifiedVariableError(vname.to_string()),
 		}
 	}
-	#[trusted]
+
 	fn general(line: usize, desc: &dyn ToString) -> Self {
 		Self {
 			line,
@@ -151,13 +144,11 @@ impl ModelParseError {
 		}
 	}
 }
-#[trusted]
 fn get_variable_id(v: &[String], name: &str) -> Option<usize> {
 	v.iter().position(|r| r == name)
 }
 
-#[trusted]
-// Build two variable objects (names and initial values)
+/// Builds two variable objects (names and initial values)
 fn build_variables(
 	raw_data: Vec<(usize, String)>,
 ) -> Result<(Box<[String]>, Box<[VasValue]>), ModelParseError> {
@@ -208,8 +199,7 @@ fn build_variables(
 	))
 }
 
-// Build the transition objects
-#[trusted]
+/// Builds the transition objects
 fn build_transitions(
 	raw_data: Vec<Vec<(usize, std::string::String)>>,
 	variable_names: &Box<[String]>,
@@ -220,8 +210,8 @@ fn build_transitions(
 
 	for declaration in raw_data {
 		let mut transition_name = String::new();
-		let mut increment = vec![VasValue::from(0); num_variables].into_boxed_slice();
-		let mut decrement = vec![VasValue::from(0); num_variables].into_boxed_slice();
+		let mut increment = [0; 64][..num_variables].to_vec().into_boxed_slice();
+		let mut decrement = [0; 64][..num_variables].to_vec().into_boxed_slice();
 		let mut rate_const: ProbabilityOrRate = 0.0;
 
 		for line in declaration.iter() {
@@ -368,6 +358,7 @@ fn build_transitions(
 	Ok(transitions)
 }
 
+/// Builds the property object
 fn build_property(
 	raw_data: Vec<(usize, String)>,
 	variable_names: Box<[String]>,
@@ -412,6 +403,7 @@ fn build_property(
 	Ok(property)
 }
 
+/// Reads a VAS model file and builds an AbstractVas model
 pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 	// Initialize everything
 	let lines = read_lines(&filename).map_err(|_| {
@@ -444,12 +436,10 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 		if VARIABLE_TERMS.contains(first_word) {
 			variable_lines.push((num, line));
 		} else if TRANSITION_TERMS.contains(first_word) {
-			if current_transition.is_empty() {
-				current_transition = vec![(num, line)];
-			} else {
+			if !current_transition.is_empty() {
 				transition_lines.push(current_transition);
-				current_transition = vec![(num, line)];
 			}
+			current_transition = Vec::from([(num, line)]);
 		} else if DECREASE_TERMS.contains(first_word) || INCREASE_TERMS.contains(first_word) {
 			current_transition.push((num, line));
 		} else if RATE_TERMS.contains(first_word) {
@@ -487,7 +477,7 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 	// Return the model
 	let model = AbstractVas::new(
 		variable_names,
-		vec![VasState::new(DVector::from_vec(initial_states.to_vec()))],
+		[VasState::new(DVector::from_vec(initial_states.to_vec()))].to_vec(),
 		transitions,
 		target,
 	);
