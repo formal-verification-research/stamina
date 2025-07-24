@@ -6,7 +6,7 @@ This README temporarily documents the procedure for repeating experiments from t
 
 The following are required for correct execution:
 
-0. Suitable operating system. PRACTICE is designed to be cross-compatible, but current features have been designed and tested on Ubuntu 24.
+0. Suitable operating system. PRACTICE is designed to be cross-compatible, but current features have been designed and tested on Ubuntu 24 and Debian 12.
 1. Correct installation of `z3` including `clang`:
 	```
 	sudo apt-get install z3 clang libclang-dev
