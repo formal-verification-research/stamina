@@ -4,6 +4,7 @@ use crate::model::vas_model::{VasStateVector, VasValue};
 use crate::*;
 
 /// A node in the VAS state trie.
+#[derive(Clone)]
 pub enum VasTrieNode {
 	LeafNode(usize),
 	Node(HashMap<VasValue, VasTrieNode>),

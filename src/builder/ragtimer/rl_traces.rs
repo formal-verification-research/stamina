@@ -28,7 +28,7 @@ impl<'a> RagtimerBuilder<'a> {
 	/// Function to set default magic numbers for the RL traces method.
 	pub fn default_magic_numbers(&mut self) -> MagicNumbers {
 		MagicNumbers {
-			num_traces: 100,
+			num_traces: 10,
 			dependency_reward: 1.0,
 			base_reward: 0.1,
 			trace_reward: 0.01,
@@ -248,7 +248,7 @@ impl<'a> RagtimerBuilder<'a> {
 						total_outgoing_rate: current_outgoing_rate,
 					});
 					explicit_model.add_transition(PrismVasTransition {
-						transition_id: usize::MAX,
+						transition_id: transition_id,
 						from_state: current_state_id,
 						to_state: 0,                 // Absorbing state
 						rate: current_outgoing_rate, // Start out by assuming every outgoing transition goes to absorbing state
@@ -284,7 +284,7 @@ impl<'a> RagtimerBuilder<'a> {
 						total_outgoing_rate: next_outgoing_rate,
 					});
 					explicit_model.add_transition(PrismVasTransition {
-						transition_id: usize::MAX,
+						transition_id: transition_id,
 						from_state: next_state_id,
 						to_state: 0,              // Absorbing state
 						rate: next_outgoing_rate, // Start out by assuming every outgoing transition goes to absorbing state
@@ -516,5 +516,6 @@ impl<'a> RagtimerBuilder<'a> {
 			self.update_rewards(&mut rewards, &trace, &trace_probability_history);
 			self.maintain_rewards(&mut rewards, dependency_graph_ref);
 		}
+		explicit_model.trace_trie = trace_trie;
 	}
 }
