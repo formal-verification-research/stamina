@@ -117,21 +117,21 @@ fn main() {
 						.help("Sets the model file (crn format)")
 						.required(true),
 				)
-				.arg(
-					Arg::new("trace")
-						.short('t')
-						.long("trace-file")
-						.value_name("TRACE")
-						.help("File containing white-space separated transition names for seed traces")
-						.required(true),
-				)
+				// .arg(
+				// 	Arg::new("trace")
+				// 		.short('t')
+				// 		.long("trace-file")
+				// 		.value_name("TRACE")
+				// 		.help("File containing white-space separated transition names for seed traces")
+				// 		.required(true),
+				// )
 				.arg(
 					Arg::new("output_file")
 						.short('o')
 						.long("output-file")
 						.value_name("OUTPUT")
 						.help("File to write the output to WITHOUT A FILE EXTENSION")
-						.default_value("cycle_commute"),
+						.default_value("cycle_commute.txt"),
 				)
 		)
 		.subcommand(
@@ -245,14 +245,14 @@ fn main() {
 		}
 		Some(("cycle-commute", sub_m)) => {
 			let model = sub_m.get_one::<String>("model").unwrap();
-			let trace = sub_m.get_one::<String>("trace").unwrap();
+			// let trace = sub_m.get_one::<String>("trace").unwrap();
 			let output_file = sub_m.get_one::<String>("output_file").unwrap();
 			message!(
-				"Running cycle-commute with model: {} and trace: {}",
+				"Running cycle-commute demo with model: {}",
 				model,
-				trace
+				// trace
 			);
-			demos::cycle_commute_demo::cycle_commute_demo(model, trace, output_file);
+			demos::cycle_commute_demo::cycle_commute_demo(model, output_file);
 		}
 		Some(("stamina", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();

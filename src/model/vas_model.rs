@@ -1,17 +1,14 @@
 use std::{
 	collections::{BTreeSet, HashMap},
-	fmt,
+	fmt, fs::File,
 };
 
 use crate::{
-	logging::messages::*,
-	model::{model::ExplicitModel, vas_trie::VasTrieNode},
-	parser::vas_file_reader,
-	property::property,
-	validator::vas_validator::validate_vas,
+	logging::messages::*, model::{model::ExplicitModel, vas_trie::VasTrieNode}, parser::vas_file_reader, property::property, trace::trace_trie::TraceTrieNode, validator::vas_validator::validate_vas
 };
 
 use nalgebra::DVector;
+use std::io::Write;
 
 use super::model::{AbstractModel, ModelType, ProbabilityOrRate, State, Transition};
 
@@ -456,6 +453,7 @@ impl AbstractVas {
 	}
 }
 
+#[derive(Clone)]
 /// Transition data for Prism export of a VAS
 pub(crate) struct PrismVasTransition {
 	pub(crate) transition_id: usize,
@@ -465,6 +463,7 @@ pub(crate) struct PrismVasTransition {
 }
 
 /// Transition data for Prism export of a VAS
+#[derive(Clone)]
 pub(crate) struct PrismVasState {
 	pub(crate) state_id: usize,
 	pub(crate) vector: DVector<i128>,
@@ -474,25 +473,39 @@ pub(crate) struct PrismVasState {
 
 /// The data for an explicit Prism export of a VAS
 // TODO: Do we want to have a target stored here?
+#[derive(Clone)]
 pub(crate) struct PrismVasModel {
 	pub(crate) variable_names: Vec<String>,
 	pub(crate) states: Vec<PrismVasState>,
 	pub(crate) transitions: Vec<PrismVasTransition>,
 	pub(crate) m_type: ModelType,
-	pub(crate) state_trie: VasTrieNode, // Optional trie for storing traces, if needed
+	pub(crate) state_trie: VasTrieNode, // Optional trie for storing states, if needed
+	pub(crate) trace_trie: TraceTrieNode, // Optional trie for storing traces, if needed
 	pub(crate) transition_map: HashMap<usize, Vec<(usize, usize)>>, // Quick transition from-(to, transitions list index) lookup
 }
 
 /// Default implementation for PrismVasModel
 impl Default for PrismVasModel {
 	fn default() -> Self {
+		// Create the absorbing state
+		let absorbing_state = DVector::from_element(0, -1);
+		let absorbing_state_id = 0;
+		// Add the absorbing state to the prism states
+		let mut states = Vec::new();
+		states.push(PrismVasState {
+			state_id: absorbing_state_id,
+			vector: absorbing_state,
+			label: Some("absorbing".to_string()), // Label for the absorbing state
+			total_outgoing_rate: 0.0, // No outgoing rate for the absorbing state
+		});
 		PrismVasModel {
 			variable_names: Vec::new(),
-			states: Vec::new(),
+			states: states,
 			transitions: Vec::new(),
 			m_type: ModelType::ContinuousTime,
 			state_trie: VasTrieNode::new(), // No trie by default
 			transition_map: HashMap::new(), // No transitions by default
+			trace_trie: TraceTrieNode::new(), // No trace trie by default
 		}
 	}
 }
@@ -582,6 +595,16 @@ impl PrismVasModel {
 		let mut model = Self::new();
 		model.variable_names = abstract_model.variable_names.clone().into_vec();
 		model.m_type = abstract_model.m_type;
+		// Create the absorbing state
+		let absorbing_state = DVector::from_element(model.variable_names.len(), -1);
+		let absorbing_state_id = 0;
+		// Add the absorbing state to the prism states
+		model.states.push(PrismVasState {
+			state_id: absorbing_state_id,
+			vector: absorbing_state,
+			label: Some("absorbing".to_string()), // Label for the absorbing state
+			total_outgoing_rate: 0.0, // No outgoing rate for the absorbing state
+		});
 		model
 	}
 
@@ -593,5 +616,61 @@ impl PrismVasModel {
 	/// Adds a state to the model
 	pub fn add_state(&mut self, state: PrismVasState) {
 		self.states.push(state);
+	}
+
+	
+	/// This function prints the PRISM-style explicit state space to .sta and .tra files.
+	/// The .sta file contains the state vectors and their IDs,
+	/// while the .tra file contains the transitions between states with their rates.
+	pub fn print_explicit_prism_files(&mut self, output_file: &str) {
+		// Write .sta file
+		let mut sta_file = match File::create(format!("{}.sta", output_file)) {
+			Ok(f) => f,
+			Err(e) => {
+				error!("Error creating .sta file: {}", e);
+				return;
+			}
+		};
+
+		// header info
+		let num_states = self.states.len();
+		let num_transitions = self.transitions.len();
+		
+		// states
+		for i in 0..num_states {
+			let state_str = self.states[i]
+				.vector
+				.iter()
+				.map(|x| x.to_string())
+				.collect::<Vec<_>>()
+				.join(",");
+			writeln!(sta_file, "{}: ({})", i, state_str).unwrap();
+		}
+		// Write .tra file
+		let mut tra_file = match File::create(format!("{}.tra", output_file)) {
+			Ok(f) => f,
+			Err(e) => {
+				error!("Error creating .tra file: {}", e);
+				return;
+			}
+		};
+		writeln!(tra_file, "{} {}", num_states, num_transitions).unwrap();
+		// transitions
+		for t in self.transitions.iter() {
+			writeln!(tra_file, "{} {} {}", t.from_state, t.to_state, t.rate).unwrap();
+		}
+		let var_names = self.variable_names.join(" ");
+		writeln!(sta_file, "({})", var_names).unwrap();
+		// Output results to the specified output file
+		message!(
+			"Resulting explicit state space written to: {}.sta, .tra",
+			output_file
+		);
+		message!(
+			"Check this with the following command:\n
+			prism -importtrans {}.tra -importstates {}.sta -ctmc",
+			output_file,
+			output_file
+		);
 	}
 }

@@ -5,6 +5,7 @@ use std::collections::HashMap;
 /// The ID of a transition, aliased for readability
 type Transition = usize;
 
+#[derive(Clone)]
 pub enum TraceTrieNode {
 	LeafNode,
 	Node(HashMap<Transition, TraceTrieNode>),
