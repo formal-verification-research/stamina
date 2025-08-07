@@ -9,7 +9,7 @@ use crate::*;
 /// For now, run this demo with
 /// cargo run -- cycle-commute --model-file toy_model/ModifiedYeastPolarization/ModifiedYeastPolarization.crn --max-commute-depth 2 --max-cycle-length 2
 pub fn cycle_commute_demo(
-	model_file: &str, 
+	model_file: &str,
 	output_file: &str,
 	max_commute_depth: usize,
 	max_cycle_length: usize,
@@ -22,7 +22,7 @@ pub fn cycle_commute_demo(
 		ragtimer_builder.build(&mut explicit_model);
 		debug_message!("Traces added to explicit model with Ragtimer");
 		cycle_commute(
-			&mut abstract_model, 
+			&mut abstract_model,
 			&mut explicit_model,
 			max_commute_depth,
 			max_cycle_length,

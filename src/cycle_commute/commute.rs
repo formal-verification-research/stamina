@@ -3,9 +3,7 @@ use itertools::Itertools;
 use crate::{
 	model::{
 		model::ProbabilityOrRate,
-		vas_model::{
-			AbstractVas, PrismVasModel, PrismVasState, PrismVasTransition, VasTransition,
-		},
+		vas_model::{AbstractVas, PrismVasModel, PrismVasState, PrismVasTransition, VasTransition},
 	},
 	trace::trace_trie::TraceTrieNode,
 	*,
@@ -36,7 +34,7 @@ impl VasTransition {
 /// builds the user-specified set of concurrent and cyclical transitions,
 /// and generates the PRISM-style explicit state space files (.sta and .tra).
 pub fn cycle_commute(
-	abstract_model: &mut AbstractVas, 
+	abstract_model: &mut AbstractVas,
 	explicit_model: &mut PrismVasModel,
 	max_commute_depth: usize,
 	max_cycle_length: usize,
