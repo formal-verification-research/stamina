@@ -276,7 +276,12 @@ fn main() {
 				model,
 				// trace
 			);
-			demos::cycle_commute_demo::cycle_commute_demo(model, output_file, max_commute_depth, max_cycle_length);
+			demos::cycle_commute_demo::cycle_commute_demo(
+				model,
+				output_file,
+				max_commute_depth,
+				max_cycle_length,
+			);
 		}
 		Some(("stamina", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
