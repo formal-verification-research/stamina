@@ -4,3 +4,5 @@ old_code/
 verif/
 rustc-ice*.txt
 *.txt
+*.sta
+*.tra
