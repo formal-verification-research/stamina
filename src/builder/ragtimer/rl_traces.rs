@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use nalgebra::DVector;
 use rand::{seq::SliceRandom, Rng};
 
 use crate::{
@@ -8,7 +7,7 @@ use crate::{
 		MagicNumbers, RagtimerBuilder, RagtimerMethod::ReinforcementLearning, RewardValue,
 	},
 	dependency::graph::{make_dependency_graph, DependencyGraph},
-	logging::messages::{debug_message, error, warning},
+	logging::messages::{debug_message, error, message, warning},
 	model::{
 		model::ProbabilityOrRate,
 		vas_model::{
@@ -28,7 +27,7 @@ impl<'a> RagtimerBuilder<'a> {
 	/// Function to set default magic numbers for the RL traces method.
 	pub fn default_magic_numbers(&mut self) -> MagicNumbers {
 		MagicNumbers {
-			num_traces: 10,
+			num_traces: 1000,
 			dependency_reward: 1.0,
 			base_reward: 0.1,
 			trace_reward: 0.01,
@@ -455,17 +454,17 @@ impl<'a> RagtimerBuilder<'a> {
 			label: Some("init".to_string()),
 			total_outgoing_rate: self.crn_total_outgoing_rate(&current_state),
 		});
-		let absorbing_state = DVector::from_element(current_state.len(), -1);
-		let absorbing_state_id = 0;
-		explicit_model
-			.state_trie
-			.insert_if_not_exists(&absorbing_state, absorbing_state_id);
-		explicit_model.add_state(PrismVasState {
-			state_id: absorbing_state_id,
-			vector: absorbing_state,
-			label: Some("sink".to_string()),
-			total_outgoing_rate: 0.0,
-		});
+		// let absorbing_state = DVector::from_element(current_state.len(), -1);
+		// let absorbing_state_id = 0;
+		// explicit_model
+		// 	.state_trie
+		// 	.insert_if_not_exists(&absorbing_state, absorbing_state_id);
+		// explicit_model.add_state(PrismVasState {
+		// 	state_id: absorbing_state_id,
+		// 	vector: absorbing_state,
+		// 	label: Some("sink".to_string()),
+		// 	total_outgoing_rate: 0.0,
+		// });
 
 		// If the dependency graph is not provided, we try to construct it from the abstract model.
 		let owned_dep_graph;
@@ -503,12 +502,21 @@ impl<'a> RagtimerBuilder<'a> {
 				}
 				debug_message!("Trace {} already exists, generating a new one.", i);
 			}
-			debug_message!(
-				"Generated trace {}: {:?} with probability {:.3e}",
-				i,
-				trace,
-				trace_probability
-			);
+			// let trace_names: Vec<String> = trace
+			// 	.iter()
+			// 	.map(|&id| {
+			// 		self.abstract_model
+			// 			.get_transition_from_id(id)
+			// 			.map(|t| t.transition_name.clone())
+			// 			.unwrap_or_else(|| format!("id_{}", id))
+			// 	})
+			// 	.collect();
+			// debug_message!(
+			// 	"Generated trace {}: {:?} with probability {:.3e}",
+			// 	i,
+			// 	trace_names,
+			// 	trace_probability
+			// );
 			trace_probability_history.push(trace_probability);
 			// Store explicit prism states and transitions for this trace
 			self.store_explicit_trace(explicit_model, &trace);
@@ -517,5 +525,11 @@ impl<'a> RagtimerBuilder<'a> {
 			self.maintain_rewards(&mut rewards, dependency_graph_ref);
 		}
 		explicit_model.trace_trie = trace_trie;
+
+		message!(
+			"Ragtimer RL Traces complete. Explicit model now has {} states and {} transitions.",
+			explicit_model.states.len(),
+			explicit_model.transitions.len()
+		);
 	}
 }

@@ -342,6 +342,9 @@ pub fn make_dependency_graph(
 	debug_message!("decrement? {}", dependency_graph.root.decrement);
 	// Start building the graph from the root node.
 	let _ = dependency_graph.root.rec_build_graph(vas, 1);
+
+	message!("Dependency graph built.");
+
 	Ok(Some(dependency_graph))
 }
 
