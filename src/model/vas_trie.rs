@@ -29,20 +29,30 @@ impl VasTrieNode {
 			VasTrieNode::Node(_) => {
 				let mut node = self;
 				for &val in state {
+					// debug_message!("Traversing trie for value: {}", val);
 					match node {
 						VasTrieNode::Node(children) => {
+							// debug_message!("At node with children: {:?}", children.keys());
+							// if !children.contains_key(&val) {
+							// 	debug_message!("Inserting new child for value: {}", val);
+							// }
 							node = children.entry(val).or_insert_with(VasTrieNode::new);
 						}
 						VasTrieNode::LeafNode(_) => {
 							// Should not happen in normal traversal, break early
+							// debug_message!("Reached leaf node unexpectedly while inserting state {:?}", state);
 							break;
 						}
 					}
 				}
 				match node {
-					VasTrieNode::LeafNode(existing_id) => Some(*existing_id),
+					VasTrieNode::LeafNode(existing_id) => {
+						// debug_message!("[TRIE] State {:?} already exists with ID {}", state, existing_id);
+						Some(*existing_id)
+					}
 					VasTrieNode::Node(_) => {
 						*node = VasTrieNode::LeafNode(id);
+						// debug_message!("[TRIE] Inserted new state {:?} with ID {}", state, id);
 						None
 					}
 				}
@@ -58,5 +68,19 @@ impl VasTrieNode {
 			}
 		}
 		max_id(self) + 1
+	}
+	/// Prints the trie structure for debugging purposes.
+	pub fn print(&self, depth: usize) {
+		match self {
+			VasTrieNode::LeafNode(id) => {
+				println!("{:indent$}Leaf (ID: {})", "", id, indent = depth * 2);
+			}
+			VasTrieNode::Node(children) => {
+				for (val, child) in children {
+					println!("{:indent$}{}", "", val, indent = depth * 2);
+					child.print(depth + 1);
+				}
+			}
+		}
 	}
 }

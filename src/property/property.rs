@@ -1,4 +1,3 @@
-
 use std::fmt::{Display, Error, Formatter};
 
 /// A trait representing a label on a labeled type

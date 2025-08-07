@@ -1,29 +1,29 @@
 #[macro_export]
 macro_rules! message {
     ($($arg:tt)*) => {
-        eprintln!("[MESSAGE] {}", format!($($arg)*));
+        eprintln!("{}[MESSAGE]{} {}", $crate::logging::colors::COLOR_MESSAGE, $crate::logging::colors::COLOR_RESET, format!($($arg)*));
     };
 }
 
 #[macro_export]
 macro_rules! warning {
     ($($arg:tt)*) => {
-        eprintln!("[WARNING] {}", format!($($arg)*));
+        eprintln!("{}[WARNING]{} {}", $crate::logging::colors::COLOR_WARNING, $crate::logging::colors::COLOR_RESET, format!($($arg)*));
     };
 }
 
 #[macro_export]
 macro_rules! error {
     ($($arg:tt)*) => {
-        eprintln!("[ERROR] {}", format!($($arg)*));
+        eprintln!("{}[ERROR]{} {}", $crate::logging::colors::COLOR_ERROR, $crate::logging::colors::COLOR_RESET, format!($($arg)*));
     };
 }
 
 #[macro_export]
 macro_rules! error_and_exit {
     ($($arg:tt)*) => {
-        error!($($arg)*);
-        exit(1);
+        $crate::error!($($arg)*);
+        $crate::exit(1);
     };
 }
 
@@ -31,7 +31,7 @@ macro_rules! error_and_exit {
 macro_rules! debug_message {
     ($($arg:tt)*) => {
         if cfg!(debug_assertions) {
-            eprintln!("[DEBUG MESSAGE] {}", format!($($arg)*));
+            eprintln!("{}[DEBUG]{} {}", $crate::logging::colors::COLOR_DEBUG, $crate::logging::colors::COLOR_RESET, format!($($arg)*));
         }
     };
 }

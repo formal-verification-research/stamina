@@ -1,10 +1,16 @@
 use std::{
 	collections::{BTreeSet, HashMap},
-	fmt, fs::File,
+	fmt,
+	fs::File,
 };
 
 use crate::{
-	logging::messages::*, model::{model::ExplicitModel, vas_trie::VasTrieNode}, parser::vas_file_reader, property::property, trace::trace_trie::TraceTrieNode, validator::vas_validator::validate_vas
+	logging::messages::*,
+	model::{model::ExplicitModel, vas_trie::VasTrieNode},
+	parser::vas_file_reader,
+	property::property,
+	trace::trace_trie::TraceTrieNode,
+	validator::vas_validator::validate_vas,
 };
 
 use nalgebra::DVector;
@@ -496,15 +502,15 @@ impl Default for PrismVasModel {
 			state_id: absorbing_state_id,
 			vector: absorbing_state,
 			label: Some("absorbing".to_string()), // Label for the absorbing state
-			total_outgoing_rate: 0.0, // No outgoing rate for the absorbing state
+			total_outgoing_rate: 0.0,             // No outgoing rate for the absorbing state
 		});
 		PrismVasModel {
 			variable_names: Vec::new(),
 			states: states,
 			transitions: Vec::new(),
 			m_type: ModelType::ContinuousTime,
-			state_trie: VasTrieNode::new(), // No trie by default
-			transition_map: HashMap::new(), // No transitions by default
+			state_trie: VasTrieNode::new(),   // No trie by default
+			transition_map: HashMap::new(),   // No transitions by default
 			trace_trie: TraceTrieNode::new(), // No trace trie by default
 		}
 	}
@@ -598,12 +604,13 @@ impl PrismVasModel {
 		// Create the absorbing state
 		let absorbing_state = DVector::from_element(model.variable_names.len(), -1);
 		let absorbing_state_id = 0;
+		model.states = Vec::new();
 		// Add the absorbing state to the prism states
 		model.states.push(PrismVasState {
 			state_id: absorbing_state_id,
 			vector: absorbing_state,
 			label: Some("absorbing".to_string()), // Label for the absorbing state
-			total_outgoing_rate: 0.0, // No outgoing rate for the absorbing state
+			total_outgoing_rate: 0.0,             // No outgoing rate for the absorbing state
 		});
 		model
 	}
@@ -618,7 +625,6 @@ impl PrismVasModel {
 		self.states.push(state);
 	}
 
-	
 	/// This function prints the PRISM-style explicit state space to .sta and .tra files.
 	/// The .sta file contains the state vectors and their IDs,
 	/// while the .tra file contains the transitions between states with their rates.
@@ -635,7 +641,7 @@ impl PrismVasModel {
 		// header info
 		let num_states = self.states.len();
 		let num_transitions = self.transitions.len();
-		
+
 		// states
 		for i in 0..num_states {
 			let state_str = self.states[i]
@@ -668,7 +674,7 @@ impl PrismVasModel {
 		);
 		message!(
 			"Check this with the following command:\n
-			prism -importtrans {}.tra -importstates {}.sta -ctmc",
+			prism -importtrans {}.tra -importstates {}.sta -ctmc\n",
 			output_file,
 			output_file
 		);

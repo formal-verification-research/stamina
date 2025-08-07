@@ -76,7 +76,7 @@ fn main() {
 						.value_name("FILE")
 						.help("Sets the model file")
 						.required(true),
-				)
+				),
 		)
 		.subcommand(
 			Command::new("ragtimer")
@@ -104,7 +104,7 @@ fn main() {
 						.value_name("MINUTES")
 						.help("Timeout in minutes for get_bounds")
 						.default_value(TIMEOUT_MINUTES),
-				)
+				),
 		)
 		.subcommand(
 			Command::new("cycle-commute")
@@ -131,8 +131,24 @@ fn main() {
 						.long("output-file")
 						.value_name("OUTPUT")
 						.help("File to write the output to WITHOUT A FILE EXTENSION")
-						.default_value("cycle_commute.txt"),
+						.default_value("cycle_commute_output"),
 				)
+				.arg(
+					Arg::new("max_commute_depth")
+						.short('c')
+						.long("max-commute-depth")
+						.value_name("MAX_COMMUTE_DEPTH")
+						.help("Max recursion depth for commuting transitions")
+						.default_value("3"),
+				)
+				.arg(
+					Arg::new("max_cycle_length")
+						.short('l')
+						.long("max-cycle-length")
+						.value_name("MAX_CYCLE_LENGTH")
+						.help("Max length of cycles to consider")
+						.default_value("3"),
+				),
 		)
 		.subcommand(
 			Command::new("stamina")
@@ -153,7 +169,7 @@ fn main() {
 						.value_name("MINUTES")
 						.help("Timeout in minutes for get_bounds")
 						.default_value(TIMEOUT_MINUTES),
-				)
+				),
 		)
 		.subcommand(
 			Command::new("wayfarer")
@@ -174,7 +190,7 @@ fn main() {
 						.value_name("MINUTES")
 						.help("Timeout in minutes for get_bounds")
 						.default_value(TIMEOUT_MINUTES),
-				)
+				),
 		)
 		.get_matches();
 
@@ -247,12 +263,20 @@ fn main() {
 			let model = sub_m.get_one::<String>("model").unwrap();
 			// let trace = sub_m.get_one::<String>("trace").unwrap();
 			let output_file = sub_m.get_one::<String>("output_file").unwrap();
+			let max_commute_depth = sub_m
+				.get_one::<String>("max_commute_depth")
+				.and_then(|s| s.parse::<usize>().ok())
+				.unwrap();
+			let max_cycle_length = sub_m
+				.get_one::<String>("max_cycle_length")
+				.and_then(|s| s.parse::<usize>().ok())
+				.unwrap();
 			message!(
 				"Running cycle-commute demo with model: {}",
 				model,
 				// trace
 			);
-			demos::cycle_commute_demo::cycle_commute_demo(model, output_file);
+			demos::cycle_commute_demo::cycle_commute_demo(model, output_file, max_commute_depth, max_cycle_length);
 		}
 		Some(("stamina", sub_m)) => {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();

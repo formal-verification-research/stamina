@@ -29,7 +29,6 @@ impl Parser for VasParser {
 // Ensure ModelType is properly imported or defined
 use crate::model::model::ModelType;
 impl From<AbstractVas> for ModelType {
-
 	fn from(_abstract_vas: AbstractVas) -> Self {
 		unimplemented!("Conversion from AbstractVas to ModelType is not implemented yet");
 	}
