@@ -493,14 +493,20 @@ impl<'a> RagtimerBuilder<'a> {
 		for i in 0..magic_numbers.num_traces {
 			let mut trace;
 			let mut trace_probability;
+			let mut trace_attempts = 0;
 			loop {
+				trace_attempts += 1;
+				if trace_attempts > 100 {
+					warning!("Exceeded maximum attempts to generate a unique trace (100 attempts). Moving on to next trace.");
+					break;
+				}
 				// Generate a single trace
 				(trace, trace_probability) = self.generate_single_trace(&rewards);
 				// If the trace already exists or is empty, we try to generate a new one.
 				if !trace_trie.exists_or_insert(&trace) && !trace.is_empty() {
 					break;
 				}
-				debug_message!("Trace {} already exists, generating a new one.", i);
+				debug_message!("Trace {} already exists, generating a new one (attempt {}/100).", i, trace_attempts);
 			}
 			// let trace_names: Vec<String> = trace
 			// 	.iter()
