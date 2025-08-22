@@ -75,12 +75,26 @@ impl<'a> RagtimerBuilder<'a> {
 			_ => panic!("RagtimerBuilder::add_rl_traces called with non-RL method"),
 		};
 		let latest_probability = trace_probability_history.last().cloned().unwrap_or(0.0);
-		if trace.len() == 0 || latest_probability <= 0.0 {
+		if trace.is_empty() {
 			debug_message!(
-				"Skipping reward update for trace {:?} with probability {:.3e}",
-				trace,
-				latest_probability
+				"Skipping reward update for empty trace."
 			);
+			return;
+		}
+		if latest_probability <= 0.0 {
+			// debug_message!(
+			// 	"Penalizing trace {:?} with zero probability.",
+			// 	trace
+			// );
+			// Apply a negative reward to each transition in the trace
+			let penalty = -magic_numbers.trace_reward;
+			for &transition_id in trace {
+				if let Some(reward) = rewards.get_mut(&transition_id) {
+					*reward += penalty;
+				} else {
+					error!("Transition ID {} not found in rewards map.", transition_id);
+				}
+			}
 			return;
 		}
 		// Use the last 10% of entries to compute the average probability
@@ -379,10 +393,11 @@ impl<'a> RagtimerBuilder<'a> {
 			let available_transitions = self.get_available_transitions(&current_state);
 			if available_transitions.is_empty() {
 				// No available transitions, warn the user and break out of the loop
-				warning!(
+				message!(
 					"No available transitions found in state {:?}. Ending trace generation.",
-					current_state
+					format!("[{}]", current_state.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", "))
 				);
+				trace_probability *= 0.01; // Apply a penalty to the trace probability for reaching a dead-end state
 				break;
 			}
 			// Shuffle the available transitions to add randomness
@@ -502,11 +517,11 @@ impl<'a> RagtimerBuilder<'a> {
 					break;
 				}
 				trace_attempts += 1;
-				if trace_attempts > 100 {
-					warning!("Exceeded maximum attempts to generate a unique trace (100 attempts). Moving on to next trace.");
+				if trace_attempts > 20 {
+					warning!("Exceeded maximum attempts to generate a unique trace (20 attempts). Moving on to next trace.");
 					break;
 				}
-				debug_message!("Trace {} already exists, generating a new one (attempt {}/100).", i, trace_attempts);
+				debug_message!("Trace {} already exists, generating a new one (attempt {}/20).", i, trace_attempts);
 			}
 			// let trace_names: Vec<String> = trace
 			// 	.iter()
