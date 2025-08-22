@@ -31,7 +31,7 @@ macro_rules! error_and_exit {
 macro_rules! debug_message {
     ($($arg:tt)*) => {
         if cfg!(debug_assertions) {
-            eprintln!("{}[DEBUG]{} {}", $crate::logging::colors::COLOR_DEBUG, $crate::logging::colors::COLOR_RESET, format!($($arg)*));
+            eprintln!("{}[DEBUG]{}   {}", $crate::logging::colors::COLOR_DEBUG, $crate::logging::colors::COLOR_RESET, format!($($arg)*));
         }
     };
 }

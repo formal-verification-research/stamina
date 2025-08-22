@@ -27,7 +27,7 @@ impl<'a> RagtimerBuilder<'a> {
 	/// Function to set default magic numbers for the RL traces method.
 	pub fn default_magic_numbers(&mut self) -> MagicNumbers {
 		MagicNumbers {
-			num_traces: 1000,
+			num_traces: 10000,
 			dependency_reward: 1.0,
 			base_reward: 0.1,
 			trace_reward: 0.01,

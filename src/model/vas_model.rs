@@ -629,6 +629,20 @@ impl PrismVasModel {
 	/// The .sta file contains the state vectors and their IDs,
 	/// while the .tra file contains the transitions between states with their rates.
 	pub fn print_explicit_prism_files(&mut self, output_file: &str) {
+		// Write .lab file
+		let mut lab_file = match File::create(format!("{}.lab", output_file)) {
+			Ok(f) => f,
+			Err(e) => {
+				error!("Error creating .lab file: {}", e);
+				return;
+			}
+		};
+
+		// Write labels and state associations
+		writeln!(lab_file, "0=\"init\" 1=\"deadlock\"").unwrap();
+		writeln!(lab_file, "0: 1").unwrap();
+		writeln!(lab_file, "1: 0").unwrap();
+
 		// Write .sta file
 		let mut sta_file = match File::create(format!("{}.sta", output_file)) {
 			Ok(f) => f,
@@ -641,6 +655,9 @@ impl PrismVasModel {
 		// header info
 		let num_states = self.states.len();
 		let num_transitions = self.transitions.len();
+
+		let var_names = self.variable_names.join(",");
+		writeln!(sta_file, "({})", var_names).unwrap();
 
 		// states
 		for i in 0..num_states {
@@ -665,8 +682,8 @@ impl PrismVasModel {
 		for t in self.transitions.iter() {
 			writeln!(tra_file, "{} {} {}", t.from_state, t.to_state, t.rate).unwrap();
 		}
-		let var_names = self.variable_names.join(" ");
-		writeln!(sta_file, "({})", var_names).unwrap();
+		// let var_names = self.variable_names.join(" ");
+		// writeln!(sta_file, "({})", var_names).unwrap();
 		// Output results to the specified output file
 		message!(
 			"Resulting explicit state space written to: {}.sta, .tra",
