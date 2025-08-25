@@ -39,6 +39,9 @@ pub fn cycle_commute(
 	max_commute_depth: usize,
 	max_cycle_length: usize,
 ) {
+	if max_commute_depth == 0 && max_cycle_length == 0 {
+		return;
+	}
 	// Do a depth first search of the trace trie to gather traces
 	let mut traces = Vec::new();
 	// Stack is a vector of (transition id, current trace, current node)
@@ -124,31 +127,41 @@ pub fn cycle_commute(
 	}
 
 	let mut num_states_added = 0;
-	// Add commuted/parallel traces
-	for trace in traces {
-		commute(
+
+	if max_commute_depth > 0 {
+		// Add commuted/parallel traces
+		for trace in traces {
+			commute(
+				abstract_model,
+				explicit_model,
+				&trace,
+				0,
+				max_commute_depth,
+				&mut num_states_added,
+			);
+		}
+		message!(
+			"Commuting complete. Method added {} states. Explicit model now has {} states and {} transitions. Now adding cycles...",
+			num_states_added,
+			explicit_model.states.len(),
+			explicit_model.transitions.len()
+		);
+	}
+	else {
+		message!("Skipping commuting phase.");
+	}
+
+	if max_cycle_length > 0 {
+		add_cycles(
 			abstract_model,
 			explicit_model,
-			&trace,
-			0,
-			max_commute_depth,
+			max_cycle_length,
 			&mut num_states_added,
 		);
 	}
-
-	message!(
-		"Commuting complete. Method added {} states. Explicit model now has {} states and {} transitions. Now adding cycles...",
-		num_states_added,
-		explicit_model.states.len(),
-		explicit_model.transitions.len()
-	);
-
-	add_cycles(
-		abstract_model,
-		explicit_model,
-		max_cycle_length,
-		&mut num_states_added,
-	);
+	else {
+		message!("Skipping cycle addition phase.");
+	}
 
 	message!(
 		"Cycle & Commute complete. Method added {} states in total. Explicit model now has {} states and {} transitions.",

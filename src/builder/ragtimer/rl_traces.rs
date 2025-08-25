@@ -448,6 +448,7 @@ impl<'a> RagtimerBuilder<'a> {
 		explicit_model: &mut PrismVasModel,
 		dependency_graph: Option<&DependencyGraph>,
 	) {
+		message!("Beginning Ragtimer RL Trace Generation");
 		let magic_numbers = match &self.method {
 			ReinforcementLearning(magic_numbers) => magic_numbers,
 			_ => panic!("RagtimerBuilder::add_rl_traces called with non-RL method"),
