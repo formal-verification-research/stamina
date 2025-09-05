@@ -147,14 +147,6 @@ impl CustomRateFn {
 }
 
 impl VasTransition {
-	// pub fn set_vectors(&mut self, increment: Box<[u64]>, decrement: Box<[u64]>) {
-	// 	self.update_vector = increment - decrement;
-	// 	self.enabled_bounds = decrement;
-	// }
-	// pub fn set_rate(&mut self, rate: ProbabilityOrRate) {
-	// 	self.rate_const = rate;
-	// }
-
 	pub fn set_custom_rate_fn(
 		&mut self,
 		rate_fn: std::sync::Arc<dyn Fn(&VasState) -> ProbabilityOrRate + Send + Sync + 'static>,

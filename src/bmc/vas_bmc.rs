@@ -33,9 +33,6 @@ pub(crate) trait AbstractVasBmc: AbstractModel {
 	) -> (ast::Bool, u32);
 }
 
-// TODO: The following functions are no longer needed without context.
-// They can be removed in a future refactor.
-
 impl AbstractVasBmc for AbstractVas {
 	/// Sets up the Z3 context for BMC.
 	fn setup_z3(&mut self) {
