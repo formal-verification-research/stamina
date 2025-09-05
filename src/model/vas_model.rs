@@ -642,7 +642,6 @@ impl PrismVasModel {
 		writeln!(lab_file, "0=\"init\" 1=\"deadlock\"").unwrap();
 		writeln!(lab_file, "0: 1").unwrap();
 		writeln!(lab_file, "1: 0").unwrap();
-
 		// Write .sta file
 		let mut sta_file = match File::create(format!("{}.sta", output_file)) {
 			Ok(f) => f,
@@ -655,10 +654,8 @@ impl PrismVasModel {
 		// header info
 		let num_states = self.states.len();
 		let num_transitions = self.transitions.len();
-
 		let var_names = self.variable_names.join(",");
 		writeln!(sta_file, "({})", var_names).unwrap();
-
 		// states
 		for i in 0..num_states {
 			let state_str = self.states[i]
