@@ -394,7 +394,6 @@ fn build_property(
 
 /// Reads a VAS model file and builds an AbstractVas model
 pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
-	
 	// Initialize everything
 	let lines = read_lines(&filename).map_err(|_| {
 		ModelParseError::general(
@@ -402,7 +401,7 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 			&"line-by-line file parsing not Ok. Check your model file.",
 		)
 	})?;
-	
+
 	// Setup strings for the various things
 	let mut variable_lines = Vec::<(usize, String)>::new();
 	let mut transition_lines = Vec::<Vec<(usize, String)>>::new();

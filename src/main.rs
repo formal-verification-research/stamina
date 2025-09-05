@@ -114,7 +114,7 @@ fn main() {
 						.long("default")
 						.help("Set all parameters to default recommended values")
 						.action(clap::ArgAction::SetTrue),
-				)
+				),
 		)
 		.subcommand(
 			Command::new("dependency-graph")
@@ -265,30 +265,46 @@ fn main() {
 			let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
 			message!("Running ragtimer with models_dir: {}", models_dir);
 			let dir_path = Path::new(models_dir);
-			let (min_commute_depth, max_commute_depth, min_cycle_length, max_cycle_length) = if sub_m.get_flag("default") {
-				// Set recommended default values
-				(0, 12, 0, 8)
-			} else {
-				let min_commute_depth = sub_m
-					.get_one::<String>("min_commute_depth")
-					.and_then(|s| s.parse::<usize>().ok())
-					.unwrap();
-				let max_commute_depth = sub_m
-					.get_one::<String>("max_commute_depth")
-					.and_then(|s| s.parse::<usize>().ok())
-					.unwrap();
-				let min_cycle_length = sub_m
-					.get_one::<String>("min_cycle_length")
-					.and_then(|s| s.parse::<usize>().ok())
-					.unwrap();
-				let max_cycle_length = sub_m
-					.get_one::<String>("max_cycle_length")
-					.and_then(|s| s.parse::<usize>().ok())
-					.unwrap();
-				(min_commute_depth, max_commute_depth, min_cycle_length, max_cycle_length)
-			};
-			message!("Max Commute Depth: {}, Max Cycle Length: {}", max_commute_depth, max_cycle_length);
-			demos::cycle_commute_benchmark::cycle_commute_benchmark(dir_path, min_commute_depth, max_commute_depth, min_cycle_length, max_cycle_length);
+			let (min_commute_depth, max_commute_depth, min_cycle_length, max_cycle_length) =
+				if sub_m.get_flag("default") {
+					// Set recommended default values
+					(0, 12, 0, 8)
+				} else {
+					let min_commute_depth = sub_m
+						.get_one::<String>("min_commute_depth")
+						.and_then(|s| s.parse::<usize>().ok())
+						.unwrap();
+					let max_commute_depth = sub_m
+						.get_one::<String>("max_commute_depth")
+						.and_then(|s| s.parse::<usize>().ok())
+						.unwrap();
+					let min_cycle_length = sub_m
+						.get_one::<String>("min_cycle_length")
+						.and_then(|s| s.parse::<usize>().ok())
+						.unwrap();
+					let max_cycle_length = sub_m
+						.get_one::<String>("max_cycle_length")
+						.and_then(|s| s.parse::<usize>().ok())
+						.unwrap();
+					(
+						min_commute_depth,
+						max_commute_depth,
+						min_cycle_length,
+						max_cycle_length,
+					)
+				};
+			message!(
+				"Max Commute Depth: {}, Max Cycle Length: {}",
+				max_commute_depth,
+				max_cycle_length
+			);
+			demos::cycle_commute_benchmark::cycle_commute_benchmark(
+				dir_path,
+				min_commute_depth,
+				max_commute_depth,
+				min_cycle_length,
+				max_cycle_length,
+			);
 		}
 		Some(("dependency-graph", sub_m)) => {
 			// TODO: Move this whole thing to a demo

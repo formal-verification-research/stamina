@@ -1,13 +1,13 @@
 use crate::cycle_commute::commute::cycle_commute;
 use crate::model::vas_model::AbstractVas;
-use std::fs;
-use std::path::Path;
+use crate::*;
 use chrono::Local;
-use std::time::Instant;
-use sysinfo::{System, SystemExt, ProcessExt};
+use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
-use crate::*;
+use std::path::Path;
+use std::time::Instant;
+use sysinfo::{ProcessExt, System, SystemExt};
 
 /// Gets the list of .crn files in the models directory
 fn get_crn_files(dir_path: &Path) -> Vec<String> {
@@ -52,7 +52,7 @@ pub fn cycle_commute_benchmark(
 	let timestamp = Local::now().format("%Y%m%d_%H%M%S").to_string();
 
 	let csv_path = format!("output/{}/benchmark_results.csv", timestamp);
-	
+
 	fs::create_dir_all(format!("output/{}", timestamp)).expect("Failed to create output directory");
 	message!("CSV output created at output/{}", timestamp);
 	let mut csv_file = OpenOptions::new()
@@ -75,23 +75,28 @@ pub fn cycle_commute_benchmark(
 
 	for model_file in crn_files {
 		let model_name = Path::new(&model_file)
-		.file_name()
-		.and_then(|s| s.to_str())
-		.unwrap_or("model")
-		.replace(".", "_");
+			.file_name()
+			.and_then(|s| s.to_str())
+			.unwrap_or("model")
+			.replace(".", "_");
 		for cycle_length in min_cycle_length..=max_cycle_length {
 			for commute_depth in min_commute_depth..=max_commute_depth {
 				message!("Running cycle commute benchmark on model: {} with commute depth: {} and cycle length: {}", model_file, commute_depth, cycle_length);
 				if let Ok(mut abstract_model) = AbstractVas::from_file(&model_file) {
 					message!("Model {} Parsed", model_name);
-					let output_dir = format!("output/{}/{}/cycle_{}/commute_{}/", timestamp, model_name, cycle_length, commute_depth);
+					let output_dir = format!(
+						"output/{}/{}/cycle_{}/commute_{}/",
+						timestamp, model_name, cycle_length, commute_depth
+					);
 					let output_word = "model";
 					fs::create_dir_all(&output_dir).expect("Failed to create output directory");
-					let output_file = Path::new(&output_dir).join(output_word).to_string_lossy().into_owned();
+					let output_file = Path::new(&output_dir)
+						.join(output_word)
+						.to_string_lossy()
+						.into_owned();
 					let mut explicit_model = PrismVasModel::from_abstract_model(&abstract_model);
 					message!("Explicit Model Built");
-					
-					
+
 					let mut ragtimer_builder = RagtimerBuilder::new(&abstract_model, None);
 					ragtimer_builder.build(&mut explicit_model);
 					message!("Traces added to explicit model with Ragtimer");
@@ -99,29 +104,39 @@ pub fn cycle_commute_benchmark(
 					// Set start time and memory usage
 					let mut sys = System::new();
 					sys.refresh_process(sysinfo::get_current_pid().unwrap());
-					let start_memory = sys.process(sysinfo::get_current_pid().unwrap())
+					let start_memory = sys
+						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())
 						.unwrap_or(0);
 					let start_time = Instant::now();
 
 					// Time Ragtimer state space building
 					let ragtimer_start_time = Instant::now();
-					let ragtimer_start_memory = sys.process(sysinfo::get_current_pid().unwrap())
+					let ragtimer_start_memory = sys
+						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())
 						.unwrap_or(0);
 					let mut ragtimer_builder = RagtimerBuilder::new(&abstract_model, None);
 					ragtimer_builder.build(&mut explicit_model);
 					let build_elapsed = ragtimer_start_time.elapsed().as_millis();
-					let ragtimer_end_memory = sys.process(sysinfo::get_current_pid().unwrap())
+					let ragtimer_end_memory = sys
+						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())
 						.unwrap_or(0);
 					let ragtimer_memory_usage = ragtimer_end_memory - ragtimer_start_memory;
-					message!("Traces added to explicit model with Ragtimer ({} ms)", build_elapsed);
-					message!("Ragtimer-specific memory usage: {:.3e} B", ragtimer_memory_usage as f64);
+					message!(
+						"Traces added to explicit model with Ragtimer ({} ms)",
+						build_elapsed
+					);
+					message!(
+						"Ragtimer-specific memory usage: {:.3e} B",
+						ragtimer_memory_usage as f64
+					);
 
 					// Time cycle and commute
 					let cycle_start_time = Instant::now();
-					let cycle_start_memory = sys.process(sysinfo::get_current_pid().unwrap())
+					let cycle_start_memory = sys
+						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())
 						.unwrap_or(0);
 					cycle_commute(
@@ -131,22 +146,30 @@ pub fn cycle_commute_benchmark(
 						cycle_length,
 					);
 					let cycle_elapsed = cycle_start_time.elapsed().as_millis();
-					let cycle_end_memory = sys.process(sysinfo::get_current_pid().unwrap())
+					let cycle_end_memory = sys
+						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())
 						.unwrap_or(0);
 					let cycle_memory_usage = cycle_end_memory - cycle_start_memory;
 					message!("CC added to explicit model ({} ms)", cycle_elapsed);
-					message!("CC-specific memory usage: {:.3e} B", cycle_memory_usage as f64);
+					message!(
+						"CC-specific memory usage: {:.3e} B",
+						cycle_memory_usage as f64
+					);
 
 					let total_elapsed = start_time.elapsed().as_millis();
 					message!("Total time for benchmark: {} ms", total_elapsed);
 
 					sys.refresh_process(sysinfo::get_current_pid().unwrap());
-					let total_end_memory = sys.process(sysinfo::get_current_pid().unwrap())
+					let total_end_memory = sys
+						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())
 						.unwrap_or(0);
 					let total_memory_usage = total_end_memory - start_memory;
-					message!("Total memory for benchmark: {:.3e} B", total_memory_usage as f64);
+					message!(
+						"Total memory for benchmark: {:.3e} B",
+						total_memory_usage as f64
+					);
 
 					explicit_model.print_explicit_prism_files(&output_file);
 					message!(
@@ -154,11 +177,13 @@ pub fn cycle_commute_benchmark(
 						output_file
 					);
 
-					let bash_dir = format!("{}/cycle_{}/commute_{}/", model_name, cycle_length, commute_depth);
+					let bash_dir = format!(
+						"{}/cycle_{}/commute_{}/",
+						model_name, cycle_length, commute_depth
+					);
 					let prop_dst = format!("{}.prop", output_file);
 
-					let prop_src = Path::new(&model_file)
-						.with_extension("prop");
+					let prop_src = Path::new(&model_file).with_extension("prop");
 					if prop_src.exists() {
 						fs::copy(&prop_src, &prop_dst).expect("Failed to copy .prop file");
 						message!("Copied property file to {}", prop_dst);
@@ -198,7 +223,8 @@ pub fn cycle_commute_benchmark(
 						total_memory_usage as f64,
 						ragtimer_memory_usage as f64,
 						cycle_memory_usage as f64
-					).expect("Failed to write time/memory data");
+					)
+					.expect("Failed to write time/memory data");
 
 					writeln!(
 						csv_file,
@@ -214,7 +240,8 @@ pub fn cycle_commute_benchmark(
 						ragtimer_memory_usage as f64,
 						cycle_memory_usage as f64,
 						output_file
-					).expect("Failed to write CSV row");
+					)
+					.expect("Failed to write CSV row");
 				} else {
 					error!("Could not parse model");
 				}

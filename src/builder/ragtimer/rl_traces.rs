@@ -76,9 +76,7 @@ impl<'a> RagtimerBuilder<'a> {
 		};
 		let latest_probability = trace_probability_history.last().cloned().unwrap_or(0.0);
 		if trace.is_empty() {
-			debug_message!(
-				"Skipping reward update for empty trace."
-			);
+			debug_message!("Skipping reward update for empty trace.");
 			return;
 		}
 		if latest_probability <= 0.0 {
@@ -395,7 +393,14 @@ impl<'a> RagtimerBuilder<'a> {
 				// No available transitions, warn the user and break out of the loop
 				message!(
 					"No available transitions found in state {:?}. Ending trace generation.",
-					format!("[{}]", current_state.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", "))
+					format!(
+						"[{}]",
+						current_state
+							.iter()
+							.map(|v| v.to_string())
+							.collect::<Vec<_>>()
+							.join(", ")
+					)
 				);
 				trace_probability *= 0.01; // Apply a penalty to the trace probability for reaching a dead-end state
 				break;
@@ -522,7 +527,11 @@ impl<'a> RagtimerBuilder<'a> {
 					warning!("Exceeded maximum attempts to generate a unique trace (20 attempts). Moving on to next trace.");
 					break;
 				}
-				debug_message!("Trace {} already exists, generating a new one (attempt {}/20).", i, trace_attempts);
+				debug_message!(
+					"Trace {} already exists, generating a new one (attempt {}/20).",
+					i,
+					trace_attempts
+				);
 			}
 			// let trace_names: Vec<String> = trace
 			// 	.iter()

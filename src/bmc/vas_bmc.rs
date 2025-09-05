@@ -10,15 +10,15 @@ use crate::{
 };
 
 /// Trait for Abstract VAS models to provide BMC-related functionality.
-pub(crate) trait AbstractVasBmc<'a>: AbstractModel {
+pub(crate) trait AbstractVasBmc: AbstractModel {
 	/// Sets up the Z3 context for BMC.
 	fn setup_z3(&mut self);
 	/// Returns the formula for BMC plus the unroller.
 	/// Order: (init_formula, transition_formula, target_formula, unroller)
-	fn bmc_encoding(&'a self, bits: u32) -> BMCEncoding<'a>;
+	fn bmc_encoding(&self, bits: u32) -> BMCEncoding;
 	/// Returns the variable bounds
 	fn variable_bounds(
-		&'a self,
+		&self,
 		bmc_encoding: &BMCEncoding,
 		bits: u32,
 		max_steps: u32,
@@ -26,14 +26,17 @@ pub(crate) trait AbstractVasBmc<'a>: AbstractModel {
 	) -> BMCBounds;
 	/// Runs general BMC for the given number of steps.
 	fn run_bmc(
-		&'a self,
-		bmc_encoding: &BMCEncoding<'a>,
+		&self,
+		bmc_encoding: &BMCEncoding,
 		max_steps: u32,
 		backward: bool,
-	) -> (ast::Bool<'a>, u32);
+	) -> (ast::Bool, u32);
 }
 
-impl<'a> AbstractVasBmc<'a> for AbstractVas {
+// TODO: The following functions are no longer needed without context.
+// They can be removed in a future refactor.
+
+impl AbstractVasBmc for AbstractVas {
 	/// Sets up the Z3 context for BMC.
 	fn setup_z3(&mut self) {
 		let cfg = Config::new();
@@ -43,42 +46,30 @@ impl<'a> AbstractVasBmc<'a> for AbstractVas {
 
 	/// Returns the formula for BMC plus the unroller.
 	/// Order: (context, config, init_formula, transition_formula, target_formula, unroller)
-	fn bmc_encoding(&'a self, bits: u32) -> BMCEncoding<'a> {
-		let ctx: &'a Context = self
-			.z3_context
-			.as_ref()
-			.expect("Z3 context not initialized");
-		BMCEncoding::from_vas(self, ctx, bits)
+	fn bmc_encoding(&self, bits: u32) -> BMCEncoding {
+		BMCEncoding::from_vas(self, bits)
 	}
 
 	/// Returns the variable bounds for the VAS model.
 	/// It computes both loose and tight bounds for upper and lower limits of each variable.
 	/// The bounds are calculated using a pre-computed BMC encoding of a VAS model.
 	fn variable_bounds(
-		&'a self,
+		&self,
 		bmc_encoding: &BMCEncoding,
 		bits: u32,
 		max_steps: u32,
 		backward: bool,
 	) -> BMCBounds {
-		let ctx: &'a Context = self
-			.z3_context
-			.as_ref()
-			.expect("Z3 context not initialized");
-		BMCBounds::from_encoding(self, bmc_encoding, ctx, bits, max_steps, backward)
+		BMCBounds::from_encoding(self, bmc_encoding, bits, max_steps, backward)
 	}
 
 	/// Runs general BMC for the given number of steps.
 	fn run_bmc(
-		&'a self,
-		bmc_encoding: &BMCEncoding<'a>,
+		&self,
+		bmc_encoding: &BMCEncoding,
 		max_steps: u32,
 		backward: bool,
-	) -> (ast::Bool<'a>, u32) {
-		let ctx: &'a Context = self
-			.z3_context
-			.as_ref()
-			.expect("Z3 context not initialized");
-		BMCEncoding::run_bmc(bmc_encoding, ctx, max_steps, backward)
+	) -> (ast::Bool, u32) {
+		BMCEncoding::run_bmc(bmc_encoding, max_steps, backward)
 	}
 }

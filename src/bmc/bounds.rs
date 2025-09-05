@@ -17,12 +17,11 @@ pub struct BMCBounds {
 }
 
 /// Builds variable bounds for an abstract VAS model for BMC.
-impl<'a> BMCBounds {
+impl BMCBounds {
 	/// Constructs a new BMCEncoding from the given context, config, and unroller.
 	pub fn from_encoding(
-		model: &'a AbstractVas,
-		encoding: &'a BMCEncoding<'a>,
-		ctx: &'a z3::Context,
+		model: &AbstractVas,
+		encoding: &BMCEncoding,
 		bits: u32,
 		max_steps: u32,
 		backward: bool,
@@ -35,7 +34,7 @@ impl<'a> BMCBounds {
 			ub_tight: HashMap::new(),
 		};
 		// Do BMC to get the k-step reachable formula
-		let (reachable_formula, steps) = encoding.run_bmc(ctx, max_steps, backward);
+		let (reachable_formula, steps) = encoding.run_bmc(max_steps, backward);
 		if steps == 0 || steps >= max_steps {
 			debug_message!("Steps: {}", steps);
 			debug_message!("Reachable formula: {:?}", reachable_formula);
@@ -45,12 +44,11 @@ impl<'a> BMCBounds {
 		let variable_names = model.variable_names.clone();
 		let state_vars = encoding.unroller.state_vars.clone();
 		// Initialize the Z3 solver and reset the unroller
-		let solver = z3::Solver::new(ctx);
+		let solver = z3::Solver::new();
 		let mut unroller = encoding.unroller.clone();
 		// Step 1: Loosest upper bounds
 		Self::loose_upper_bounds(
 			model,
-			ctx,
 			bits,
 			&mut variable_bounds,
 			&solver,
@@ -64,7 +62,6 @@ impl<'a> BMCBounds {
 		// Step 2: Tightest upper bounds
 		Self::tight_upper_bounds(
 			model,
-			ctx,
 			bits,
 			&mut variable_bounds,
 			&solver,
@@ -78,7 +75,6 @@ impl<'a> BMCBounds {
 		// Step 3: Loosest lower bounds
 		Self::loose_lower_bounds(
 			model,
-			ctx,
 			bits,
 			&mut variable_bounds,
 			&solver,
@@ -92,7 +88,6 @@ impl<'a> BMCBounds {
 		// Step 4: Tightest lower bounds
 		Self::tight_lower_bounds(
 			model,
-			ctx,
 			bits,
 			&mut variable_bounds,
 			&solver,
@@ -128,14 +123,13 @@ impl<'a> BMCBounds {
 
 	/// Computes tightest upper bounds for all the variables.
 	fn tight_upper_bounds(
-		model: &'a AbstractVas,
-		ctx: &'a z3::Context,
+		model: &AbstractVas,
 		bits: u32,
 		variable_bounds: &mut BMCBounds,
-		solver: &z3::Solver<'a>,
-		unroller: &mut Unroller<'a>,
-		reachable_formula: &ast::Bool<'a>,
-		state_vars: &HashMap<String, ast::BV<'a>>,
+		solver: &z3::Solver,
+		unroller: &mut Unroller,
+		reachable_formula: &ast::Bool,
+		state_vars: &HashMap<String, ast::BV>,
 		variable_names: &[String],
 		steps: u32,
 	) {
@@ -150,10 +144,10 @@ impl<'a> BMCBounds {
 			loop {
 				solver.reset();
 				let bound_formula = unroller.at_all_times_and(
-					&state_var.bvule(&ast::BV::from_i64(&ctx, bound.try_into().unwrap(), bits)),
+					&state_var.bvule(&ast::BV::from_i64(bound.try_into().unwrap(), bits)),
 					steps,
 				);
-				let combined_formula = ast::Bool::and(&ctx, &[&bound_formula, &reachable_formula]);
+				let combined_formula = ast::Bool::and(&[&bound_formula, &reachable_formula]);
 				solver.assert(&combined_formula);
 				let status = solver.check();
 				if status == SatResult::Sat {
@@ -186,14 +180,13 @@ impl<'a> BMCBounds {
 
 	/// Computes loosest upper bounds for all the variables.
 	fn loose_upper_bounds(
-		model: &'a AbstractVas,
-		ctx: &'a z3::Context,
+		model: &AbstractVas,
 		bits: u32,
 		variable_bounds: &mut BMCBounds,
-		solver: &z3::Solver<'a>,
-		unroller: &mut Unroller<'a>,
-		reachable_formula: &ast::Bool<'a>,
-		state_vars: &HashMap<String, ast::BV<'a>>,
+		solver: &z3::Solver,
+		unroller: &mut Unroller,
+		reachable_formula: &ast::Bool,
+		state_vars: &HashMap<String, ast::BV>,
 		variable_names: &[String],
 		steps: u32,
 	) {
@@ -212,10 +205,10 @@ impl<'a> BMCBounds {
 			loop {
 				solver.reset();
 				let bound_formula = unroller.at_all_times_or(
-					&state_var.bvuge(&ast::BV::from_i64(&ctx, bound.try_into().unwrap(), bits)),
+					&state_var.bvuge(&ast::BV::from_i64(bound.try_into().unwrap(), bits)),
 					steps,
 				);
-				let combined_formula = ast::Bool::and(&ctx, &[&bound_formula, &reachable_formula]);
+				let combined_formula = ast::Bool::and(&[&bound_formula, &reachable_formula]);
 				solver.assert(&combined_formula);
 				let status = solver.check();
 				if status == SatResult::Sat {
@@ -249,14 +242,13 @@ impl<'a> BMCBounds {
 
 	/// Computes tightest lower bounds for all the variables.
 	fn tight_lower_bounds(
-		model: &'a AbstractVas,
-		ctx: &'a z3::Context,
+		model: &AbstractVas,
 		bits: u32,
 		variable_bounds: &mut BMCBounds,
-		solver: &z3::Solver<'a>,
-		unroller: &mut Unroller<'a>,
-		reachable_formula: &ast::Bool<'a>,
-		state_vars: &HashMap<String, ast::BV<'a>>,
+		solver: &z3::Solver,
+		unroller: &mut Unroller,
+		reachable_formula: &ast::Bool,
+		state_vars: &HashMap<String, ast::BV>,
 		variable_names: &[String],
 		steps: u32,
 	) {
@@ -275,10 +267,10 @@ impl<'a> BMCBounds {
 				}
 				solver.reset();
 				let bound_formula = unroller.at_all_times_and(
-					&state_var.bvuge(&ast::BV::from_i64(&ctx, bound.try_into().unwrap(), bits)),
+					&state_var.bvuge(&ast::BV::from_i64(bound.try_into().unwrap(), bits)),
 					steps,
 				);
-				let combined_formula = ast::Bool::and(&ctx, &[&bound_formula, &reachable_formula]);
+				let combined_formula = ast::Bool::and(&[&bound_formula, &reachable_formula]);
 				solver.assert(&combined_formula);
 				let status = solver.check();
 				if status == SatResult::Sat {
@@ -311,14 +303,13 @@ impl<'a> BMCBounds {
 
 	/// Computes loosest lower bounds for all the variables.
 	fn loose_lower_bounds(
-		model: &'a AbstractVas,
-		ctx: &'a z3::Context,
+		model: &AbstractVas,
 		bits: u32,
 		variable_bounds: &mut BMCBounds,
-		solver: &z3::Solver<'a>,
-		unroller: &mut Unroller<'a>,
-		reachable_formula: &ast::Bool<'a>,
-		state_vars: &HashMap<String, ast::BV<'a>>,
+		solver: &z3::Solver,
+		unroller: &mut Unroller,
+		reachable_formula: &ast::Bool,
+		state_vars: &HashMap<String, ast::BV>,
 		variable_names: &[String],
 		steps: u32,
 	) {
@@ -337,10 +328,10 @@ impl<'a> BMCBounds {
 				}
 				solver.reset();
 				let bound_formula = unroller.at_all_times_or(
-					&state_var.bvule(&ast::BV::from_i64(&ctx, bound.try_into().unwrap(), bits)),
+					&state_var.bvule(&ast::BV::from_i64(bound.try_into().unwrap(), bits)),
 					steps,
 				);
-				let combined_formula = ast::Bool::and(&ctx, &[&bound_formula, &reachable_formula]);
+				let combined_formula = ast::Bool::and(&[&bound_formula, &reachable_formula]);
 				solver.assert(&combined_formula);
 				let status = solver.check();
 
