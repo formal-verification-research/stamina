@@ -39,7 +39,6 @@ pub fn cycle_commute(
 	max_commute_depth: usize,
 	max_cycle_length: usize,
 ) {
-  
 	if max_commute_depth == 0 && max_cycle_length == 0 {
 		return;
 	}
@@ -148,8 +147,7 @@ pub fn cycle_commute(
 			explicit_model.states.len(),
 			explicit_model.transitions.len()
 		);
-	}
-	else {
+	} else {
 		message!("Skipping commuting phase.");
 	}
 
@@ -160,8 +158,7 @@ pub fn cycle_commute(
 			max_cycle_length,
 			&mut num_states_added,
 		);
-	}
-	else {
+	} else {
 		message!("Skipping cycle addition phase.");
 	}
 
