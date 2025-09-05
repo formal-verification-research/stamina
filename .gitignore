@@ -6,3 +6,4 @@ rustc-ice*.txt
 *.txt
 *.sta
 *.tra
+output/

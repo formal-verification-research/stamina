@@ -59,23 +59,12 @@ pub struct ModelParseError {
 impl fmt::Display for ModelParseError {
 	/// Formats the error for display
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		let (line_num, line_content) = self.line();
-		let col = self.column();
-		let err_str = self.to_string();
-		let marker = if col.is_some() {
-			let col_n = col.unwrap();
-			format!(
-				"{}^{}",
-				" ".repeat(col_n as usize),
-				"-".repeat(line_content.len() - col_n as usize - 1)
-			)
-		} else {
-			"^".repeat(line_content.len())
-		};
+		let line_num = self.line;
+		let err_str = self.etype.to_string();
 		write!(
 			f,
-			"[Parse Error] Error in model parsing. Unable to parse model!\n{}: {}\n{}\n{}",
-			line_num, line_content, marker, err_str
+			"[Parse Error] Error in model parsing. Unable to parse model!\nLine {}: {}\n{}",
+			line_num, err_str, "^"
 		)
 	}
 }
@@ -405,6 +394,7 @@ fn build_property(
 
 /// Reads a VAS model file and builds an AbstractVas model
 pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
+	
 	// Initialize everything
 	let lines = read_lines(&filename).map_err(|_| {
 		ModelParseError::general(
@@ -412,7 +402,7 @@ pub fn build_model(filename: &str) -> Result<AbstractVas, ModelParseError> {
 			&"line-by-line file parsing not Ok. Check your model file.",
 		)
 	})?;
-
+	
 	// Setup strings for the various things
 	let mut variable_lines = Vec::<(usize, String)>::new();
 	let mut transition_lines = Vec::<Vec<(usize, String)>>::new();
