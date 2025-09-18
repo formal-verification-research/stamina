@@ -33,7 +33,7 @@ impl BMCEncoding {
 			let next_var = ast::BV::new_const(format!("{}_next", model_variables[i]), bits);
 			bmc_current_variables.insert(model_variables[i].clone(), state_var.clone());
 			bmc_next_variables.insert(model_variables[i].clone(), next_var.clone());
-			bmc_init_constraints.push(Ast::_eq(
+			bmc_init_constraints.push(Ast::eq(
 				&state_var,
 				&ast::BV::from_i64(model_init[0].vector[i].try_into().unwrap(), bits),
 			));
@@ -45,7 +45,7 @@ impl BMCEncoding {
 
 		// Encode the target formula
 		let model_target = model.target.clone();
-		let bmc_target_formula = ast::Ast::_eq(
+		let bmc_target_formula = ast::Ast::eq(
 			&bmc_current_variables[&model_variables[model_target.variable_index]],
 			&ast::BV::from_i64(model_target.target_value.try_into().unwrap(), bits),
 		);
@@ -61,7 +61,7 @@ impl BMCEncoding {
 				// If the update is zero and the enabled bounds are also zero, mark no change
 				if transition_i.update_vector[i] == 0 && transition_i.enabled_bounds[i] == 0 {
 					transition_i_constraints
-						.push(ast::Ast::_eq(bmc_next_variable, bmc_current_variable));
+						.push(ast::Ast::eq(bmc_next_variable, bmc_current_variable));
 					continue;
 				}
 				// Encode the guard for the transition
@@ -74,13 +74,13 @@ impl BMCEncoding {
 				}
 				// Encode the update for the transition
 				transition_i_constraints.push(if *update > 0 {
-					ast::Ast::_eq(
+					ast::Ast::eq(
 						bmc_next_variable,
 						&bmc_current_variable
 							.bvadd(&ast::BV::from_i64((*update).try_into().unwrap(), bits)),
 					)
 				} else {
-					ast::Ast::_eq(
+					ast::Ast::eq(
 						bmc_next_variable,
 						&bmc_current_variable
 							.bvsub(&ast::BV::from_i64((*update).try_into().unwrap(), bits)),
