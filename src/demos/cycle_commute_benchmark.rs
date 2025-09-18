@@ -7,7 +7,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 use std::time::Instant;
-use sysinfo::{ProcessExt, System, SystemExt};
+use sysinfo::{ProcessesToUpdate, System};
 
 /// Gets the list of .crn files in the models directory
 fn get_crn_files(dir_path: &Path) -> Vec<String> {
@@ -103,7 +103,8 @@ pub fn cycle_commute_benchmark(
 
 					// Set start time and memory usage
 					let mut sys = System::new();
-					sys.refresh_process(sysinfo::get_current_pid().unwrap());
+					let current_pid = sysinfo::get_current_pid().unwrap();
+					sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
 					let start_memory = sys
 						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())
@@ -160,7 +161,8 @@ pub fn cycle_commute_benchmark(
 					let total_elapsed = start_time.elapsed().as_millis();
 					message!("Total time for benchmark: {} ms", total_elapsed);
 
-					sys.refresh_process(sysinfo::get_current_pid().unwrap());
+					let current_pid = sysinfo::get_current_pid().unwrap();
+					sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
 					let total_end_memory = sys
 						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())

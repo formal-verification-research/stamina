@@ -23,7 +23,7 @@ impl VasTransition {
 				.enabled_bounds
 				.iter()
 				.filter(|&&r| r != 0)
-				.map(|&r| (r as ProbabilityOrRate))
+				.map(|&r| r as ProbabilityOrRate)
 				.product::<ProbabilityOrRate>()
 	}
 }
