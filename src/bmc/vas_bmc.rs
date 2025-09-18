@@ -1,6 +1,6 @@
 use z3::{
 	ast::{self},
-	Config, Context,
+	// Config, Context,
 };
 
 use crate::{
@@ -12,7 +12,7 @@ use crate::{
 /// Trait for Abstract VAS models to provide BMC-related functionality.
 pub(crate) trait AbstractVasBmc: AbstractModel {
 	/// Sets up the Z3 context for BMC.
-	fn setup_z3(&mut self);
+	// fn setup_z3(&mut self);
 	/// Returns the formula for BMC plus the unroller.
 	/// Order: (init_formula, transition_formula, target_formula, unroller)
 	fn bmc_encoding(&self, bits: u32) -> BMCEncoding;
@@ -35,11 +35,11 @@ pub(crate) trait AbstractVasBmc: AbstractModel {
 
 impl AbstractVasBmc for AbstractVas {
 	/// Sets up the Z3 context for BMC.
-	fn setup_z3(&mut self) {
-		let cfg = Config::new();
-		let ctx = Context::new(&cfg);
-		self.z3_context = Some(ctx);
-	}
+	// fn setup_z3(&mut self) {
+	// 	let cfg = Config::new();
+	// 	let ctx = Context::new(&cfg);
+	// 	self.z3_context = Some(ctx);
+	// }
 
 	/// Returns the formula for BMC plus the unroller.
 	/// Order: (context, config, init_formula, transition_formula, target_formula, unroller)

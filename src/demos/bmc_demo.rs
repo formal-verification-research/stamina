@@ -54,7 +54,7 @@ pub fn bmc_demo(crn_model_directory: &Path, bits: u32, max_steps: u32, backward:
 		let model_path = crn_model_directory.join(&m);
 		let parsed_model = AbstractVas::from_file(model_path.to_str().unwrap());
 		if parsed_model.is_ok() {
-			let mut model = parsed_model.unwrap();
+			let model = parsed_model.unwrap();
 			message!("Finished parsing model: {}", m);
 			debug_message!("Model: {}", model.nice_print());
 			// Build the dependency graph
@@ -67,19 +67,19 @@ pub fn bmc_demo(crn_model_directory: &Path, bits: u32, max_steps: u32, backward:
 					dependency_graph.nice_print(&model)
 				);
 
-				model.setup_z3();
+				// model.setup_z3();
 				let bmc_encoding = model.bmc_encoding(bits);
 
 				let _ = model.variable_bounds(&bmc_encoding, bits, max_steps, backward);
 				message!("Bounding completed successfully on original model.");
 
 				// Trim the model using the dependency graph
-				let mut trimmed_model =
+				let trimmed_model =
 					dependency::trimmer::trim_model(&model, dependency_graph.clone());
 				message!("Trimmed model created for model: {}", m);
 				debug_message!("{}", trimmed_model.nice_print());
 
-				trimmed_model.setup_z3();
+				// trimmed_model.setup_z3();
 				let bmc_encoding = trimmed_model.bmc_encoding(bits);
 				let _ = trimmed_model.variable_bounds(&bmc_encoding, bits, max_steps, backward);
 				message!("Bounding completed successfully on trimmed model.");
