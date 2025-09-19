@@ -4,3 +4,6 @@ pub const DEFAULT_CYCLE_LENGTH: &str = "3";
 pub const DEFAULT_COMMUTE_DEPTH: &str = "3";
 pub const DEFAULT_BOUNDER_STEPS: &str = "1000";
 pub const DEFAULT_OUTPUT_NAME: &str = "output";
+pub const DEFAULT_BMC_BITS: &str = "16";
+pub const DEFAULT_BMC_MAX_STEPS: &str = "100";
+pub const DEFAULT_BOUNDER_BITS: &str = "16";

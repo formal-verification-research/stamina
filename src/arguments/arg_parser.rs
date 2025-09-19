@@ -22,7 +22,7 @@ pub fn parse_args() -> clap::ArgMatches {
 			.arg(
 				Arg::new("dir")
 					.short('d')
-					.long("models-dir")
+					.long("dir")
 					.value_name("DIR")
 					.help("Set a directory with multiple models (alternative to --model)")
 					.required(false)
@@ -84,7 +84,7 @@ pub fn parse_args() -> clap::ArgMatches {
                 Arg::new("steps")
                     .long("steps")
                     .value_name("STEPS")
-                    .help("Sets the number of unrolling steps for BMC (required)")
+                    .help("Sets the max number of unrolling steps for BMC (required)")
                     .required(true),
             )
             .arg(
@@ -120,8 +120,8 @@ pub fn parse_args() -> clap::ArgMatches {
                     .short('b')
                     .long("bits")
                     .value_name("BITS")
-                    .help("Sets the number of bits to use for BMC (default 16)")
-                    .default_value("16"),
+					.help(&format!("Sets the number of bits to use for BMC (default {})", DEFAULT_BOUNDER_BITS))
+                    .default_value(DEFAULT_BOUNDER_BITS),
             )
             .arg(
                 Arg::new("max-steps")
@@ -266,6 +266,15 @@ pub fn parse_args() -> clap::ArgMatches {
                         .default_value(DEFAULT_TIMEOUT_SECONDS),
                 ),
         )
+		.subcommand(
+            Command::new("wayfarer")
+                .about("Wayfarer is not yet implemented")
+		)
+		.subcommand(
+            Command::new("stamina")
+                .about("Stamina is not yet implemented")
+		)
+
 
         // .subcommand(
 		// 	Command::new("bounds")

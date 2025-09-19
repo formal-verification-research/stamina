@@ -6,6 +6,13 @@ macro_rules! message {
 }
 
 #[macro_export]
+macro_rules! info {
+    ($($arg:tt)*) => {
+        eprintln!("{}[INFORMATION]{} {}", $crate::logging::colors::COLOR_INFO, $crate::logging::colors::COLOR_RESET, format!($($arg)*));
+    };
+}
+
+#[macro_export]
 macro_rules! warning {
     ($($arg:tt)*) => {
         eprintln!("{}[WARNING]{} {}", $crate::logging::colors::COLOR_WARNING, $crate::logging::colors::COLOR_RESET, format!($($arg)*));
