@@ -6,7 +6,7 @@ use z3::{
 use crate::{
 	bmc::{bounds::BMCBounds, encoding::BMCEncoding},
 	model::model::AbstractModel,
-	AbstractVas,
+	model::vas_model::AbstractVas,
 };
 
 /// Trait for Abstract VAS models to provide BMC-related functionality.

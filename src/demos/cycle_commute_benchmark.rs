@@ -1,6 +1,8 @@
-use crate::cycle_commute::commute::cycle_commute;
+use crate::builder::builder::Builder;
+use crate::builder::ragtimer::ragtimer::RagtimerBuilder;
 use crate::model::vas_model::AbstractVas;
 use crate::*;
+use crate::{cycle_commute::commute::cycle_commute, model::vas_model::PrismVasModel};
 use chrono::Local;
 use std::fs;
 use std::fs::OpenOptions;
