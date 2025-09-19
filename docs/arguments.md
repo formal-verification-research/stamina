@@ -62,7 +62,7 @@ Results are stored in the `benchmark_results/<timestamp>` directory.
 | Command | Description |
 | --- | --- |
 | `--model <>` or `-m <>`   | Set the input model (required) |
-| `--steps <>`       | Set the number of unrolling steps for BMC (required) |
+| `--steps <>`              | Set the number of unrolling steps for BMC (required) |
 | `--output <>`             | Set the output directory. (default `<model>.smt2`) |
 | `--timeout <>` or `-t <>` | Set the time limit per-model in seconds (default 10 minutes) |
 

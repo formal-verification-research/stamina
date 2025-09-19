@@ -18,6 +18,8 @@ rand = "0.9.1"
 
 chrono = "0.4"
 sysinfo = "0.37.0"
+walkdir = "2.5.0"
+hostname = "0.4.1"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(creusot)'] }
