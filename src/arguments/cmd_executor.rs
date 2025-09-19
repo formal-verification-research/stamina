@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{arguments::default_args::*, bmc::bounds::bound_model, logging::messages::*};
+use crate::{arguments::default_args::*, bmc::bounds::bound_model, dependency::graph::make_dependency_graph, logging::messages::*, model::vas_model::AbstractVas};
 
 pub fn run_commands(args: &clap::ArgMatches) {
 	match args.subcommand() {
@@ -134,7 +134,7 @@ pub fn run_commands(args: &clap::ArgMatches) {
 			// Run cycle-commute here
 		}
 		Some(("dependency-graph", sub_m)) => {
-			let model = sub_m.get_one::<String>("model").unwrap();
+			let model_file = sub_m.get_one::<String>("model").unwrap();
 			let output = sub_m.get_one::<String>("output").unwrap();
 			let timeout = sub_m
 				.get_one::<String>("timeout")
@@ -142,12 +142,35 @@ pub fn run_commands(args: &clap::ArgMatches) {
 				.unwrap_or(DEFAULT_TIMEOUT_SECONDS.parse::<usize>().unwrap());
 			message!(
 				"Generating Dependency Graph for model: {}, Output: {}, Timeout: {}s",
-				model,
+				model_file,
 				output,
 				timeout
 			);
-			unimplemented!();
-			// Generate and display the dependency graph here
+			if let Ok(model) = AbstractVas::from_file(model_file) {
+				message!("Successfully parsed model file: {}", model_file);
+				// Generate and display the dependency graph
+				let dependency_graph = match make_dependency_graph(&model) {
+					Ok(Some(dg)) => dg,
+					Ok(None) => {
+						error!("Failed to create dependency graph for model: {}", model_file);
+						return;
+					}
+					Err(e) => {
+						error!("Error creating dependency graph for model: {}: {}", model_file, e);
+						return;
+					}
+				};
+				message!("Dependency graph created for model: {}", model_file);
+				// TODO: Print to file if output is specified
+				message!("Simple Print of Dependency Graph:");
+				dependency_graph.simple_print(&model);
+
+				message!("Original Style Print of Dependency Graph:");
+				dependency_graph.original_print(&model);
+				
+			} else {
+				error!("Error parsing model file: {}", model_file);
+			}
 		}
 		Some(("ragtimer", sub_m)) => {
 			let model = sub_m.get_one::<String>("model").unwrap();
