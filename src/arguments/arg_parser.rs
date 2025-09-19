@@ -130,6 +130,12 @@ pub fn parse_args() -> clap::ArgMatches {
                     .help(&format!("Sets the limit on the number of steps (default {})", DEFAULT_BOUNDER_STEPS))
                     .default_value(DEFAULT_BOUNDER_STEPS),
             )
+			.arg(
+				Arg::new("trim")
+					.long("trim")
+					.help("Trim model based on dependency graph before bounding")
+					.action(clap::ArgAction::SetTrue),
+			)
             .arg(
             Arg::new("timeout")
                 .short('t')

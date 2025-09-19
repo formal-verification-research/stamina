@@ -36,7 +36,7 @@ pub const COLOR_BG_BRIGHT_WHITE: &str = "\x1b[107m";
 
 // ANSI color codes for logging messages
 pub const COLOR_MESSAGE: &str = COLOR_BRIGHT_BLUE;
-pub const COLOR_INFO: &str = COLOR_BRIGHT_GREEN;
+pub const COLOR_INFO: &str = COLOR_CYAN;
 pub const COLOR_WARNING: &str = COLOR_BG_YELLOW;
 pub const COLOR_ERROR: &str = COLOR_BG_RED;
 pub const COLOR_DEBUG: &str = COLOR_MAGENTA;
