@@ -78,6 +78,7 @@ Results are stored in the `benchmark_results/<timestamp>` directory.
 | `--model <>` or `-m <>`   | Set the input model (required) |
 | `--bits <>` or `-b <>`    | Set the number of bits to use for BMC (default 16) |
 | `--max-steps <>`          | Set the limit on the number of steps (default 1K) |
+| `--trim`                  | Use the trimmed model based on dependency graph (false if absent) |
 | `--timeout <>` or `-t <>` | Set the time limit per-model in seconds (default 10 minutes) |
 
 This command will run BMC with bit vectors of the specified number of bits for each variable. It will unroll the model to the required number of steps to reach a satisfying/target state, then it uses a binary search to determine tightest and loosest upper and lower bounds for each variable along traces that reach a target state.

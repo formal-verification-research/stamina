@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{arguments::default_args::*, logging::messages::*};
+use crate::{arguments::default_args::*, bmc::bounds::bound_model, logging::messages::*};
 
 pub fn run_commands(args: &clap::ArgMatches) {
 	match args.subcommand() {
@@ -87,7 +87,7 @@ pub fn run_commands(args: &clap::ArgMatches) {
 			// Run the BMC here
 		}
 		Some(("bounds", sub_m)) => {
-			let model = sub_m.get_one::<String>("model").unwrap();
+			let model_file = sub_m.get_one::<String>("model").unwrap();
 			let bits = sub_m
 				.get_one::<String>("bits")
 				.and_then(|s| s.parse::<u32>().ok())
@@ -96,19 +96,19 @@ pub fn run_commands(args: &clap::ArgMatches) {
 				.get_one::<String>("max-steps")
 				.and_then(|s| s.parse::<u32>().ok())
 				.unwrap_or(DEFAULT_BOUNDER_STEPS.parse::<u32>().unwrap());
+			let trim = sub_m.get_flag("trim");
 			let timeout = sub_m
 				.get_one::<String>("timeout")
 				.and_then(|s| s.parse::<usize>().ok())
 				.unwrap_or(DEFAULT_TIMEOUT_SECONDS.parse::<usize>().unwrap());
 			message!(
 				"Running bounds checking on model: {}, Bits: {}, Max Steps: {}, Timeout: {}s",
-				model,
+				model_file,
 				bits,
 				max_steps,
 				timeout
 			);
-			unimplemented!();
-			// Run the bounds checking here
+			bound_model(model_file, bits, max_steps, trim);
 		}
 		Some(("cycle-commute", sub_m)) => {
 			let model = sub_m.get_one::<String>("model").unwrap();

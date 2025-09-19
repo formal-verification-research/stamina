@@ -8,7 +8,7 @@ macro_rules! message {
 #[macro_export]
 macro_rules! info {
     ($($arg:tt)*) => {
-        eprintln!("{}[INFORMATION]{} {}", $crate::logging::colors::COLOR_INFO, $crate::logging::colors::COLOR_RESET, format!($($arg)*));
+        eprintln!("{}[INFO]{} {}", $crate::logging::colors::COLOR_INFO, $crate::logging::colors::COLOR_RESET, format!($($arg)*));
     };
 }
 

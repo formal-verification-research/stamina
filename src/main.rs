@@ -15,10 +15,7 @@ mod util;
 mod validator;
 
 fn main() {
-	// Give a bit of whitespace after the command line prompt
-    println!();
-
-    // Print the current date and time for logging purposes
+    // Get the current date and time for logging purposes
 	let now = chrono::Local::now();
     let hostname = hostname::get().unwrap_or_else(|_| "(unknown)".into());
 
@@ -37,13 +34,11 @@ fn main() {
 	message!("Repository: https://github.com/formal-verification-research/stamina-toolset");
 	message!("Documentation: https://github.com/formal-verification-research/stamina-toolset/tree/main/docs");
 	message!("For help, use the --help flag or consult the documentation.");
-    println!();
     info!(
         "This execution began on host {} at {}",
         hostname.to_string_lossy(),
         now.format("%Y-%m-%d %H:%M:%S%.3f")
 	);
-    println!();
 
 	// Execute commands based on parsed arguments
 	arguments::cmd_executor::run_commands(&args);

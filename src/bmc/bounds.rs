@@ -4,6 +4,8 @@ use z3::{ast, SatResult};
 
 use crate::bmc::encoding::BMCEncoding;
 use crate::bmc::unroller::Unroller;
+use crate::bmc::vas_bmc::AbstractVasBmc;
+use crate::dependency::trimmer::trim_model;
 use crate::model::vas_model::AbstractVas;
 use crate::model::vas_model::VasValue;
 use crate::*;
@@ -362,4 +364,48 @@ impl BMCBounds {
 			);
 		}
 	}
+}
+
+pub fn bound_model(
+	model_file: &str,
+	bits: u32,
+	max_steps: u32,
+	trim: bool,
+) {
+	// Run the bounds checking
+	// TODO: Allow model trimming based on dependency graph
+	if let Ok(model) = AbstractVas::from_file(model_file) {
+		message!("Successfully parsed model file: {}", model_file);
+		if trim {
+			let dependency_graph = match crate::dependency::graph::make_dependency_graph(&model) {
+				Ok(Some(dg)) => dg,
+				Ok(None) => {
+					error!("Failed to create dependency graph for model: {}", model_file);
+					return;
+				}
+				Err(e) => {
+					error!("Error creating dependency graph for model: {}: {}", model_file, e);
+					return;
+				}
+			};
+			let trimmed_model = trim_model(&model, dependency_graph);
+			message!("Using trimmed model based on dependency graph.");
+			debug_message!("Trimmed Model: {}", trimmed_model.nice_print());
+			let bmc_encoding = trimmed_model.bmc_encoding(bits);
+			let _ = trimmed_model.variable_bounds(&bmc_encoding, bits, max_steps, false);
+			// TODO: print the bound object rather than printing in-process
+			message!("Bounding completed successfully on trimmed model.");
+		}
+		else {
+			message!("Using original model without trimming.");
+			debug_message!("Model: {}", model.nice_print());
+			let bmc_encoding = model.bmc_encoding(bits);
+			let _ = model.variable_bounds(&bmc_encoding, bits, max_steps, false);
+			// TODO: print the bound object rather than printing in-process
+			message!("Bounding completed successfully on original model.");
+		}
+	} else {
+		error!("Error parsing model file: {}", model_file);
+		return;
+	};
 }
