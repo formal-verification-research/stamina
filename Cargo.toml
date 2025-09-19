@@ -1,5 +1,5 @@
 [package]
-name = "practice"
+name = "stamina-toolset"
 version = "0.1.0"
 edition = "2021"
 description = "PRobabilistic Research and Analysis of C(RN|TMC) (and VAS) Tool Integration for Checking and Evaluation"

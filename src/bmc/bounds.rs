@@ -4,8 +4,8 @@ use z3::{ast, SatResult};
 
 use crate::bmc::encoding::BMCEncoding;
 use crate::bmc::unroller::Unroller;
+use crate::model::vas_model::AbstractVas;
 use crate::model::vas_model::VasValue;
-use crate::AbstractVas;
 use crate::*;
 
 /// Struct to hold the BMC encoding components

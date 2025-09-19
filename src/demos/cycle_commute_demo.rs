@@ -1,5 +1,7 @@
+use crate::builder::builder::Builder;
+use crate::builder::ragtimer::ragtimer::RagtimerBuilder;
 use crate::cycle_commute::commute::cycle_commute;
-use crate::model::vas_model::AbstractVas;
+use crate::model::vas_model::{AbstractVas, PrismVasModel};
 use crate::*;
 
 /// This function runs the cycle commute demo for a given model and trace file.

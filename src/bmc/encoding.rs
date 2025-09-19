@@ -5,7 +5,7 @@ use z3::{
 	SatResult, Solver,
 };
 
-use crate::{bmc::unroller::Unroller, logging::messages::*, AbstractVas};
+use crate::{bmc::unroller::Unroller, logging::messages::*, model::vas_model::AbstractVas};
 
 /// Struct to hold the BMC encoding components
 pub struct BMCEncoding {
