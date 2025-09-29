@@ -11,7 +11,7 @@ colored = "3.0.0"
 evalexpr = "12.0.2"
 nalgebra = "0.34.0"
 num = "0.4.3"
-z3 = "0.18.2"
+z3 = "0.19.1"
 
 itertools = "0.14.0"
 rand = "0.9.1"
