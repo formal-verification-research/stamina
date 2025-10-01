@@ -63,7 +63,9 @@ Results are stored in the `benchmark_results/<timestamp>` directory.
 | --- | --- |
 | `--model <>` or `-m <>`   | Set the input model (required) |
 | `--steps <>`              | Set the number of unrolling steps for BMC (required) |
-| `--output <>`             | Set the output directory. (default `<model>.smt2`) |
+| `--bits <>`               | Set the number of bits to use for BMC (default 16) |
+| `--output <>`             | Set the output filename. (default `<model>.smt2`) |
+| `--check`                 | Use z3 to check the output model (equivalent to `z3 <model>.smt2`) |
 | `--timeout <>` or `-t <>` | Set the time limit per-model in seconds (default 10 minutes) |
 
 

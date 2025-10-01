@@ -88,12 +88,25 @@ pub fn parse_args() -> clap::ArgMatches {
                     .required(true),
             )
             .arg(
+                Arg::new("bits")
+                    .long("bits")
+                    .value_name("BITS")
+                    .help(&format!("Sets the number of bits to use for BMC (default {})", DEFAULT_BOUNDER_BITS))
+                    .default_value(DEFAULT_BOUNDER_BITS),
+            )
+            .arg(
                 Arg::new("output")
                     .long("output")
                     .value_name("OUTPUT")
-                    .help("Sets the output directory (default <model>.smt2)")
+                    .help("Sets the output filename (default <model>.smt2)")
                     .required(false),
             )
+			.arg(
+				Arg::new("check")
+					.long("check")
+					.help("Use z3 to check the output model (equivalent to `z3 <model>.smt2`)")
+					.action(clap::ArgAction::SetTrue),
+			)
             .arg(
             Arg::new("timeout")
                 .short('t')

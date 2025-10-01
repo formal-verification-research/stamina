@@ -5,7 +5,7 @@ use z3::{
 	SatResult, Solver,
 };
 
-use crate::{bmc::unroller::Unroller, logging::messages::*, model::vas_model::AbstractVas};
+use crate::{bmc::{unroller::Unroller, vas_bmc::AbstractVasBmc}, logging::messages::*, model::{self, vas_model::AbstractVas}};
 
 /// Struct to hold the BMC encoding components
 pub struct BMCEncoding {
@@ -182,4 +182,73 @@ impl BMCEncoding {
 		debug_message!("Finished BMC with actual step count of {}", max_k);
 		(formula, max_k)
 	}
+
+	/// Prints the Z3 encoding as an SMT-LIB string.
+	pub fn to_smtlib(&self) -> String {
+		let solver = Solver::new();
+		solver.assert(&self.init_formula);
+		solver.assert(&self.transition_formula);
+		solver.assert(&self.target_formula);
+		solver.to_smt2()
+	}
+
+}
+
+/// Unrolls the model for BMC and outputs the desired encoding
+pub fn unroll_model(
+	model_file: &str,
+	steps: u32,
+	bits: u32,
+	output: &str,
+	check: bool,
+) {
+	if let Ok(model) = AbstractVas::from_file(model_file) {
+		message!("Successfully parsed model file: {}", model_file);
+		debug_message!("Model:\n{}", model.nice_print());
+		let bmc_encoding = model.bmc_encoding(bits);
+		let mut unroller = bmc_encoding.unroller.clone();
+		let mut formula = unroller.at_time(&bmc_encoding.init_formula, 0);
+		for k in 0..steps {
+			formula = ast::Bool::and(&[
+				&formula,
+				&unroller.at_time(&bmc_encoding.transition_formula, k),
+			]);
+		}
+		formula = ast::Bool::and(&[
+			&formula,
+			&unroller.at_time(&bmc_encoding.target_formula, steps),
+		]);
+		let solver = Solver::new();
+		solver.assert(&formula);
+		let smtlib_string = solver.to_smt2();
+		let output_file = if output.ends_with(".smt2") {
+			output.to_string()
+		} else {
+			format!("{}.smt2", output)
+		};
+		std::fs::write(&output_file, smtlib_string).expect("Unable to write file");
+		message!("Successfully wrote SMT-LIB encoding to {}", output_file);
+		if check {
+			message!("Checking satisfiability with Z3...");
+			let status = solver.check();
+			match status {
+				SatResult::Sat => {
+					message!("The formula is SAT (the target state is reachable).");
+					if let Some(model) = solver.get_model() {
+						debug_message!("Z3 Satisfying Model:\n{}", model);
+					}
+				}
+				SatResult::Unsat => {
+					message!("The formula is UNSAT (the target state is not reachable in {} steps).", steps);
+				}
+				SatResult::Unknown => {
+					message!("The satisfiability of the formula is UNKNOWN.");
+				}
+			}
+		}
+		
+	} else {
+		error!("Error parsing model file: {}", model_file);
+		return;
+	};
 }
