@@ -92,7 +92,7 @@ This command will run BMC with bit vectors of the specified number of bits for e
 | Command | Description |
 | --- | --- |
 | `--model <>` or `-m <>`   | Set the input model (required) |
-| ``-trace <>`              | Provide a tab-separated list of transitions (required) |
+| `--trace <>`              | Provide a tab-separated list of transitions (required) |
 | `--cycle-length <>`       | Set the maximum Cycle & Commute cycle length (default 3) |
 | `--commute-depth <>`      | Set the maximum Cycle & Commute recursion depth (default 3) |
 | `--output <>` or `-o <>`  | Set the output file name *without extensions* (default `output`) |
