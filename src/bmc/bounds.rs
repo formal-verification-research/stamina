@@ -373,7 +373,6 @@ pub fn bound_model(
 	trim: bool,
 ) {
 	// Run the bounds checking
-	// TODO: Allow model trimming based on dependency graph
 	if let Ok(model) = AbstractVas::from_file(model_file) {
 		message!("Successfully parsed model file: {}", model_file);
 		if trim {

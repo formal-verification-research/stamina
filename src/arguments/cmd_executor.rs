@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{arguments::default_args::*, bmc::bounds::bound_model, dependency::graph::make_dependency_graph, logging::messages::*, model::vas_model::AbstractVas};
+use crate::{arguments::default_args::*, bmc::{bounds::bound_model, encoding::unroll_model}, dependency::graph::make_dependency_graph, logging::messages::*, model::vas_model::AbstractVas};
 
 pub fn run_commands(args: &clap::ArgMatches) {
 	match args.subcommand() {
@@ -63,28 +63,33 @@ pub fn run_commands(args: &clap::ArgMatches) {
 			}
 		}
 		Some(("bmc", sub_m)) => {
-			let model = sub_m.get_one::<String>("model").unwrap();
+			let model_file = sub_m.get_one::<String>("model").unwrap();
+			let steps = sub_m
+				.get_one::<String>("steps")
+				.and_then(|s| s.parse::<u32>().ok())
+				.unwrap();
 			let bits = sub_m
 				.get_one::<String>("bits")
 				.and_then(|s| s.parse::<u32>().ok())
 				.unwrap();
-			let max_steps = sub_m
-				.get_one::<String>("max-steps")
-				.and_then(|s| s.parse::<u32>().ok())
-				.unwrap();
+			let output = sub_m
+				.get_one::<String>("output")
+				.map(|s| s.to_string())
+				.unwrap_or_else(|| format!("{}.smt2", model_file));
+			let check = sub_m.get_flag("check");
 			let timeout = sub_m
 				.get_one::<String>("timeout")
 				.and_then(|s| s.parse::<usize>().ok())
 				.unwrap_or(DEFAULT_TIMEOUT_SECONDS.parse::<usize>().unwrap());
 			message!(
-				"Running BMC on model: {}, Bits: {}, Max Steps: {}, Timeout: {}s",
-				model,
+				"Preparing BMC Unrolled Encoding on model: {}, Steps: {}, Bits: {}, Output: {}, Timeout: {}s",
+				model_file,
+				steps,
 				bits,
-				max_steps,
+				output,
 				timeout
 			);
-			unimplemented!();
-			// Run the BMC here
+			unroll_model(model_file, steps, bits, &output, check);
 		}
 		Some(("bounds", sub_m)) => {
 			let model_file = sub_m.get_one::<String>("model").unwrap();
@@ -221,22 +226,7 @@ pub fn run_commands(args: &clap::ArgMatches) {
 
 	// // Old Stuff
 	// match args.subcommand() {
-	// 	Some(("bounds", sub_m)) => {
-	// 		let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
-	// 		message!("Running ragtimer with models_dir: {}", models_dir);
-	// 		let dir_path = Path::new(models_dir);
-	// 		let backward = sub_m.get_flag("backward");
-	// 		let bits = sub_m
-	// 			.get_one::<String>("bits")
-	// 			.and_then(|s| s.parse::<u32>().ok())
-	// 			.unwrap();
-	// 		let max_steps = sub_m
-	// 			.get_one::<String>("max_steps")
-	// 			.and_then(|s| s.parse::<u32>().ok())
-	// 			.unwrap();
-	// 		message!("Bits: {}, Max Steps: {}", bits, max_steps);
-	// 		demos::bmc_demo::bmc_demo(dir_path, bits, max_steps, backward);
-	// 	}
+
 	// 	Some(("cycle-commute-benchmark", sub_m)) => {
 	// 		let models_dir = sub_m.get_one::<String>("models_dir").unwrap();
 	// 		message!("Running ragtimer with models_dir: {}", models_dir);
