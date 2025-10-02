@@ -5,7 +5,11 @@ use z3::{
 	SatResult, Solver,
 };
 
-use crate::{bmc::{unroller::Unroller, vas_bmc::AbstractVasBmc}, logging::messages::*, model::{self, vas_model::AbstractVas}};
+use crate::{
+	bmc::{unroller::Unroller, vas_bmc::AbstractVasBmc},
+	logging::messages::*,
+	model::vas_model::AbstractVas,
+};
 
 /// Struct to hold the BMC encoding components
 pub struct BMCEncoding {
@@ -191,17 +195,10 @@ impl BMCEncoding {
 		solver.assert(&self.target_formula);
 		solver.to_smt2()
 	}
-
 }
 
 /// Unrolls the model for BMC and outputs the desired encoding
-pub fn unroll_model(
-	model_file: &str,
-	steps: u32,
-	bits: u32,
-	output: &str,
-	check: bool,
-) {
+pub fn unroll_model(model_file: &str, steps: u32, bits: u32, output: &str, check: bool) {
 	if let Ok(model) = AbstractVas::from_file(model_file) {
 		message!("Successfully parsed model file: {}", model_file);
 		debug_message!("Model:\n{}", model.nice_print());
@@ -239,14 +236,16 @@ pub fn unroll_model(
 					}
 				}
 				SatResult::Unsat => {
-					message!("The formula is UNSAT (the target state is not reachable in {} steps).", steps);
+					message!(
+						"The formula is UNSAT (the target state is not reachable in {} steps).",
+						steps
+					);
 				}
 				SatResult::Unknown => {
 					message!("The satisfiability of the formula is UNKNOWN.");
 				}
 			}
 		}
-		
 	} else {
 		error!("Error parsing model file: {}", model_file);
 		return;
