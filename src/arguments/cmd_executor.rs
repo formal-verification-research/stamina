@@ -1,6 +1,12 @@
 use std::path::Path;
 
-use crate::{arguments::default_args::*, bmc::{bounds::bound_model, encoding::unroll_model}, dependency::graph::make_dependency_graph, logging::messages::*, model::vas_model::AbstractVas};
+use crate::{
+	arguments::default_args::*,
+	bmc::{bounds::bound_model, encoding::unroll_model},
+	dependency::graph::make_dependency_graph,
+	logging::messages::*,
+	model::vas_model::AbstractVas,
+};
 
 pub fn run_commands(args: &clap::ArgMatches) {
 	match args.subcommand() {
@@ -157,22 +163,31 @@ pub fn run_commands(args: &clap::ArgMatches) {
 				let dependency_graph = match make_dependency_graph(&model) {
 					Ok(Some(dg)) => dg,
 					Ok(None) => {
-						error!("Failed to create dependency graph for model: {}", model_file);
+						error!(
+							"Failed to create dependency graph for model: {}",
+							model_file
+						);
 						return;
 					}
 					Err(e) => {
-						error!("Error creating dependency graph for model: {}: {}", model_file, e);
+						error!(
+							"Error creating dependency graph for model: {}: {}",
+							model_file, e
+						);
 						return;
 					}
 				};
 				message!("Dependency graph created for model: {}", model_file);
-				// TODO: Print to file if output is specified
-				message!("Simple Print of Dependency Graph:");
+				message!("Constructed the following dependency graph:");
 				dependency_graph.simple_print(&model);
-
-				message!("Original Style Print of Dependency Graph:");
-				dependency_graph.original_print(&model);
-				
+				// Write the dependency graph to the specified output file
+				let output_file = format!("{}.dependencygraph.txt", output);
+				let original_style_output = dependency_graph.original_print(&model);
+				if let Err(e) = std::fs::write(&output_file, original_style_output) {
+					error!("Error writing dependency graph to file {}: {}", output_file, e);
+				} else {
+					message!("Dependency graph written to file: {}", output_file);
+				}
 			} else {
 				error!("Error parsing model file: {}", model_file);
 			}

@@ -268,8 +268,8 @@ pub fn make_dependency_graph(
 impl DependencyGraph {
 	/// Prints the dependency graph in its original format.
 	/// This uses println! instead of message to simplify Beckey's work.
-	pub fn original_print(&self, vas: &AbstractVas) {
-		fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize) {
+	pub fn original_print(&self, vas: &AbstractVas) -> String {
+		fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize, output: &mut String) {
 			let mut node_str = String::new();
 			node_str.push_str(&format!(
 				"{}{}",
@@ -294,14 +294,15 @@ impl DependencyGraph {
 				.collect::<Vec<_>>()
 				.join(", ");
 			node_str.push_str(&format!("[{}]", targets_str));
-			println!("{}", node_str);
-			// message(&format!("{}", node_str));
+			output.push_str(&format!("{}\n", node_str));
 			for child in &node.children {
-				print_node(vas, child, depth + 1);
+				print_node(vas, child, depth + 1, output);
 			}
 		}
 
-		print_node(vas, &self.root, 0);
+		let mut output = String::new();
+		print_node(vas, &self.root, 0, &mut output);
+		output
 	}
 	/// Pretty prints the dependency graph in a human-readable format.
 	pub fn pretty_print(&self, vas: &AbstractVas) {

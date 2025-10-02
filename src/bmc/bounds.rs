@@ -366,12 +366,7 @@ impl BMCBounds {
 	}
 }
 
-pub fn bound_model(
-	model_file: &str,
-	bits: u32,
-	max_steps: u32,
-	trim: bool,
-) {
+pub fn bound_model(model_file: &str, bits: u32, max_steps: u32, trim: bool) {
 	// Run the bounds checking
 	if let Ok(model) = AbstractVas::from_file(model_file) {
 		message!("Successfully parsed model file: {}", model_file);
@@ -379,11 +374,17 @@ pub fn bound_model(
 			let dependency_graph = match crate::dependency::graph::make_dependency_graph(&model) {
 				Ok(Some(dg)) => dg,
 				Ok(None) => {
-					error!("Failed to create dependency graph for model: {}", model_file);
+					error!(
+						"Failed to create dependency graph for model: {}",
+						model_file
+					);
 					return;
 				}
 				Err(e) => {
-					error!("Error creating dependency graph for model: {}: {}", model_file, e);
+					error!(
+						"Error creating dependency graph for model: {}: {}",
+						model_file, e
+					);
 					return;
 				}
 			};
@@ -394,8 +395,7 @@ pub fn bound_model(
 			let _ = trimmed_model.variable_bounds(&bmc_encoding, bits, max_steps, false);
 			// TODO: print the bound object rather than printing in-process
 			message!("Bounding completed successfully on trimmed model.");
-		}
-		else {
+		} else {
 			message!("Using original model without trimming.");
 			debug_message!("Model: {}", model.nice_print());
 			let bmc_encoding = model.bmc_encoding(bits);
