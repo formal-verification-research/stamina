@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
 use rand::{seq::SliceRandom, Rng};
+use std::io::{stdout, Write};
 
 use crate::{
 	builder::ragtimer::ragtimer::{
-		MagicNumbers, RagtimerBuilder, RagtimerMethod::ReinforcementLearning, RewardValue,
+		MagicNumbers, RagtimerApproach::ReinforcementLearning, RagtimerBuilder, RewardValue,
 	},
 	dependency::graph::{make_dependency_graph, DependencyGraph},
 	logging::messages::{debug_message, error, message, warning},
@@ -18,24 +19,30 @@ use crate::{
 	trace::trace_trie::TraceTrieNode,
 };
 
-const MAX_TRACE_LENGTH: usize = 10000;
+const MAX_TRACE_LENGTH: usize = 3000;
+const DEFAULT_NUM_TRACES: usize = 1000;
+const DEFAULT_DEPENDENCY_REWARD: f64 = 1.0;
+const DEFAULT_BASE_REWARD: f64 = 0.1;
+const DEFAULT_TRACE_REWARD: f64 = 0.01;
+const DEFAULT_SMALLEST_HISTORY_WINDOW: usize = 50;
+const DEFAULT_CLAMP: f64 = 10.0;
+
+/// Function to set default magic numbers for the RL traces method.
+pub fn default_magic_numbers() -> MagicNumbers {
+	MagicNumbers {
+		num_traces: DEFAULT_NUM_TRACES,
+		dependency_reward: DEFAULT_DEPENDENCY_REWARD,
+		base_reward: DEFAULT_BASE_REWARD,
+		trace_reward: DEFAULT_TRACE_REWARD,
+		smallest_history_window: DEFAULT_SMALLEST_HISTORY_WINDOW,
+		clamp: DEFAULT_CLAMP,
+	}
+}
 
 /// This is the builder for the Ragtimer tool, specifically for the RL Traces method.
 /// It implements the `Builder` trait and provides methods to build the explicit state space
 /// using reinforcement learning traces.
 impl<'a> RagtimerBuilder<'a> {
-	/// Function to set default magic numbers for the RL traces method.
-	pub fn default_magic_numbers(&mut self) -> MagicNumbers {
-		MagicNumbers {
-			num_traces: 10000,
-			dependency_reward: 1.0,
-			base_reward: 0.1,
-			trace_reward: 0.01,
-			smallest_history_window: 50,
-			clamp: 10.0,
-		}
-	}
-
 	/// Initializes the rewards for each transition in the model based on the dependency graph.
 	/// For now, it initializes all rewards to zero, then adds DEPENDENCY_REWARD to the reward of any transition
 	/// that appears in the dependency graph.
@@ -44,7 +51,7 @@ impl<'a> RagtimerBuilder<'a> {
 		dependency_graph: &DependencyGraph,
 	) -> HashMap<usize, RewardValue> {
 		let mut rewards = HashMap::new();
-		let magic_numbers = match &self.method {
+		let magic_numbers = match &self.approach {
 			ReinforcementLearning(magic_numbers) => magic_numbers,
 			_ => panic!("RagtimerBuilder::add_rl_traces called with non-RL method"),
 		};
@@ -70,7 +77,7 @@ impl<'a> RagtimerBuilder<'a> {
 		trace: &Vec<usize>,
 		trace_probability_history: &Vec<ProbabilityOrRate>,
 	) {
-		let magic_numbers = match &self.method {
+		let magic_numbers = match &self.approach {
 			ReinforcementLearning(magic_numbers) => magic_numbers,
 			_ => panic!("RagtimerBuilder::add_rl_traces called with non-RL method"),
 		};
@@ -140,7 +147,7 @@ impl<'a> RagtimerBuilder<'a> {
 		rewards: &mut HashMap<usize, RewardValue>,
 		dependency_graph: &DependencyGraph,
 	) {
-		let magic_numbers = match &self.method {
+		let magic_numbers = match &self.approach {
 			ReinforcementLearning(magic_numbers) => magic_numbers,
 			_ => panic!("RagtimerBuilder::add_rl_traces called with non-RL method"),
 		};
@@ -212,7 +219,7 @@ impl<'a> RagtimerBuilder<'a> {
 	}
 
 	/// Stores the explicit trace in the explicit model.
-	fn store_explicit_trace(&self, explicit_model: &mut PrismVasModel, trace: &Vec<usize>) {
+	fn store_explicit_trace(&mut self, explicit_model: &mut PrismVasModel, trace: &Vec<usize>) {
 		// Start with the initial state
 		let mut current_state = self.abstract_model.initial_states[0].vector.clone();
 		let mut next_state = current_state.clone();
@@ -347,6 +354,7 @@ impl<'a> RagtimerBuilder<'a> {
 			}
 			current_state = next_state.clone();
 		}
+		self.traces_complete += 1;
 	}
 
 	/// Generates a single trace based on the rewards and magic numbers.
@@ -434,7 +442,7 @@ impl<'a> RagtimerBuilder<'a> {
 		dependency_graph: Option<&DependencyGraph>,
 	) {
 		message!("Beginning Ragtimer RL Trace Generation");
-		let magic_numbers = match &self.method {
+		let magic_numbers = match &self.approach {
 			ReinforcementLearning(magic_numbers) => magic_numbers,
 			_ => panic!("RagtimerBuilder::add_rl_traces called with non-RL method"),
 		};
@@ -480,7 +488,10 @@ impl<'a> RagtimerBuilder<'a> {
 		};
 		let mut rewards = self.initialize_rewards(dependency_graph_ref);
 		// Generate the traces one-by-one, repeating if the trace is not unique
-		for i in 0..magic_numbers.num_traces {
+		let num_traces = magic_numbers.num_traces;
+		// print a line to give whitespace for the progress bar
+		println!("\nTRACE GENERATION PROGRESS:");
+		for i in 0..num_traces {
 			let mut trace;
 			let mut trace_probability;
 			let mut trace_attempts = 0;
@@ -494,13 +505,14 @@ impl<'a> RagtimerBuilder<'a> {
 				trace_attempts += 1;
 				if trace_attempts > 20 {
 					warning!("Exceeded maximum attempts to generate a unique trace (20 attempts). Moving on to next trace.");
+					println!("\nTRACE GENERATION PROGRESS:");
 					break;
 				}
-				debug_message!(
-					"Trace {} already exists, generating a new one (attempt {}/20).",
-					i,
-					trace_attempts
-				);
+				// debug_message!(
+				// 	"Trace {} already exists, generating a new one (attempt {}/20).",
+				// 	i,
+				// 	trace_attempts
+				// );
 			}
 			trace_probability_history.push(trace_probability);
 			// Store explicit prism states and transitions for this trace
@@ -508,6 +520,27 @@ impl<'a> RagtimerBuilder<'a> {
 			// Update the rewards based on the trace
 			self.update_rewards(&mut rewards, &trace, &trace_probability_history);
 			self.maintain_rewards(&mut rewards, dependency_graph_ref);
+			// Print the trace generation progress every 100 traces
+			let percent_step = (num_traces as f64 / 100.0).ceil().max(1.0) as usize;
+			if self.traces_complete % percent_step == 0 || self.traces_complete == num_traces {
+				let bar_width = 40;
+				let progress = self.traces_complete as f64 / num_traces as f64;
+				let filled = (progress * bar_width as f64).round() as usize;
+				let bar = format!(
+					"\r|{}{}| {}/{} traces ({:.1}%)",
+					"█".repeat(filled),
+					" ".repeat(bar_width - filled),
+					self.traces_complete,
+					num_traces,
+					progress * 100.0
+				);
+				print!("{}", bar);
+				stdout().flush().unwrap();
+				if self.traces_complete == num_traces {
+					println!("\n");
+					message!("All RL traces generated.");
+				}
+			}
 		}
 		explicit_model.trace_trie = trace_trie;
 

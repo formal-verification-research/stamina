@@ -3,6 +3,10 @@ use std::path::Path;
 use crate::{
 	arguments::default_args::*,
 	bmc::{bounds::bound_model, encoding::unroll_model},
+	builder::ragtimer::{
+		ragtimer::{ragtimer, RagtimerApproach},
+		rl_traces::default_magic_numbers,
+	},
 	dependency::graph::make_dependency_graph,
 	logging::messages::*,
 	model::vas_model::AbstractVas,
@@ -17,7 +21,7 @@ pub fn run_commands(args: &clap::ArgMatches) {
 			let num_traces = sub_m
 				.get_one::<String>("num-traces")
 				.and_then(|s| s.parse::<usize>().ok())
-				.unwrap_or(10000);
+				.unwrap_or(DEFAULT_NUM_TRACES.parse::<usize>().unwrap());
 			let cycle_length = sub_m
 				.get_one::<String>("cycle-length")
 				.and_then(|s| s.parse::<usize>().ok())
@@ -157,6 +161,7 @@ pub fn run_commands(args: &clap::ArgMatches) {
 				output,
 				timeout
 			);
+			// TODO: Put this into its own function in the dependency module
 			if let Ok(model) = AbstractVas::from_file(model_file) {
 				message!("Successfully parsed model file: {}", model_file);
 				// Generate and display the dependency graph
@@ -184,7 +189,10 @@ pub fn run_commands(args: &clap::ArgMatches) {
 				let output_file = format!("{}.dependencygraph.txt", output);
 				let original_style_output = dependency_graph.original_print(&model);
 				if let Err(e) = std::fs::write(&output_file, original_style_output) {
-					error!("Error writing dependency graph to file {}: {}", output_file, e);
+					error!(
+						"Error writing dependency graph to file {}: {}",
+						output_file, e
+					);
 				} else {
 					message!("Dependency graph written to file: {}", output_file);
 				}
@@ -194,19 +202,12 @@ pub fn run_commands(args: &clap::ArgMatches) {
 		}
 		Some(("ragtimer", sub_m)) => {
 			let model = sub_m.get_one::<String>("model").unwrap();
-			let approach = sub_m.get_one::<String>("approach").unwrap();
-			let valid_approaches = ["RL", "random", "shortest"];
-			if !valid_approaches.contains(&approach.as_str()) {
-				error!(
-					"Invalid approach: {}. Must be one of: RL, random, shortest.",
-					approach
-				);
-				return;
-			}
+			let approach: &String = sub_m.get_one::<String>("approach").unwrap();
+			let output = sub_m.get_one::<String>("output").unwrap();
 			let num_traces = sub_m
 				.get_one::<String>("num-traces")
 				.and_then(|s| s.parse::<usize>().ok())
-				.unwrap_or(10000);
+				.unwrap_or(DEFAULT_NUM_TRACES.parse::<usize>().unwrap());
 			let cycle_length = sub_m
 				.get_one::<String>("cycle-length")
 				.and_then(|s| s.parse::<usize>().ok())
@@ -223,8 +224,36 @@ pub fn run_commands(args: &clap::ArgMatches) {
 				"Running Ragtimer on model: {}, Approach: {}, Traces: {}, Cycle Length: {}, Commute Depth: {}, Timeout: {}s",
 				model, approach, num_traces, cycle_length, commute_depth, timeout
 			);
-			unimplemented!();
-			// Run Ragtimer here
+			// Run ragtimer based on approach
+			match approach.as_str() {
+				"RL" => {
+					message!("Ragtimer with Reinforcement Learning");
+					let mut magic_numbers = default_magic_numbers();
+					magic_numbers.num_traces = num_traces;
+					ragtimer(
+						model,
+						RagtimerApproach::ReinforcementLearning(magic_numbers),
+						cycle_length,
+						commute_depth,
+						output,
+					);
+				}
+				"random" => {
+					message!("Ragtimer with Random approach is not yet implemented.");
+					unimplemented!();
+				}
+				"shortest" => {
+					message!("Ragtimer with Shortest approach is not yet implemented.");
+					unimplemented!();
+				}
+				_ => {
+					error!(
+						"Invalid approach: {}. Must be one of: RL, random, shortest.",
+						approach
+					);
+					return;
+				}
+			}
 		}
 		Some(("stamina", _sub_m)) => {
 			error!("Stamina is not yet implemented.");
