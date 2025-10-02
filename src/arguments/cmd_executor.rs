@@ -145,6 +145,7 @@ pub fn run_commands(args: &clap::ArgMatches) {
 				"Running Cycle & Commute on model: {}, Trace: {}, Max Cycle Length: {}, Max Commute Depth: {}, Output: {}, Timeout: {}s",
 				model, trace, cycle_length, commute_depth, output, timeout
 			);
+			error!("Cycle & Commute is not yet implemented for reading traces from files.");
 			unimplemented!();
 			// Run cycle-commute here
 		}
