@@ -1,5 +1,9 @@
 use crate::{
-	builder::builder::Builder,
+	builder::{builder::Builder, ragtimer::rl_traces::default_magic_numbers},
+	cycle_commute::commute::cycle_commute,
+	debug_message,
+	logging::messages::error,
+	message,
 	model::{
 		model::ProbabilityOrRate,
 		vas_model::{AbstractVas, PrismVasModel},
@@ -21,8 +25,9 @@ pub struct MagicNumbers {
 }
 
 /// Enum representing the method used by Ragtimer to build the model.
-pub enum RagtimerMethod {
+pub enum RagtimerApproach {
 	ReinforcementLearning(MagicNumbers),
+	RandomPathExploration,
 	DeterministicDependencyGraph,
 }
 
@@ -31,7 +36,8 @@ pub enum RagtimerMethod {
 pub(crate) struct RagtimerBuilder<'a> {
 	pub abstract_model: &'a AbstractVas,
 	pub model_built: bool,
-	pub method: RagtimerMethod,
+	pub approach: RagtimerApproach,
+	pub traces_complete: usize,
 }
 
 impl<'a> Builder for RagtimerBuilder<'a> {
@@ -75,37 +81,81 @@ impl<'a> Builder for RagtimerBuilder<'a> {
 		if self.model_built {
 			return;
 		}
-
-		let method = &self.method;
+		let method = &self.approach;
 		match method {
-			RagtimerMethod::ReinforcementLearning(_) => {
+			RagtimerApproach::ReinforcementLearning(_) => {
 				// self.method = RagtimerMethod::ReinforcementLearning(self.default_magic_numbers());
 				self.add_rl_traces(explicit_model, None);
 			}
-			RagtimerMethod::DeterministicDependencyGraph => {
+			RagtimerApproach::RandomPathExploration => {
+				todo!()
+			}
+			RagtimerApproach::DeterministicDependencyGraph => {
 				todo!()
 			}
 		}
-
 		self.model_built = true;
 	}
 }
 
 impl<'a> RagtimerBuilder<'a> {
-	/// Creates a new RagtimerBuilder with the given abstract model and method.
-	pub fn new(abstract_model: &'a AbstractVas, method: Option<RagtimerMethod>) -> Self {
+	/// Creates a new RagtimerBuilder with the given abstract model and approach.
+	pub fn new(abstract_model: &'a AbstractVas, approach: Option<RagtimerApproach>) -> Self {
 		let mut builder = RagtimerBuilder {
 			abstract_model,
 			model_built: false,
-			method: RagtimerMethod::DeterministicDependencyGraph,
+			approach: RagtimerApproach::RandomPathExploration, // Placeholder will be set properly below
+			traces_complete: 0,
 		};
-
-		if let Some(m) = method {
-			builder.method = m;
+		if let Some(m) = approach {
+			builder.approach = m;
 		} else {
-			builder.method = RagtimerMethod::ReinforcementLearning(builder.default_magic_numbers());
+			builder.approach = RagtimerApproach::ReinforcementLearning(default_magic_numbers());
 		}
-
 		builder
+	}
+}
+
+pub fn ragtimer(
+	model_file: &str,
+	approach: RagtimerApproach,
+	max_cycle_length: usize,
+	max_commute_depth: usize,
+	output: &str,
+) {
+	// Attempt to parse the model file
+	if let Ok(mut abstract_model) = AbstractVas::from_file(model_file) {
+		let mut explicit_model = PrismVasModel::from_abstract_model(&abstract_model);
+		let approach = match approach {
+			RagtimerApproach::ReinforcementLearning(magic_numbers) => {
+				message!("Using Reinforcement Learning approach for Ragtimer.");
+				let magic_numbers = magic_numbers;
+				RagtimerApproach::ReinforcementLearning(magic_numbers)
+			}
+			RagtimerApproach::RandomPathExploration => {
+				message!("Using Random Path Exploration approach for Ragtimer.");
+				RagtimerApproach::RandomPathExploration
+			}
+			RagtimerApproach::DeterministicDependencyGraph => {
+				message!("Using Deterministic Dependency Graph approach for Ragtimer.");
+				RagtimerApproach::DeterministicDependencyGraph
+			}
+		};
+		// Run trace generation
+		let mut ragtimer_builder = RagtimerBuilder::new(&abstract_model, Some(approach));
+		ragtimer_builder.build(&mut explicit_model);
+		debug_message!("Traces added to explicit model with Ragtimer");
+		// Run cycle and commute
+		cycle_commute(
+			&mut abstract_model,
+			&mut explicit_model,
+			max_commute_depth,
+			max_cycle_length,
+		);
+		// Output the explicit model to PRISM files
+		explicit_model.print_explicit_prism_files(output);
+		message!("Ragtimer complete. Output written to {}", output);
+	} else {
+		error!("Failed to parse model file: {}", model_file);
 	}
 }

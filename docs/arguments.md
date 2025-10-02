@@ -133,6 +133,7 @@ This command will build a dependency graph from the specified model. It outputs 
 | `--num-traces <>`          | Set the number of traces for Ragtimer to generate (default 10K) |
 | `--cycle-length <>`        | Set the maximum Cycle & Commute cycle length (default 3) |
 | `--commute-depth <>`       | Set the maximum Cycle & Commute recursion depth (default 3) |
+| `--output <>` or `-o <>`  | Set the output file name *without extensions* (default `output`) |
 | `--timeout <>` or `-t <>`  | Set the time limit per-model in seconds (default 10 minutes) |
 
 The `--approach` value may be one of the following (more coming soon):

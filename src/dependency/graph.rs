@@ -201,7 +201,7 @@ fn property_sat(prop: &VasProperty, state: &VasState) -> Result<bool, String> {
 pub fn make_dependency_graph(
 	vas: &vas_model::AbstractVas,
 ) -> Result<Option<DependencyGraph>, String> {
-	debug_message!("Building a dependency graph.");
+	message!("Building a dependency graph.");
 	// check if target is satisfied in the initial state; if not, build a root node.
 	let initial_state = VasState::new(vas.initial_states[0].vector.clone());
 	let initially_sat = property_sat(&vas.target, &initial_state);

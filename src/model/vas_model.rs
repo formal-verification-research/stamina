@@ -675,13 +675,11 @@ impl PrismVasModel {
 		// writeln!(sta_file, "({})", var_names).unwrap();
 		// Output results to the specified output file
 		message!(
-			"Resulting explicit state space written to: {}.sta, .tra",
+			"Resulting explicit state space written to: {}.tra,sta,lab",
 			output_file
 		);
 		message!(
-			"Check this with the following command:\n
-			prism -importtrans {}.tra -importstates {}.sta -ctmc\n",
-			output_file,
+			"Check this with the following command:\n\n\tprism -importmodel {}.tra,sta,lab <property file>.csl -ctmc\n",
 			output_file
 		);
 	}

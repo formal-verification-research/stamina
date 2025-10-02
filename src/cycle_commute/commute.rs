@@ -42,7 +42,11 @@ pub fn cycle_commute(
 	if max_commute_depth == 0 && max_cycle_length == 0 {
 		return;
 	}
-
+	message!(
+		"Starting Cycle & Commute with max commute depth {} and max cycle length {}.",
+		max_commute_depth,
+		max_cycle_length
+	);
 	// Do a depth first search of the trace trie to gather traces
 	let mut traces = Vec::new();
 	// Stack is a vector of (transition id, current trace, current node)

@@ -43,7 +43,7 @@ pub fn parse_args() -> clap::ArgMatches {
                     .long("num-traces")
                     .value_name("NUM_TRACES")
                     .help(&format!("Sets the number of traces to generate (default {})", DEFAULT_NUM_TRACES))
-                    .default_value("10000"),
+                    .default_value(DEFAULT_NUM_TRACES),
             )
             .arg(
                 Arg::new("cycle-length")
@@ -260,7 +260,7 @@ pub fn parse_args() -> clap::ArgMatches {
                         .long("num-traces")
                         .value_name("NUM_TRACES")
                         .help(&format!("Sets the number of traces to generate (default {})", DEFAULT_NUM_TRACES))
-                        .default_value("10000"),
+                        .default_value(DEFAULT_NUM_TRACES),
                 )
                 .arg(
                     Arg::new("cycle-length")
@@ -276,6 +276,14 @@ pub fn parse_args() -> clap::ArgMatches {
                         .help(&format!("Sets the maximum Cycle & Commute recursion depth (default {})", DEFAULT_COMMUTE_DEPTH))
                         .default_value(DEFAULT_COMMUTE_DEPTH),
                 )
+				.arg(
+					Arg::new("output")
+						.short('o')
+						.long("output")
+						.value_name("OUTPUT")
+						.help(&format!("Sets the output file name without extensions (default {})", DEFAULT_OUTPUT_NAME))
+						.default_value(DEFAULT_OUTPUT_NAME),
+				)
                 .arg(
                     Arg::new("timeout")
                         .short('t')
@@ -284,6 +292,7 @@ pub fn parse_args() -> clap::ArgMatches {
                         .help(&format!("Set the time limit per-model in seconds (default {})", DEFAULT_TIMEOUT_SECONDS))
                         .default_value(DEFAULT_TIMEOUT_SECONDS),
                 ),
+				// TODO: Add options for RL magic number import (from some kind of file)
         )
 		.subcommand(
             Command::new("wayfarer")
