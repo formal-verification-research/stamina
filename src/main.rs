@@ -14,6 +14,8 @@ mod trace;
 mod util;
 mod validator;
 
+mod kani_playground;
+
 fn main() {
 	// Get the current date and time for logging purposes
 	let now = chrono::Local::now();
@@ -43,3 +45,4 @@ fn main() {
 	// Execute commands based on parsed arguments
 	arguments::cmd_executor::run_commands(&args);
 }
+

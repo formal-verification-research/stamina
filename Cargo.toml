@@ -22,4 +22,4 @@ walkdir = "2.5.0"
 hostname = "0.4.1"
 
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(creusot)'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
