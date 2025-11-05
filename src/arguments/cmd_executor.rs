@@ -1,7 +1,6 @@
-use std::path::Path;
-
 use crate::{
 	arguments::default_args::*,
+	benchmarks::bench_ragtimer::ragtimer_benchmark,
 	bmc::{bounds::bound_model, encoding::unroll_model},
 	builder::ragtimer::{
 		ragtimer::{ragtimer, RagtimerApproach},
@@ -16,7 +15,7 @@ pub fn run_commands(args: &clap::ArgMatches) {
 	match args.subcommand() {
 		// Benchmark set
 		Some(("benchmark", sub_m)) => {
-			let model = sub_m.get_one::<String>("model");
+			// let model = sub_m.get_one::<String>("model");
 			let dir = sub_m.get_one::<String>("dir");
 			let num_traces = sub_m
 				.get_one::<String>("num-traces")
@@ -30,47 +29,59 @@ pub fn run_commands(args: &clap::ArgMatches) {
 				.get_one::<String>("commute-depth")
 				.and_then(|s| s.parse::<usize>().ok())
 				.unwrap_or(DEFAULT_COMMUTE_DEPTH.parse::<usize>().unwrap());
-			let timeout = sub_m
+			let _timeout = sub_m
 				.get_one::<String>("timeout")
 				.and_then(|s| s.parse::<usize>().ok())
 				.unwrap_or(DEFAULT_TIMEOUT_SECONDS.parse::<usize>().unwrap());
 
-			let model_files: Vec<String> = if let Some(dir_path) = dir {
-				let path = Path::new(dir_path);
-				if !path.exists() || !path.is_dir() {
-					error!(
-						"Specified directory does not exist or is not a directory: {}",
-						dir_path
-					);
-					return;
-				}
-				let mut files = Vec::new();
-				for entry in walkdir::WalkDir::new(path)
-					.into_iter()
-					.filter_map(|e| e.ok())
-					.filter(|e| e.file_type().is_file())
-				{
-					let file_name = entry.file_name().to_string_lossy();
-					if file_name.ends_with(".crn") || file_name.ends_with(".vas") {
-						files.push(entry.path().to_string_lossy().to_string());
-					}
-				}
-				files
-			} else if let Some(model_file) = model {
-				vec![model_file.clone()]
-			} else {
-				error!("Either --model or --dir must be specified for benchmarking.");
-				return;
-			};
+			ragtimer_benchmark(
+				dir.unwrap().as_ref(),
+				num_traces,
+				0,
+				commute_depth,
+				0,
+				cycle_length,
+			);
 
-			for model_file in model_files {
-				message!(
-					"Benchmarking Model: {}, Traces: {}, Cycle Length: {}, Commute Depth: {}, Timeout: {}s",
-					model_file, num_traces, cycle_length, commute_depth, timeout
-				);
-				unimplemented!();
-				// Call the benchmarking function for each model_file here
-			}
+			// The following code used to allow either a single model file or a directory of models.
+			// For now, we requires a directory of models, but I left the old code commented out to
+			// allow updating benchmarks in the future.
+			// let model_files: Vec<String> = if let Some(dir_path) = dir {
+			// 	let path = Path::new(dir_path);
+			// 	if !path.exists() || !path.is_dir() {
+			// 		error!(
+			// 			"Specified directory does not exist or is not a directory: {}",
+			// 			dir_path
+			// 		);
+			// 		return;
+			// 	}
+			// 	let mut files = Vec::new();
+			// 	for entry in walkdir::WalkDir::new(path)
+			// 		.into_iter()
+			// 		.filter_map(|e| e.ok())
+			// 		.filter(|e| e.file_type().is_file())
+			// 	{
+			// 		let file_name = entry.file_name().to_string_lossy();
+			// 		if file_name.ends_with(".crn") || file_name.ends_with(".vas") {
+			// 			files.push(entry.path().to_string_lossy().to_string());
+			// 		}
+			// 	}
+			// 	files
+			// // } else if let Some(model_file) = model {
+			// // 	vec![model_file.clone()]
+			// } else {
+			// 	error!("Either --model or --dir must be specified for benchmarking.");
+			// 	return;
+			// };
+
+			// for model_file in model_files {
+			// 	message!(
+			// 		"Benchmarking Model: {}, Traces: {}, Cycle Length: {}, Commute Depth: {}, Timeout: {}s",
+			// 		model_file, num_traces, cycle_length, commute_depth, timeout
+			// 	);
+			// 	// unimplemented!();
+			// 	// Call the benchmarking function for each model_file here
+			// }
 		}
 		Some(("bmc", sub_m)) => {
 			let model_file = sub_m.get_one::<String>("model").unwrap();

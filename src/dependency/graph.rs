@@ -401,4 +401,20 @@ impl DependencyGraph {
 		traverse(&self.root, &mut transitions);
 		transitions
 	}
+
+	/// Returns the distance from the root node to the given transition
+	pub fn distance_to_root(&self, transition_name: &str) -> Option<usize> {
+		fn traverse(node: &GraphNode, transition_name: &str, depth: usize) -> Option<usize> {
+			if node.transition.transition_name == transition_name {
+				return Some(depth);
+			}
+			for child in &node.children {
+				if let Some(d) = traverse(child, transition_name, depth + 1) {
+					return Some(d);
+				}
+			}
+			None
+		}
+		traverse(&self.root, transition_name, 0)
+	}
 }

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use rand::{seq::SliceRandom, Rng};
 use std::io::{stdout, Write};
 
@@ -21,7 +22,7 @@ use crate::{
 
 const MAX_TRACE_LENGTH: usize = 3000;
 const DEFAULT_NUM_TRACES: usize = 1000;
-const DEFAULT_DEPENDENCY_REWARD: f64 = 1.0;
+const DEFAULT_DEPENDENCY_REWARD: f64 = 100.0;
 const DEFAULT_BASE_REWARD: f64 = 0.1;
 const DEFAULT_TRACE_REWARD: f64 = 0.01;
 const DEFAULT_SMALLEST_HISTORY_WINDOW: usize = 50;
@@ -55,15 +56,37 @@ impl<'a> RagtimerBuilder<'a> {
 			ReinforcementLearning(magic_numbers) => magic_numbers,
 			_ => panic!("RagtimerBuilder::add_rl_traces called with non-RL method"),
 		};
+		let num_dependencies = dependency_graph.get_transitions().len() as f64;
+		debug_message!("Number of dependencies in graph: {}", num_dependencies);
+		let effective_dependency_reward = magic_numbers.dependency_reward / num_dependencies;
+		debug_message!(
+			"Effective dependency reward per transition: {:.3e}",
+			effective_dependency_reward
+		);
 		let model = self.abstract_model;
 		let all_transitions = model.transitions.clone();
-		let dep_transitions = dependency_graph.get_transitions();
 		for transition in all_transitions {
 			rewards.insert(transition.transition_id, magic_numbers.base_reward);
+			if let Some(distance) = dependency_graph.distance_to_root(&transition.transition_name) {
+				let additional_reward = effective_dependency_reward / (distance as f64 + 1.0);
+				if let Some(reward) = rewards.get_mut(&transition.transition_id) {
+					*reward += additional_reward;
+					debug_message!(
+						"Transition {} is in dependency graph at distance {}: adding reward {:.3e}, total reward now {:.3e}",
+						transition.transition_id,
+						distance,
+						additional_reward,
+						*reward
+					);
+				}
+			}
 		}
-		for transition in dep_transitions {
-			if let Some(reward) = rewards.get_mut(&transition.transition_id) {
-				*reward += magic_numbers.dependency_reward;
+		debug_message!(
+			"Rewards for each transition:",
+		);
+		for &transition_id in rewards.keys().sorted() {
+			if let Some(reward) = rewards.get(&transition_id) {
+				println!("  Transition {}: {:.3e}", transition_id, *reward);
 			}
 		}
 		rewards
@@ -386,18 +409,18 @@ impl<'a> RagtimerBuilder<'a> {
 			let available_transitions = self.get_available_transitions(&current_state);
 			if available_transitions.is_empty() {
 				// No available transitions, warn the user and break out of the loop
-				message!(
-					"No available transitions found in state {:?}. Ending trace generation.",
-					format!(
-						"[{}]",
-						current_state
-							.iter()
-							.map(|v| v.to_string())
-							.collect::<Vec<_>>()
-							.join(", ")
-					)
-				);
-				trace_probability *= 0.01; // Apply a penalty to the trace probability for reaching a dead-end state
+				// message!(
+				// 	"No available transitions found in state {:?}. Ending trace generation.",
+				// 	format!(
+				// 		"[{}]",
+				// 		current_state
+				// 			.iter()
+				// 			.map(|v| v.to_string())
+				// 			.collect::<Vec<_>>()
+				// 			.join(", ")
+				// 	)
+				// );
+				trace_probability *= 0.01;
 				break;
 			}
 			// Shuffle the available transitions to add randomness
@@ -422,8 +445,16 @@ impl<'a> RagtimerBuilder<'a> {
 					{
 						current_state = current_state + vas_transition.update_vector.clone();
 						trace.push(transition);
-						trace_probability *=
-							self.crn_transition_probability(&current_state, &vas_transition);
+						trace_probability *= self.crn_transition_probability(&current_state, &vas_transition);
+						// debug_message!(
+						// 	"Selected transition {} with reward {:.3e} (selection prob {:.3e}) (transition prob {:.3e}) (trace len {} prob {:.3e})",
+						// 	transition,
+						// 	transition_reward,
+						// 	selection_probability,
+						// 	self.crn_transition_probability(&current_state, &vas_transition),
+						// 	trace.len(),
+						// 	trace_probability
+						// );
 					} else {
 						error!("Transition ID {} not found in model.", transition);
 					}
@@ -486,6 +517,9 @@ impl<'a> RagtimerBuilder<'a> {
 				}
 			}
 		};
+		// Print the dependency graph
+		debug_message!("Dependency Graph:");
+		dependency_graph_ref.nice_print(self.abstract_model);
 		let mut rewards = self.initialize_rewards(dependency_graph_ref);
 		// Generate the traces one-by-one, repeating if the trace is not unique
 		let num_traces = magic_numbers.num_traces;
@@ -504,8 +538,8 @@ impl<'a> RagtimerBuilder<'a> {
 				}
 				trace_attempts += 1;
 				if trace_attempts > 20 {
-					warning!("Exceeded maximum attempts to generate a unique trace (20 attempts). Moving on to next trace.");
-					println!("\nTRACE GENERATION PROGRESS:");
+					//warning!("Exceeded maximum attempts to generate a unique trace (20 attempts). Moving on to next trace.");
+					//println!("\nTRACE GENERATION PROGRESS:");
 					break;
 				}
 				// debug_message!(
@@ -536,12 +570,10 @@ impl<'a> RagtimerBuilder<'a> {
 				);
 				print!("{}", bar);
 				stdout().flush().unwrap();
-				if i == num_traces {
-					println!("\n");
-					message!("All RL traces generated.");
-				}
 			}
 		}
+		println!("\n");
+		message!("All RL traces generated.");
 		explicit_model.trace_trie = trace_trie;
 
 		message!(

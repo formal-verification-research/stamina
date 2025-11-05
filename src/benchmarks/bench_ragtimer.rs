@@ -1,5 +1,6 @@
 use crate::builder::builder::Builder;
-use crate::builder::ragtimer::ragtimer::RagtimerBuilder;
+use crate::builder::ragtimer::ragtimer::{RagtimerApproach, RagtimerBuilder};
+use crate::builder::ragtimer::rl_traces::default_magic_numbers;
 use crate::model::vas_model::AbstractVas;
 use crate::*;
 use crate::{cycle_commute::commute::cycle_commute, model::vas_model::PrismVasModel};
@@ -11,7 +12,7 @@ use std::path::Path;
 use std::time::Instant;
 use sysinfo::{ProcessesToUpdate, System};
 
-/// Gets the list of .crn files in the models directory
+/// Gets the list of .crn files in the specified directory
 fn get_crn_files(dir_path: &Path) -> Vec<String> {
 	let mut crn_files: Vec<String> = Vec::new();
 	for entry in fs::read_dir(dir_path).unwrap() {
@@ -36,14 +37,11 @@ fn get_crn_files(dir_path: &Path) -> Vec<String> {
 }
 
 /// This function runs the cycle commute demo for a given model and trace file.
-/// It reads the model from the specified file, processes the trace file,
-/// and writes the output to the specified output file.
-/// It is not meant to be used by an end user, but rather as a demo or proof of concept for the cycle commute functionality.
-/// For now, run this demo with
-/// cargo run -- cycle-commute-benchmark --models-dir <dir> --min-commute-depth <min> --max-commute-depth <max> --min-cycle-length <min> --max-cycle-length <max>
-/// cargo run -- cycle-commute-benchmark --default -m benchmark_models
-pub fn cycle_commute_benchmark(
+/// It reads the models from the specified directory and creates a spreadsheet of results
+/// plus a bash script to run PRISM on each generated model.
+pub fn ragtimer_benchmark(
 	model_dir: &Path,
+	num_traces: usize,
 	min_commute_depth: usize,
 	max_commute_depth: usize,
 	min_cycle_length: usize,
@@ -65,14 +63,14 @@ pub fn cycle_commute_benchmark(
 		.expect("Failed to open CSV file");
 	writeln!(
 		csv_file,
-		"model,commute_depth,cycle_length,time_ms_total,time_ms_ragtimer,time_ms_cc,bytes_total,bytes_ragtimer,bytes_cc,output_file"
+		"model,commute_depth,cycle_length,time_ms_total,time_ms_ragtimer,time_ms_cc,bytes_total,bytes_ragtimer,bytes_cc,states_total,states_ragtimer,states_cc,output_file"
 	).expect("Failed to write CSV header");
 
 	let mut bash_file = OpenOptions::new()
 		.create(true)
 		.write(true)
 		.truncate(true)
-		.open(format!("output/{}/run_all.sh", timestamp))
+		.open(format!("output/{}/run_prism.sh", timestamp))
 		.expect("Failed to open bash script file");
 
 	for model_file in crn_files {
@@ -99,10 +97,6 @@ pub fn cycle_commute_benchmark(
 					let mut explicit_model = PrismVasModel::from_abstract_model(&abstract_model);
 					message!("Explicit Model Built");
 
-					let mut ragtimer_builder = RagtimerBuilder::new(&abstract_model, None);
-					ragtimer_builder.build(&mut explicit_model);
-					message!("Traces added to explicit model with Ragtimer");
-
 					// Set start time and memory usage
 					let mut sys = System::new();
 					let current_pid = sysinfo::get_current_pid().unwrap();
@@ -115,13 +109,21 @@ pub fn cycle_commute_benchmark(
 
 					// Time Ragtimer state space building
 					let ragtimer_start_time = Instant::now();
+                    sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
 					let ragtimer_start_memory = sys
 						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())
 						.unwrap_or(0);
-					let mut ragtimer_builder = RagtimerBuilder::new(&abstract_model, None);
+					let mut magic_numbers = default_magic_numbers();
+					magic_numbers.num_traces = num_traces;
+					let mut ragtimer_builder = RagtimerBuilder::new(
+						&abstract_model,
+						Some(RagtimerApproach::ReinforcementLearning(magic_numbers)),
+					);
 					ragtimer_builder.build(&mut explicit_model);
+                    let ragtimer_state_count = explicit_model.states.len();
 					let build_elapsed = ragtimer_start_time.elapsed().as_millis();
+                    sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
 					let ragtimer_end_memory = sys
 						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())
@@ -138,6 +140,7 @@ pub fn cycle_commute_benchmark(
 
 					// Time cycle and commute
 					let cycle_start_time = Instant::now();
+                    sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
 					let cycle_start_memory = sys
 						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())
@@ -148,7 +151,9 @@ pub fn cycle_commute_benchmark(
 						commute_depth,
 						cycle_length,
 					);
+                    let cycle_state_count = explicit_model.states.len() - ragtimer_state_count;
 					let cycle_elapsed = cycle_start_time.elapsed().as_millis();
+                    sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
 					let cycle_end_memory = sys
 						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())
@@ -159,6 +164,8 @@ pub fn cycle_commute_benchmark(
 						"CC-specific memory usage: {:.3e} B",
 						cycle_memory_usage as f64
 					);
+
+                    let total_state_count = explicit_model.states.len();
 
 					let total_elapsed = start_time.elapsed().as_millis();
 					message!("Total time for benchmark: {} ms", total_elapsed);
@@ -217,23 +224,10 @@ pub fn cycle_commute_benchmark(
 						Cycle Commute Time: {} ms\n\
 						Total Memory Used: {} B\n\
 						Ragtimer Memory Used: {} B\n\
-						Cycle Commute Memory Used: {} B\n",
-						model_name,
-						commute_depth,
-						cycle_length,
-						total_elapsed,
-						build_elapsed,
-						cycle_elapsed,
-						total_memory_usage as f64,
-						ragtimer_memory_usage as f64,
-						cycle_memory_usage as f64
-					)
-					.expect("Failed to write time/memory data");
-
-					writeln!(
-						csv_file,
-						// model,commute_depth,cycle_length,time_ms_total,time_ms_ragtimer,time_ms_cc,bytes_total,bytes_ragtimer,bytes_cc,output_file
-						"{},{},{},{},{},{},{},{},{},{}",
+						Cycle Commute Memory Used: {} B\n
+                        Total State Count: {}\n
+                        Ragtimer State Count: {}\n
+                        Cycle Commute State Count: {}\n",
 						model_name,
 						commute_depth,
 						cycle_length,
@@ -243,6 +237,28 @@ pub fn cycle_commute_benchmark(
 						total_memory_usage as f64,
 						ragtimer_memory_usage as f64,
 						cycle_memory_usage as f64,
+                        total_state_count,
+                        ragtimer_state_count,
+                        cycle_state_count
+					)
+					.expect("Failed to write time/memory data");
+
+					writeln!(
+						csv_file,
+						// model,commute_depth,cycle_length,time_ms_total,time_ms_ragtimer,time_ms_cc,bytes_total,bytes_ragtimer,bytes_cc,states_total,states_ragtimer,states_cycle,output_file
+						"{},{},{},{},{},{},{},{},{},{},{},{},{}",
+						model_name,
+						commute_depth,
+						cycle_length,
+						total_elapsed,
+						build_elapsed,
+						cycle_elapsed,
+						total_memory_usage as f64,
+						ragtimer_memory_usage as f64,
+						cycle_memory_usage as f64,
+                        total_state_count,
+                        ragtimer_state_count,
+                        cycle_state_count,
 						output_file
 					)
 					.expect("Failed to write CSV row");
