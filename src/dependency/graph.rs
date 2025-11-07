@@ -10,9 +10,9 @@ const DEBUG_DEPTH_LIMIT: usize = 5000;
 
 /// A node in the dependency graph.
 #[derive(Clone)]
-struct GraphNode {
-	transition: VasTransition,
-	children: Vec<Box<GraphNode>>,
+pub struct GraphNode {
+	pub(crate) transition: VasTransition,
+	pub(crate) children: Vec<Box<GraphNode>>,
 	parents: Vec<VasTransition>,
 	executions: VasValue,
 	enabled: bool,

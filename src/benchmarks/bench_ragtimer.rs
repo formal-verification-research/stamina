@@ -109,7 +109,7 @@ pub fn ragtimer_benchmark(
 
 					// Time Ragtimer state space building
 					let ragtimer_start_time = Instant::now();
-                    sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
+					sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
 					let ragtimer_start_memory = sys
 						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())
@@ -121,9 +121,9 @@ pub fn ragtimer_benchmark(
 						Some(RagtimerApproach::ReinforcementLearning(magic_numbers)),
 					);
 					ragtimer_builder.build(&mut explicit_model);
-                    let ragtimer_state_count = explicit_model.states.len();
+					let ragtimer_state_count = explicit_model.states.len();
 					let build_elapsed = ragtimer_start_time.elapsed().as_millis();
-                    sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
+					sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
 					let ragtimer_end_memory = sys
 						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())
@@ -140,7 +140,7 @@ pub fn ragtimer_benchmark(
 
 					// Time cycle and commute
 					let cycle_start_time = Instant::now();
-                    sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
+					sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
 					let cycle_start_memory = sys
 						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())
@@ -151,9 +151,9 @@ pub fn ragtimer_benchmark(
 						commute_depth,
 						cycle_length,
 					);
-                    let cycle_state_count = explicit_model.states.len() - ragtimer_state_count;
+					let cycle_state_count = explicit_model.states.len() - ragtimer_state_count;
 					let cycle_elapsed = cycle_start_time.elapsed().as_millis();
-                    sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
+					sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
 					let cycle_end_memory = sys
 						.process(sysinfo::get_current_pid().unwrap())
 						.map(|p| p.memory())
@@ -165,7 +165,7 @@ pub fn ragtimer_benchmark(
 						cycle_memory_usage as f64
 					);
 
-                    let total_state_count = explicit_model.states.len();
+					let total_state_count = explicit_model.states.len();
 
 					let total_elapsed = start_time.elapsed().as_millis();
 					message!("Total time for benchmark: {} ms", total_elapsed);
@@ -237,9 +237,9 @@ pub fn ragtimer_benchmark(
 						total_memory_usage as f64,
 						ragtimer_memory_usage as f64,
 						cycle_memory_usage as f64,
-                        total_state_count,
-                        ragtimer_state_count,
-                        cycle_state_count
+						total_state_count,
+						ragtimer_state_count,
+						cycle_state_count
 					)
 					.expect("Failed to write time/memory data");
 
@@ -256,9 +256,9 @@ pub fn ragtimer_benchmark(
 						total_memory_usage as f64,
 						ragtimer_memory_usage as f64,
 						cycle_memory_usage as f64,
-                        total_state_count,
-                        ragtimer_state_count,
-                        cycle_state_count,
+						total_state_count,
+						ragtimer_state_count,
+						cycle_state_count,
 						output_file
 					)
 					.expect("Failed to write CSV row");
