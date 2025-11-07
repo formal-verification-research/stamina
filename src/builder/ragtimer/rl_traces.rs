@@ -356,15 +356,15 @@ impl<'a> RagtimerBuilder<'a> {
 			self.maintain_rewards(&mut rewards, dependency_graph_ref);
 			// Print the trace generation progress every 100 traces
 			let percent_step = (num_traces as f64 / 100.0).ceil().max(1.0) as usize;
-			if i % percent_step == 0 || i == num_traces {
+			if i % percent_step == 0 || i == num_traces - 1 {
 				let bar_width = 40;
-				let progress = i as f64 / num_traces as f64;
+				let progress = (i + 1) as f64 / num_traces as f64;
 				let filled = (progress * bar_width as f64).round() as usize;
 				let bar = format!(
 					"\r|{}{}| {}/{} traces ({:.1}%)",
 					"█".repeat(filled),
 					" ".repeat(bar_width - filled),
-					i,
+					i + 1,
 					num_traces,
 					progress * 100.0
 				);

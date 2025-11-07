@@ -242,6 +242,15 @@ fn commute(
 					total_outgoing_rate: rate_sum,
 				});
 				*num_states_added += 1;
+				if *num_states_added % 1000 == 0 {
+					debug_message!(
+						"Commute at depth {}: added {} states so far. Current explicit model size: {} states, {} transitions.",
+						depth + 1,
+						num_states_added,
+						explicit_model.states.len(),
+						explicit_model.transitions.len()
+					);
+				}
 			}
 			// Check if this transition already exists
 			let transition_exists =
@@ -378,6 +387,14 @@ fn add_cycles(
 									total_outgoing_rate: rate_sum,
 								});
 								*num_states_added += 1;
+								if *num_states_added % 1000 == 0 {
+									debug_message!(
+										"Cycle added {} states so far. Current explicit model size: {} states, {} transitions.",
+										num_states_added,
+										explicit_model.states.len(),
+										explicit_model.transitions.len()
+									);
+								}
 							}
 							// Add transition if not already present
 							// Check if this transition already exists

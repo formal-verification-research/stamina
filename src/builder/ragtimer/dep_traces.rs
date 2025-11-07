@@ -133,26 +133,26 @@ impl<'a> RagtimerBuilder<'a> {
 					//println!("\nTRACE GENERATION PROGRESS:");
 					break;
 				}
-				debug_message!(
-					"Trace {} already exists, generating a new one (attempt {}/20).",
-					i,
-					trace_attempts
-				);
+				// debug_message!(
+				// 	"Trace {} already exists, generating a new one (attempt {}/20).",
+				// 	i,
+				// 	trace_attempts
+				// );
 			}
 			// Store explicit prism states and transitions for this trace
 			self.store_explicit_trace(explicit_model, &trace);
 
 			// Print the trace generation progress every 100 traces
 			let percent_step = (num_traces as f64 / 100.0).ceil().max(1.0) as usize;
-			if i % percent_step == 0 || i == num_traces {
+			if i % percent_step == 0 || i == num_traces - 1 {
 				let bar_width = 40;
-				let progress = i as f64 / num_traces as f64;
+				let progress = (i + 1) as f64 / num_traces as f64;
 				let filled = (progress * bar_width as f64).round() as usize;
 				let bar = format!(
 					"\r|{}{}| {}/{} traces ({:.1}%)",
 					"█".repeat(filled),
 					" ".repeat(bar_width - filled),
-					i,
+					i + 1,
 					num_traces,
 					progress * 100.0
 				);

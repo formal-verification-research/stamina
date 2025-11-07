@@ -255,8 +255,14 @@ pub fn run_commands(args: &clap::ArgMatches) {
 					unimplemented!();
 				}
 				"shortest" => {
-					message!("Ragtimer with Shortest approach is not yet implemented.");
-					unimplemented!();
+					message!("Ragtimer with Shortest path approach");
+					ragtimer(
+						model,
+						RagtimerApproach::RandomDependencyGraph(num_traces),
+						cycle_length,
+						commute_depth,
+						output,
+					);
 				}
 				_ => {
 					error!(
