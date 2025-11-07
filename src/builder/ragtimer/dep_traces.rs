@@ -8,9 +8,7 @@ use crate::{
 	dependency::graph::{make_dependency_graph, DependencyGraph},
 	logging::messages::{debug_message, error, message},
 	model::{
-		vas_model::{
-			PrismVasModel, PrismVasState, VasTransition,
-		},
+		vas_model::{PrismVasModel, PrismVasState, VasTransition},
 		vas_trie::VasTrieNode,
 	},
 	trace::trace_trie::TraceTrieNode,
@@ -42,13 +40,16 @@ impl<'a> RagtimerBuilder<'a> {
 				);
 			}
 			// Get available transitions
-			let available_transitions = self.get_available_transition_subset(&current_state, allowed_transitions);
+			let available_transitions =
+				self.get_available_transition_subset(&current_state, allowed_transitions);
 			if available_transitions.is_empty() {
 				break;
 			}
 			// Pick a random transition
 			let selected_transition = available_transitions.choose(&mut rand::rng());
-			if let Some(vas_transition) = selected_transition.and_then(|&id| self.abstract_model.get_transition_from_id(id)) {
+			if let Some(vas_transition) =
+				selected_transition.and_then(|&id| self.abstract_model.get_transition_from_id(id))
+			{
 				current_state = current_state + vas_transition.update_vector.clone();
 				trace.push(vas_transition.transition_id);
 			}
@@ -69,7 +70,7 @@ impl<'a> RagtimerBuilder<'a> {
 			RandomDependencyGraph(n) => *n,
 			_ => panic!("RagtimerBuilder:add_dep_traces called with non-DeterministicDependencyGraph method or invalid number of traces."),
 		};
-		
+
 		// Set up trace generation structures
 		let mut trace_trie = TraceTrieNode::new();
 

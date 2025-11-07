@@ -139,7 +139,11 @@ impl<'a> RagtimerBuilder<'a> {
 	}
 
 	/// Returns a list of transition IDs that are enabled in the current state in a subset.
-	pub(super) fn get_available_transition_subset(&self, current_state: &VasStateVector, subset: &Vec<VasTransition>) -> Vec<usize> {
+	pub(super) fn get_available_transition_subset(
+		&self,
+		current_state: &VasStateVector,
+		subset: &Vec<VasTransition>,
+	) -> Vec<usize> {
 		let available_transitions = subset
 			.iter()
 			.filter(|t| {
