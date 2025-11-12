@@ -41,7 +41,6 @@ impl GraphNode {
 		}
 		// Check if the node is already enabled.
 		if self.enabled {
-			// debug_message!("{}Node Enabled? {}", indentation, self.enabled);
 			return Ok(());
 		}
 		// Create a new "initial state" for the child nodes.
@@ -73,7 +72,6 @@ impl GraphNode {
 			.iter()
 			.filter_map(|prop| {
 				let reqd = if self.decrement {
-					// let initial_value = child_init.vector.get(prop.variable_index).unwrap();
 					let consumed_here = 0 - self
 						.transition
 						.update_vector
@@ -81,7 +79,6 @@ impl GraphNode {
 						.unwrap();
 					prop.target_value + (consumed_here * self.executions)
 				} else {
-					// let initial_value = child_init.vector.get(prop.variable_index).unwrap();
 					let consumed_here = 0 + self
 						.transition
 						.update_vector
@@ -90,7 +87,6 @@ impl GraphNode {
 					prop.target_value - (consumed_here * self.executions)
 				};
 				if reqd != 0 {
-					// debug_message!("{}reqd {}", indentation, reqd);
 					Some(VasProperty {
 						variable_index: prop.variable_index,
 						target_value: reqd,

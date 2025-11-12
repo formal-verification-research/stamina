@@ -239,17 +239,6 @@ impl<'a> RagtimerBuilder<'a> {
 						},
 						total_outgoing_rate: current_outgoing_rate,
 					});
-					explicit_model.add_transition(PrismVasTransition {
-						transition_id: transition_id,
-						from_state: current_state_id,
-						to_state: 0,                 // Absorbing state
-						rate: current_outgoing_rate, // Start out by assuming every outgoing transition goes to absorbing state
-					});
-					explicit_model
-						.transition_map
-						.entry(current_state_id)
-						.or_insert_with(Vec::new)
-						.push((0, explicit_model.transitions.len() - 1));
 				}
 				// Find the next state after applying the transition
 				next_state = current_state.clone() + vas_transition.update_vector.clone();
@@ -275,17 +264,6 @@ impl<'a> RagtimerBuilder<'a> {
 						},
 						total_outgoing_rate: next_outgoing_rate,
 					});
-					explicit_model.add_transition(PrismVasTransition {
-						transition_id: transition_id,
-						from_state: next_state_id,
-						to_state: 0,              // Absorbing state
-						rate: next_outgoing_rate, // Start out by assuming every outgoing transition goes to absorbing state
-					});
-					explicit_model
-						.transition_map
-						.entry(next_state_id)
-						.or_insert_with(Vec::new)
-						.push((0, explicit_model.transitions.len() - 1));
 				}
 			} else {
 				error!("Transition ID {} not found in model.", transition_id);
@@ -381,6 +359,10 @@ pub fn ragtimer(
 			max_commute_depth,
 			max_cycle_length,
 		);
+		debug_message!("Cycle commute complete");
+		// Finalize the explicit model by adding absorbing transitions
+		explicit_model.add_absorbing_transitions();
+		debug_message!("Absorbing transitions added to explicit model");
 		// Output the explicit model to PRISM files
 		explicit_model.print_explicit_prism_files(output);
 		message!("Ragtimer complete. Output written to {}", output);

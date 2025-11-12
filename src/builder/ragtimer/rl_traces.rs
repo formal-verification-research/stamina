@@ -207,18 +207,6 @@ impl<'a> RagtimerBuilder<'a> {
 			// Get available transitions
 			let available_transitions = self.get_available_transitions(&current_state);
 			if available_transitions.is_empty() {
-				// No available transitions, warn the user and break out of the loop
-				// message!(
-				// 	"No available transitions found in state {:?}. Ending trace generation.",
-				// 	format!(
-				// 		"[{}]",
-				// 		current_state
-				// 			.iter()
-				// 			.map(|v| v.to_string())
-				// 			.collect::<Vec<_>>()
-				// 			.join(", ")
-				// 	)
-				// );
 				trace_probability *= 0.01;
 				break;
 			}
@@ -246,15 +234,6 @@ impl<'a> RagtimerBuilder<'a> {
 						trace.push(transition);
 						trace_probability *=
 							self.crn_transition_probability(&current_state, &vas_transition);
-						// debug_message!(
-						// 	"Selected transition {} with reward {:.3e} (selection prob {:.3e}) (transition prob {:.3e}) (trace len {} prob {:.3e})",
-						// 	transition,
-						// 	transition_reward,
-						// 	selection_probability,
-						// 	self.crn_transition_probability(&current_state, &vas_transition),
-						// 	trace.len(),
-						// 	trace_probability
-						// );
 					} else {
 						error!("Transition ID {} not found in model.", transition);
 					}
@@ -338,15 +317,8 @@ impl<'a> RagtimerBuilder<'a> {
 				}
 				trace_attempts += 1;
 				if trace_attempts > 20 {
-					//warning!("Exceeded maximum attempts to generate a unique trace (20 attempts). Moving on to next trace.");
-					//println!("\nTRACE GENERATION PROGRESS:");
 					break;
 				}
-				// debug_message!(
-				// 	"Trace {} already exists, generating a new one (attempt {}/20).",
-				// 	i,
-				// 	trace_attempts
-				// );
 			}
 			trace_probability_history.push(trace_probability);
 			// Store explicit prism states and transitions for this trace

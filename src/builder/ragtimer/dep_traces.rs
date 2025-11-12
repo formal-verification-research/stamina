@@ -129,15 +129,8 @@ impl<'a> RagtimerBuilder<'a> {
 				}
 				trace_attempts += 1;
 				if trace_attempts > 20 {
-					//warning!("Exceeded maximum attempts to generate a unique trace (20 attempts). Moving on to next trace.");
-					//println!("\nTRACE GENERATION PROGRESS:");
 					break;
 				}
-				// debug_message!(
-				// 	"Trace {} already exists, generating a new one (attempt {}/20).",
-				// 	i,
-				// 	trace_attempts
-				// );
 			}
 			// Store explicit prism states and transitions for this trace
 			self.store_explicit_trace(explicit_model, &trace);

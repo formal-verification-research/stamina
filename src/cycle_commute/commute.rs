@@ -79,12 +79,6 @@ pub fn cycle_commute(
 							.insert_if_not_exists(&next_state, next_state_id)
 						{
 							next_state_id = existing_id;
-							// debug_message!(
-							// 	"Trace step: Transition {} from state {} to existing state {}",
-							// 	transition.transition_name,
-							// 	current_state_id,
-							// 	next_state_id,
-							// );
 						} else {
 							error!(
 								"Error: New state with vector {:?} (next_state_id: {}) should have already been added to the explicit model at this phase. Current state_id: {}, current_state: {:?}, transition: {} ({})",
@@ -271,7 +265,7 @@ fn commute(
 					rate: transition.get_sck_rate(),
 				};
 				// explicit_model[state_id].next_states.push(next_state_id);
-				explicit_model.transitions.push(new_transition);
+				explicit_model.add_transition(new_transition);
 				// Step 2. For each new state, create a new trace with the transition added
 				let mut new_trace = trace[..i + 1].to_vec();
 				// Get the last transition index before mutably borrowing explicit_model
@@ -414,7 +408,7 @@ fn add_cycles(
 									to_state: next_state_id,
 									rate: transition.get_sck_rate(),
 								};
-								explicit_model.transitions.push(new_transition);
+								explicit_model.add_transition(new_transition);
 							}
 							current_state = next_state;
 						}

@@ -84,7 +84,6 @@ pub fn trim_model(model: &AbstractVas, dg: DependencyGraph) -> AbstractVas {
 		transitions: transitions,
 		m_type: model.m_type,
 		target: target,
-		// z3_context: None,
 	};
 	trimmed_model
 }
