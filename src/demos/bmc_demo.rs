@@ -59,7 +59,6 @@ pub fn bmc_demo(crn_model_directory: &Path, bits: u32, max_steps: u32, backward:
 			debug_message!("Model: {}", model.nice_print());
 			// Build the dependency graph
 			let dg = make_dependency_graph(&model);
-			// dg.unwrap().pretty_print();
 			if let Ok(Some(dependency_graph)) = &dg {
 				message!("Dependency graph created for model: {}", m);
 				debug_message!(
@@ -67,7 +66,6 @@ pub fn bmc_demo(crn_model_directory: &Path, bits: u32, max_steps: u32, backward:
 					dependency_graph.nice_print(&model)
 				);
 
-				// model.setup_z3();
 				let bmc_encoding = model.bmc_encoding(bits);
 
 				let _ = model.variable_bounds(&bmc_encoding, bits, max_steps, backward);
@@ -79,7 +77,6 @@ pub fn bmc_demo(crn_model_directory: &Path, bits: u32, max_steps: u32, backward:
 				message!("Trimmed model created for model: {}", m);
 				debug_message!("{}", trimmed_model.nice_print());
 
-				// trimmed_model.setup_z3();
 				let bmc_encoding = trimmed_model.bmc_encoding(bits);
 				let _ = trimmed_model.variable_bounds(&bmc_encoding, bits, max_steps, backward);
 				message!("Bounding completed successfully on trimmed model.");

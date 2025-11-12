@@ -6,12 +6,18 @@ use crate::{
 	message,
 	model::{
 		model::ProbabilityOrRate,
-		vas_model::{AbstractVas, PrismVasModel},
+		vas_model::{
+			AbstractVas, PrismVasModel, PrismVasState, PrismVasTransition, VasStateVector,
+			VasTransition,
+		},
 	},
+	warning,
 };
 
 pub type RewardValue = f64;
 type LowerBound = Option<ProbabilityOrRate>;
+
+pub(super) const MAX_TRACE_LENGTH: usize = 1000000;
 
 /// Magic numbers used for RL traces in Ragtimer.
 #[derive(Debug)]
@@ -28,7 +34,7 @@ pub struct MagicNumbers {
 pub enum RagtimerApproach {
 	ReinforcementLearning(MagicNumbers),
 	RandomPathExploration,
-	DeterministicDependencyGraph,
+	RandomDependencyGraph(usize),
 }
 
 /// Builder for Ragtimer, which builds an abstracted model using the specified method.
@@ -90,8 +96,8 @@ impl<'a> Builder for RagtimerBuilder<'a> {
 			RagtimerApproach::RandomPathExploration => {
 				todo!()
 			}
-			RagtimerApproach::DeterministicDependencyGraph => {
-				todo!()
+			RagtimerApproach::RandomDependencyGraph(_) => {
+				self.add_dep_traces(explicit_model, None);
 			}
 		}
 		self.model_built = true;
@@ -113,6 +119,207 @@ impl<'a> RagtimerBuilder<'a> {
 			builder.approach = RagtimerApproach::ReinforcementLearning(default_magic_numbers());
 		}
 		builder
+	}
+
+	/// Returns a list of transition IDs that are enabled in the current state.
+	pub(super) fn get_available_transitions(&self, current_state: &VasStateVector) -> Vec<usize> {
+		let available_transitions = self
+			.abstract_model
+			.transitions
+			.iter()
+			.filter(|t| {
+				t.enabled_bounds
+					.iter()
+					.zip(current_state.iter())
+					.all(|(bound, &val)| val >= (*bound).try_into().unwrap())
+			})
+			.map(|t| t.transition_id)
+			.collect();
+		available_transitions
+	}
+
+	/// Returns a list of transition IDs that are enabled in the current state in a subset.
+	pub(super) fn get_available_transition_subset(
+		&self,
+		current_state: &VasStateVector,
+		subset: &Vec<VasTransition>,
+	) -> Vec<usize> {
+		let available_transitions = subset
+			.iter()
+			.filter(|t| {
+				t.enabled_bounds
+					.iter()
+					.zip(current_state.iter())
+					.all(|(bound, &val)| val >= (*bound).try_into().unwrap())
+			})
+			.map(|t| t.transition_id)
+			.collect();
+		available_transitions
+	}
+
+	/// Calculates the transition rate for a given transition in the context
+	/// of the current state under the SCK assumption for CRN models.
+	pub(super) fn crn_transition_rate(
+		&self,
+		current_state: &VasStateVector,
+		transition: &VasTransition,
+	) -> ProbabilityOrRate {
+		let mut transition_rate = 0.0;
+		for (_, &current_value) in current_state.iter().enumerate() {
+			transition_rate += transition.rate_const * (current_value as ProbabilityOrRate);
+		}
+		transition_rate
+	}
+
+	/// Calculates the transition probability for a given transition in the context
+	/// of the current state under the SCK assumption for CRN models.
+	pub(super) fn crn_transition_probability(
+		&self,
+		current_state: &VasStateVector,
+		transition: &VasTransition,
+	) -> ProbabilityOrRate {
+		let total_outgoing_rate = self.crn_total_outgoing_rate(current_state);
+		self.crn_transition_rate(current_state, transition) / total_outgoing_rate
+	}
+
+	/// Calculates the transition probability for a given transition in the context
+	/// of the current state under the SCK assumption for CRN models.
+	pub(super) fn crn_total_outgoing_rate(
+		&self,
+		current_state: &VasStateVector,
+	) -> ProbabilityOrRate {
+		let mut total_outgoing_rate = 0.0;
+		let available_transitions = self.get_available_transitions(current_state);
+		for t in available_transitions {
+			if let Some(vas_transition) = self.abstract_model.get_transition_from_id(t) {
+				total_outgoing_rate += self.crn_transition_rate(current_state, vas_transition);
+			} else {
+				error!("Transition ID {} not found in model.", t);
+				return 0.0; // If the transition is not found, return 0 probability
+			}
+		}
+		total_outgoing_rate
+	}
+
+	/// Stores the explicit trace in the explicit model.
+	pub(super) fn store_explicit_trace(
+		&mut self,
+		explicit_model: &mut PrismVasModel,
+		trace: &Vec<usize>,
+	) {
+		// Start with the initial state
+		let mut current_state = self.abstract_model.initial_states[0].vector.clone();
+		let mut next_state = current_state.clone();
+		let mut current_state_id: usize = 0; // Start with the initial state ID
+		let mut next_state_id: usize = 0;
+		for &transition_id in trace {
+			if let Some(vas_transition) = self.abstract_model.get_transition_from_id(transition_id)
+			{
+				// Store the current state with correct absorbing rate
+				let available_state_id = explicit_model.states.len();
+				if let Some(existing_id) = explicit_model
+					.state_trie
+					.insert_if_not_exists(&current_state, available_state_id)
+				{
+					current_state_id = existing_id;
+				} else {
+					warning!("During exploration, current state {:?} does not already exist in the model, but it should. Adding it under ID {}", current_state, available_state_id);
+					current_state_id = available_state_id;
+					let current_outgoing_rate = self.crn_total_outgoing_rate(&current_state);
+					explicit_model.add_state(PrismVasState {
+						state_id: current_state_id,
+						vector: current_state.clone(),
+						label: if current_state.len() > self.abstract_model.target.variable_index
+							&& current_state[self.abstract_model.target.variable_index]
+								== self.abstract_model.target.target_value
+						{
+							Some("target".to_string())
+						} else {
+							None
+						},
+						total_outgoing_rate: current_outgoing_rate,
+					});
+				}
+				// Find the next state after applying the transition
+				next_state = current_state.clone() + vas_transition.update_vector.clone();
+				let available_state_id = explicit_model.states.len();
+				if let Some(existing_id) = explicit_model
+					.state_trie
+					.insert_if_not_exists(&next_state, available_state_id)
+				{
+					next_state_id = existing_id;
+				} else {
+					next_state_id = available_state_id;
+					let next_outgoing_rate = self.crn_total_outgoing_rate(&next_state);
+					explicit_model.add_state(PrismVasState {
+						state_id: next_state_id,
+						vector: next_state.clone(),
+						label: if next_state.len() > self.abstract_model.target.variable_index
+							&& next_state[self.abstract_model.target.variable_index]
+								== self.abstract_model.target.target_value
+						{
+							Some("target".to_string())
+						} else {
+							None
+						},
+						total_outgoing_rate: next_outgoing_rate,
+					});
+				}
+			} else {
+				error!("Transition ID {} not found in model.", transition_id);
+			}
+			// Add the transition to the explicit model
+			let transition_exists = explicit_model.transition_map.get(&current_state_id).map_or(
+				false,
+				|to_state_map| {
+					to_state_map
+						.iter()
+						.any(|(to_state, _)| *to_state == next_state_id)
+				},
+			);
+			if !transition_exists {
+				let transition_rate = if let Some(vas_transition) =
+					self.abstract_model.get_transition_from_id(transition_id)
+				{
+					self.crn_transition_rate(&current_state, vas_transition)
+				} else {
+					error!("Transition ID {} not found in model.", transition_id);
+					0.0
+				};
+				explicit_model.add_transition(PrismVasTransition {
+					transition_id,
+					from_state: current_state_id,
+					to_state: next_state_id,
+					rate: transition_rate,
+				});
+				// Update the transition map
+				explicit_model
+					.transition_map
+					.entry(current_state_id)
+					.or_insert_with(Vec::new)
+					.push((next_state_id, explicit_model.transitions.len() - 1));
+
+				// Update the absorbing state transition of the current state to account for the new transition
+				if let Some(outgoing_transitions) =
+					explicit_model.transition_map.get_mut(&current_state_id)
+				{
+					// Find the index of the absorbing transition (to_state == 0)
+					if let Some((absorbing_index, _)) = outgoing_transitions
+						.iter()
+						.find(|(to_state, _)| *to_state == 0)
+					{
+						// Update the rate of the absorbing transition
+						let absorbing_transition =
+							&mut explicit_model.transitions[*absorbing_index];
+						absorbing_transition.rate -= transition_rate;
+					}
+				} else {
+					error!("No outgoing transitions found for state ID {}. Something probably went wrong with its absorbing state.", current_state_id);
+				}
+			}
+			current_state = next_state.clone();
+		}
+		self.traces_complete += 1;
 	}
 }
 
@@ -136,9 +343,9 @@ pub fn ragtimer(
 				message!("Using Random Path Exploration approach for Ragtimer.");
 				RagtimerApproach::RandomPathExploration
 			}
-			RagtimerApproach::DeterministicDependencyGraph => {
+			RagtimerApproach::RandomDependencyGraph(num_traces) => {
 				message!("Using Deterministic Dependency Graph approach for Ragtimer.");
-				RagtimerApproach::DeterministicDependencyGraph
+				RagtimerApproach::RandomDependencyGraph(num_traces)
 			}
 		};
 		// Run trace generation
@@ -152,6 +359,10 @@ pub fn ragtimer(
 			max_commute_depth,
 			max_cycle_length,
 		);
+		debug_message!("Cycle commute complete");
+		// Finalize the explicit model by adding absorbing transitions
+		explicit_model.add_absorbing_transitions();
+		debug_message!("Absorbing transitions added to explicit model");
 		// Output the explicit model to PRISM files
 		explicit_model.print_explicit_prism_files(output);
 		message!("Ragtimer complete. Output written to {}", output);

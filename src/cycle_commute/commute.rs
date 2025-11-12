@@ -79,12 +79,6 @@ pub fn cycle_commute(
 							.insert_if_not_exists(&next_state, next_state_id)
 						{
 							next_state_id = existing_id;
-							// debug_message!(
-							// 	"Trace step: Transition {} from state {} to existing state {}",
-							// 	transition.transition_name,
-							// 	current_state_id,
-							// 	next_state_id,
-							// );
 						} else {
 							error!(
 								"Error: New state with vector {:?} (next_state_id: {}) should have already been added to the explicit model at this phase. Current state_id: {}, current_state: {:?}, transition: {} ({})",
@@ -242,6 +236,15 @@ fn commute(
 					total_outgoing_rate: rate_sum,
 				});
 				*num_states_added += 1;
+				if *num_states_added % 1000 == 0 {
+					debug_message!(
+						"Commute at depth {}: added {} states so far. Current explicit model size: {} states, {} transitions.",
+						depth + 1,
+						num_states_added,
+						explicit_model.states.len(),
+						explicit_model.transitions.len()
+					);
+				}
 			}
 			// Check if this transition already exists
 			let transition_exists =
@@ -262,7 +265,7 @@ fn commute(
 					rate: transition.get_sck_rate(),
 				};
 				// explicit_model[state_id].next_states.push(next_state_id);
-				explicit_model.transitions.push(new_transition);
+				explicit_model.add_transition(new_transition);
 				// Step 2. For each new state, create a new trace with the transition added
 				let mut new_trace = trace[..i + 1].to_vec();
 				// Get the last transition index before mutably borrowing explicit_model
@@ -378,6 +381,14 @@ fn add_cycles(
 									total_outgoing_rate: rate_sum,
 								});
 								*num_states_added += 1;
+								if *num_states_added % 1000 == 0 {
+									debug_message!(
+										"Cycle added {} states so far. Current explicit model size: {} states, {} transitions.",
+										num_states_added,
+										explicit_model.states.len(),
+										explicit_model.transitions.len()
+									);
+								}
 							}
 							// Add transition if not already present
 							// Check if this transition already exists
@@ -397,7 +408,7 @@ fn add_cycles(
 									to_state: next_state_id,
 									rate: transition.get_sck_rate(),
 								};
-								explicit_model.transitions.push(new_transition);
+								explicit_model.add_transition(new_transition);
 							}
 							current_state = next_state;
 						}

@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 mod arguments;
+mod benchmarks;
 mod bmc;
 mod builder;
 mod cycle_commute;

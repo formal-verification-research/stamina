@@ -10,9 +10,9 @@ const DEBUG_DEPTH_LIMIT: usize = 5000;
 
 /// A node in the dependency graph.
 #[derive(Clone)]
-struct GraphNode {
-	transition: VasTransition,
-	children: Vec<Box<GraphNode>>,
+pub struct GraphNode {
+	pub(crate) transition: VasTransition,
+	pub(crate) children: Vec<Box<GraphNode>>,
 	parents: Vec<VasTransition>,
 	executions: VasValue,
 	enabled: bool,
@@ -41,7 +41,6 @@ impl GraphNode {
 		}
 		// Check if the node is already enabled.
 		if self.enabled {
-			// debug_message!("{}Node Enabled? {}", indentation, self.enabled);
 			return Ok(());
 		}
 		// Create a new "initial state" for the child nodes.
@@ -73,7 +72,6 @@ impl GraphNode {
 			.iter()
 			.filter_map(|prop| {
 				let reqd = if self.decrement {
-					// let initial_value = child_init.vector.get(prop.variable_index).unwrap();
 					let consumed_here = 0 - self
 						.transition
 						.update_vector
@@ -81,7 +79,6 @@ impl GraphNode {
 						.unwrap();
 					prop.target_value + (consumed_here * self.executions)
 				} else {
-					// let initial_value = child_init.vector.get(prop.variable_index).unwrap();
 					let consumed_here = 0 + self
 						.transition
 						.update_vector
@@ -90,7 +87,6 @@ impl GraphNode {
 					prop.target_value - (consumed_here * self.executions)
 				};
 				if reqd != 0 {
-					// debug_message!("{}reqd {}", indentation, reqd);
 					Some(VasProperty {
 						variable_index: prop.variable_index,
 						target_value: reqd,
@@ -400,5 +396,21 @@ impl DependencyGraph {
 		}
 		traverse(&self.root, &mut transitions);
 		transitions
+	}
+
+	/// Returns the distance from the root node to the given transition
+	pub fn distance_to_root(&self, transition_name: &str) -> Option<usize> {
+		fn traverse(node: &GraphNode, transition_name: &str, depth: usize) -> Option<usize> {
+			if node.transition.transition_name == transition_name {
+				return Some(depth);
+			}
+			for child in &node.children {
+				if let Some(d) = traverse(child, transition_name, depth + 1) {
+					return Some(d);
+				}
+			}
+			None
+		}
+		traverse(&self.root, transition_name, 0)
 	}
 }

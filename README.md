@@ -1,33 +1,35 @@
-# PRACTICE with BMC Tools
+# The Stamina Toolset
 
-This README temporarily documents the procedure for repeating experiments from the report "Kickstarting PRACTICE with a Suite of Analysis Tools for Stochastic Vector Addition Systems" by Landon Taylor.
+The Stamina Toolset is a *work-in-progress* tool for the analysis of highly-complex continuous-time models, especially Chemical Reaction Networks and other Stochastic Vector Addition Systems.
 
-## Prerequisites
+## Quick Start Guide
 
-The following are required for correct execution:
+To build and run from source on a Debian-based machine, run the following commands.
 
-0. Suitable operating system. PRACTICE is designed to be cross-compatible, but current features have been designed and tested on Ubuntu 24 and Debian 12.
-1. Correct installation of `z3` including `clang`:
-	```
-	sudo apt-get install z3 clang libclang-dev
-	```
-2. Correct installation of Rust:
-	```
-	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-	```
+```sh
+# Get prerequisites
+sudo apt install libz3-dev libclang-dev
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-Test your `z3` installation with `z3 --version` and your Rust installation with `rustc --version`.
-
-## The PRACTICE Tool
-
-Use the following commands to obtain the PRACTICE tool with BMC features at the correct commit:
-```
-git clone https://github.com/formal-verification-research/practice.git
-cd practice
-git checkout bmc
-cargo run > benchmark.txt
+# Build and run
+cargo run -- <commands>
 ```
 
-Then, check `benchmark.txt` for results. Some lines may be interspersed due to the threading used to implement a timeout of 10 minutes for each process. The most interesting results are the variable bound tables.
+This software is tested on Debian-based Linux distributions but is designed to be cross-platform compatible. Make sure you have installed equivalent prerequites on your own machine, then you should be able to build from source.
 
+Command-line arguments can be found with `--help`, and they are more thoroughly documented at [docs/arguments.md](https://github.com/formal-verification-research/stamina/blob/main/docs/arguments.md)
 
+## Implemented Functionality
+
+This checklist shows the status of our tool implementations:
+
+- **BMC Variable Bounding**: Complete
+- **Ragtimer 1.0**: In progress, released fully by December 31, 2025
+- **Wayfarer 1.0**: In progress
+- **Stamina Rust**: In progress
+
+## Input Format
+
+The input format is documented at [docs/input.md](https://github.com/formal-verification-research/stamina/blob/main/docs/input.md)
+
+Additional information about our implementation is found in an intermediate report at [docs/Kickstarting_Practice.pdf](https://github.com/formal-verification-research/stamina/blob/main/docs/Kickstarting_Practice.pdf)

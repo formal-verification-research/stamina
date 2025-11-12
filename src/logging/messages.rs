@@ -46,4 +46,4 @@ macro_rules! debug_message {
 pub use debug_message;
 pub use error;
 pub use message;
-pub use warning;
+// pub use warning;

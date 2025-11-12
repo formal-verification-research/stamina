@@ -1,4 +1,5 @@
 use std::{
+	cmp::min,
 	collections::{BTreeSet, HashMap},
 	fmt,
 	fs::File,
@@ -598,7 +599,7 @@ impl PrismVasModel {
 		let absorbing_state_id = 0;
 		model.states = Vec::new();
 		// Add the absorbing state to the prism states
-		model.states.push(PrismVasState {
+		model.add_state(PrismVasState {
 			state_id: absorbing_state_id,
 			vector: absorbing_state,
 			label: Some("absorbing".to_string()), // Label for the absorbing state
@@ -615,6 +616,57 @@ impl PrismVasModel {
 	/// Adds a state to the model
 	pub fn add_state(&mut self, state: PrismVasState) {
 		self.states.push(state);
+	}
+
+	/// Adds absorbing transitions to all states
+	pub fn add_absorbing_transitions(&mut self) {
+		// Clone states to avoid holding an immutable borrow on self while we mutably
+		// add transitions to self.transitions.
+		let num_states = self.states.len();
+		let mut num_added = 0;
+		let interval = min(num_states / 100 + 1, 5000);
+		for state in self.states.clone() {
+			if num_added % interval == 0 {
+				debug_message!(
+					"Adding absorbing transitions: {}/{} states handled so far",
+					num_added,
+					num_states
+				);
+			}
+			num_added += 1;
+			if state.state_id == 0 {
+				// Skip the absorbing state itself
+				continue;
+			}
+			let total_outgoing_rate = state.total_outgoing_rate;
+			if total_outgoing_rate == 0.0 {
+				// No need to add an absorbing transition if there are no outgoing transitions
+				continue;
+			}
+			let used_rate = self
+				.transitions
+				.iter()
+				.filter(|tr| tr.from_state == state.state_id)
+				.map(|tr| tr.rate)
+				.sum::<ProbabilityOrRate>();
+			if used_rate >= total_outgoing_rate {
+				if used_rate > total_outgoing_rate {
+					error!(
+						"State {} has used rate {} greater than total outgoing rate {}",
+						state.state_id, used_rate, total_outgoing_rate
+					);
+				}
+				// No need to add an absorbing transition if all rate is already used
+				continue;
+			}
+			let transition = PrismVasTransition {
+				transition_id: self.transitions.len(),
+				from_state: state.state_id,
+				to_state: 0,
+				rate: total_outgoing_rate - used_rate, // Absorbing transitions have zero rate
+			};
+			self.add_transition(transition);
+		}
 	}
 
 	/// This function prints the PRISM-style explicit state space to .sta and .tra files.
@@ -671,8 +723,6 @@ impl PrismVasModel {
 		for t in self.transitions.iter() {
 			writeln!(tra_file, "{} {} {}", t.from_state, t.to_state, t.rate).unwrap();
 		}
-		// let var_names = self.variable_names.join(" ");
-		// writeln!(sta_file, "({})", var_names).unwrap();
 		// Output results to the specified output file
 		message!(
 			"Resulting explicit state space written to: {}.tra,sta,lab",
