@@ -79,191 +79,229 @@ pub fn ragtimer_benchmark(
 			.and_then(|s| s.to_str())
 			.unwrap_or("model")
 			.replace(".", "_");
-		for cycle_length in min_cycle_length..=max_cycle_length {
-			for commute_depth in min_commute_depth..=max_commute_depth {
-				message!("Running cycle commute benchmark on model: {} with commute depth: {} and cycle length: {}", model_file, commute_depth, cycle_length);
-				if let Ok(mut abstract_model) = AbstractVas::from_file(&model_file) {
-					message!("Model {} Parsed", model_name);
-					let output_dir = format!(
-						"output/{}/{}/cycle_{}/commute_{}/",
-						timestamp, model_name, cycle_length, commute_depth
-					);
-					let output_word = "model";
-					fs::create_dir_all(&output_dir).expect("Failed to create output directory");
-					let output_file = Path::new(&output_dir)
-						.join(output_word)
-						.to_string_lossy()
-						.into_owned();
-					let mut explicit_model = PrismVasModel::from_abstract_model(&abstract_model);
-					message!("Explicit Model Built");
+		for approach in &[
+			RagtimerApproach::ReinforcementLearning(default_magic_numbers()),
+			// RagtimerApproach::RandomPathExploration,
+			RagtimerApproach::RandomDependencyGraph(num_traces),
+		] {
+			let approach_word = match approach {
+				RagtimerApproach::ReinforcementLearning(_) => "rl",
+				RagtimerApproach::RandomPathExploration => "rpe",
+				RagtimerApproach::RandomDependencyGraph(_) => "rdg",
+			};
+			message!(
+				"Starting benchmarks for model: {} with approach: {:?}",
+				model_name,
+				approach_word
+			);
+			for cycle_length in min_cycle_length..=max_cycle_length {
+				for commute_depth in min_commute_depth..=max_commute_depth {
+					message!("{}", "━".repeat(80));
+					message!("Running Ragtimer + C&C benchmark.");
+					message!("model: {}", model_file);
+					message!("commute depth: {}", commute_depth);
+					message!("cycle length: {}", cycle_length);
+					message!("{}", "━".repeat(80));
+					if let Ok(mut abstract_model) = AbstractVas::from_file(&model_file) {
+						message!("Model {} Parsed", model_name);
+						let output_dir = format!(
+							"output/{}/{}/cycle_{}/commute_{}/",
+							timestamp, model_name, cycle_length, commute_depth
+						);
+						let output_word = "model";
+						fs::create_dir_all(&output_dir).expect("Failed to create output directory");
+						let output_file = Path::new(&output_dir)
+							.join(output_word)
+							.to_string_lossy()
+							.into_owned();
 
-					// Set start time and memory usage
-					let mut sys = System::new();
-					let current_pid = sysinfo::get_current_pid().unwrap();
-					sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
-					let start_memory = sys
-						.process(sysinfo::get_current_pid().unwrap())
-						.map(|p| p.memory())
-						.unwrap_or(0);
-					let start_time = Instant::now();
+						let bash_dir = format!(
+							"{}/{}/cycle_{}/commute_{}/",
+							model_name, approach_word, cycle_length, commute_depth
+						);
+						let prop_dst = format!("{}.prop", output_file);
 
-					// Time Ragtimer state space building
-					let ragtimer_start_time = Instant::now();
-					sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
-					let ragtimer_start_memory = sys
-						.process(sysinfo::get_current_pid().unwrap())
-						.map(|p| p.memory())
-						.unwrap_or(0);
-					let mut magic_numbers = default_magic_numbers();
-					magic_numbers.num_traces = num_traces;
-					let mut ragtimer_builder = RagtimerBuilder::new(
-						&abstract_model,
-						Some(RagtimerApproach::ReinforcementLearning(magic_numbers)),
-					);
-					ragtimer_builder.build(&mut explicit_model);
-					let ragtimer_state_count = explicit_model.states.len();
-					let build_elapsed = ragtimer_start_time.elapsed().as_millis();
-					sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
-					let ragtimer_end_memory = sys
-						.process(sysinfo::get_current_pid().unwrap())
-						.map(|p| p.memory())
-						.unwrap_or(0);
-					let ragtimer_memory_usage = ragtimer_end_memory - ragtimer_start_memory;
-					message!(
-						"Traces added to explicit model with Ragtimer ({} ms)",
-						build_elapsed
-					);
-					message!(
-						"Ragtimer-specific memory usage: {:.3e} B",
-						ragtimer_memory_usage as f64
-					);
+						let prop_src = Path::new(&model_file).with_extension("prop");
+						if prop_src.exists() {
+							fs::copy(&prop_src, &prop_dst).expect("Failed to copy .prop file");
+							message!("Copied property file to {}", prop_dst);
+						}
 
-					// Time cycle and commute
-					let cycle_start_time = Instant::now();
-					sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
-					let cycle_start_memory = sys
-						.process(sysinfo::get_current_pid().unwrap())
-						.map(|p| p.memory())
-						.unwrap_or(0);
-					cycle_commute(
-						&mut abstract_model,
-						&mut explicit_model,
-						commute_depth,
-						cycle_length,
-					);
-					let cycle_state_count = explicit_model.states.len() - ragtimer_state_count;
-					let cycle_elapsed = cycle_start_time.elapsed().as_millis();
-					sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
-					let cycle_end_memory = sys
-						.process(sysinfo::get_current_pid().unwrap())
-						.map(|p| p.memory())
-						.unwrap_or(0);
-					let cycle_memory_usage = cycle_end_memory - cycle_start_memory;
-					message!("CC added to explicit model ({} ms)", cycle_elapsed);
-					message!(
-						"CC-specific memory usage: {:.3e} B",
-						cycle_memory_usage as f64
-					);
+						let mut explicit_model =
+							PrismVasModel::from_abstract_model(&abstract_model);
+						message!("Explicit Model Built");
 
-					let total_state_count = explicit_model.states.len();
+						// Set start time and memory usage
+						let mut sys = System::new();
+						let current_pid = sysinfo::get_current_pid().unwrap();
+						sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
+						let start_memory = sys
+							.process(sysinfo::get_current_pid().unwrap())
+							.map(|p| p.memory())
+							.unwrap_or(0);
+						let start_time = Instant::now();
 
-					let total_elapsed = start_time.elapsed().as_millis();
-					message!("Total time for benchmark: {} ms", total_elapsed);
+						// Time Ragtimer state space building
+						let ragtimer_start_time = Instant::now();
+						sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
+						let ragtimer_start_memory = sys
+							.process(sysinfo::get_current_pid().unwrap())
+							.map(|p| p.memory())
+							.unwrap_or(0);
+						let mut approach_used = (*approach).clone();
+						if let RagtimerApproach::ReinforcementLearning(_) = *approach {
+							let mut magic_numbers = default_magic_numbers();
+							magic_numbers.num_traces = num_traces;
+							approach_used = RagtimerApproach::ReinforcementLearning(magic_numbers);
+						}
+						let mut ragtimer_builder =
+							RagtimerBuilder::new(&abstract_model, Some(approach_used.clone()));
+						ragtimer_builder.build(&mut explicit_model);
+						// explicit_model.add_absorbing_transitions();
+						let ragtimer_state_count = explicit_model.states.len();
+						let build_elapsed = ragtimer_start_time.elapsed().as_millis();
+						sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
+						let ragtimer_end_memory = sys
+							.process(sysinfo::get_current_pid().unwrap())
+							.map(|p| p.memory())
+							.unwrap_or(0);
+						let ragtimer_memory_usage = ragtimer_end_memory - ragtimer_start_memory;
+						message!(
+							"Traces added to explicit model with Ragtimer ({} ms)",
+							build_elapsed
+						);
+						message!(
+							"Ragtimer-specific memory usage: {:.3e} B",
+							ragtimer_memory_usage as f64
+						);
 
-					let current_pid = sysinfo::get_current_pid().unwrap();
-					sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
-					let total_end_memory = sys
-						.process(sysinfo::get_current_pid().unwrap())
-						.map(|p| p.memory())
-						.unwrap_or(0);
-					let total_memory_usage = total_end_memory - start_memory;
-					message!(
-						"Total memory for benchmark: {:.3e} B",
-						total_memory_usage as f64
-					);
+						// let output_file_nocc = format!("{}_nocc", output_file);
+						// explicit_model.print_explicit_prism_files(&output_file_nocc);
+						// message!("Ragtimer-only output written to {}", output_file_nocc);
+						// let bash_command = format!(
+						// 						"/usr/bin/time -v -o {}_nocc_prism_time.txt prism -importmodel {}{}_nocc.tra,sta,lab {}{}.prop -ctmc > {}_nocc_prism_output.txt",
+						// 						bash_dir, bash_dir, output_word, bash_dir, output_word, bash_dir
+						// 					);
+						// writeln!(bash_file, "{}", bash_command)
+						// 	.expect("Failed to write bash command to script file");
 
-					explicit_model.print_explicit_prism_files(&output_file);
-					message!(
-						"Current benchmark complete. Output written to {}",
-						output_file
-					);
+						// Time cycle and commute
+						let cycle_start_time = Instant::now();
+						sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
+						let cycle_start_memory = sys
+							.process(sysinfo::get_current_pid().unwrap())
+							.map(|p| p.memory())
+							.unwrap_or(0);
+						cycle_commute(
+							&mut abstract_model,
+							&mut explicit_model,
+							commute_depth,
+							cycle_length,
+						);
+						// explicit_model.add_absorbing_transitions();
+						let cycle_state_count = explicit_model.states.len() - ragtimer_state_count;
+						let cycle_elapsed = cycle_start_time.elapsed().as_millis();
+						sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
+						let cycle_end_memory = sys
+							.process(sysinfo::get_current_pid().unwrap())
+							.map(|p| p.memory())
+							.unwrap_or(0);
+						let cycle_memory_usage = cycle_end_memory - cycle_start_memory;
+						message!("CC added to explicit model ({} ms)", cycle_elapsed);
+						message!(
+							"CC-specific memory usage: {:.3e} B",
+							cycle_memory_usage as f64
+						);
 
-					let bash_dir = format!(
-						"{}/cycle_{}/commute_{}/",
-						model_name, cycle_length, commute_depth
-					);
-					let prop_dst = format!("{}.prop", output_file);
+						let total_state_count = explicit_model.states.len();
 
-					let prop_src = Path::new(&model_file).with_extension("prop");
-					if prop_src.exists() {
-						fs::copy(&prop_src, &prop_dst).expect("Failed to copy .prop file");
-						message!("Copied property file to {}", prop_dst);
+						let total_elapsed = start_time.elapsed().as_millis();
+						message!("Total time for benchmark: {} ms", total_elapsed);
+
+						let current_pid = sysinfo::get_current_pid().unwrap();
+						sys.refresh_processes(ProcessesToUpdate::Some(&[current_pid]), true);
+						let total_end_memory = sys
+							.process(sysinfo::get_current_pid().unwrap())
+							.map(|p| p.memory())
+							.unwrap_or(0);
+						let total_memory_usage = total_end_memory - start_memory;
+						message!(
+							"Total memory for benchmark: {:.3e} B",
+							total_memory_usage as f64
+						);
+
+						explicit_model.add_absorbing_transitions();
+						explicit_model.print_explicit_prism_files(&output_file);
+						message!(
+							"Current benchmark complete. Output written to {}",
+							output_file
+						);
+
+						let bash_command = format!(
+												"/usr/bin/time -v -o {}prism_time.txt prism -importmodel {}{}.tra,sta,lab {}{}.prop -ctmc > {}prism_output.txt",
+												bash_dir, bash_dir, output_word, bash_dir, output_word, bash_dir
+											);
+						writeln!(bash_file, "{}", bash_command)
+							.expect("Failed to write bash command to script file");
+
+						let time_mem_file_path = format!("{}.stats", output_file);
+						let mut time_mem_file = OpenOptions::new()
+							.create(true)
+							.write(true)
+							.truncate(true)
+							.open(&time_mem_file_path)
+							.expect("Failed to open time/memory file");
+						writeln!(
+							time_mem_file,
+							"Benchmark Results for {}\n\
+							Commute Depth: {}\n\
+							Cycle Length: {}\n\
+							Total Time: {} ms\n\
+							Ragtimer Time: {} ms\n\
+							Cycle Commute Time: {} ms\n\
+							Total Memory Used: {} B\n\
+							Ragtimer Memory Used: {} B\n\
+							Cycle Commute Memory Used: {} B\n
+							Total State Count: {}\n
+							Ragtimer State Count: {}\n
+							Cycle Commute State Count: {}\n",
+							model_name,
+							commute_depth,
+							cycle_length,
+							total_elapsed,
+							build_elapsed,
+							cycle_elapsed,
+							total_memory_usage as f64,
+							ragtimer_memory_usage as f64,
+							cycle_memory_usage as f64,
+							total_state_count,
+							ragtimer_state_count,
+							cycle_state_count
+						)
+						.expect("Failed to write time/memory data");
+
+						writeln!(
+							csv_file,
+							// model,commute_depth,cycle_length,time_ms_total,time_ms_ragtimer,time_ms_cc,bytes_total,bytes_ragtimer,bytes_cc,states_total,states_ragtimer,states_cycle,output_file
+							"{},{},{},{},{},{},{},{},{},{},{},{},{}",
+							model_name,
+							commute_depth,
+							cycle_length,
+							total_elapsed,
+							build_elapsed,
+							cycle_elapsed,
+							total_memory_usage as f64,
+							ragtimer_memory_usage as f64,
+							cycle_memory_usage as f64,
+							total_state_count,
+							ragtimer_state_count,
+							cycle_state_count,
+							output_file
+						)
+						.expect("Failed to write CSV row");
+					} else {
+						error!("Could not parse model");
 					}
-
-					let bash_command = format!(
-											"/usr/bin/time -v -o {}prism_time.txt prism -importmodel {}{}.tra,sta,lab {}{}.prop -ctmc > {}prism_output.txt",
-											bash_dir, bash_dir, output_word, bash_dir, output_word, bash_dir
-										);
-					writeln!(bash_file, "{}", bash_command)
-						.expect("Failed to write bash command to script file");
-
-					let time_mem_file_path = format!("{}.stats", output_file);
-					let mut time_mem_file = OpenOptions::new()
-						.create(true)
-						.write(true)
-						.truncate(true)
-						.open(&time_mem_file_path)
-						.expect("Failed to open time/memory file");
-					writeln!(
-						time_mem_file,
-						"Benchmark Results for {}\n\
-						Commute Depth: {}\n\
-						Cycle Length: {}\n\
-						Total Time: {} ms\n\
-						Ragtimer Time: {} ms\n\
-						Cycle Commute Time: {} ms\n\
-						Total Memory Used: {} B\n\
-						Ragtimer Memory Used: {} B\n\
-						Cycle Commute Memory Used: {} B\n
-                        Total State Count: {}\n
-                        Ragtimer State Count: {}\n
-                        Cycle Commute State Count: {}\n",
-						model_name,
-						commute_depth,
-						cycle_length,
-						total_elapsed,
-						build_elapsed,
-						cycle_elapsed,
-						total_memory_usage as f64,
-						ragtimer_memory_usage as f64,
-						cycle_memory_usage as f64,
-						total_state_count,
-						ragtimer_state_count,
-						cycle_state_count
-					)
-					.expect("Failed to write time/memory data");
-
-					writeln!(
-						csv_file,
-						// model,commute_depth,cycle_length,time_ms_total,time_ms_ragtimer,time_ms_cc,bytes_total,bytes_ragtimer,bytes_cc,states_total,states_ragtimer,states_cycle,output_file
-						"{},{},{},{},{},{},{},{},{},{},{},{},{}",
-						model_name,
-						commute_depth,
-						cycle_length,
-						total_elapsed,
-						build_elapsed,
-						cycle_elapsed,
-						total_memory_usage as f64,
-						ragtimer_memory_usage as f64,
-						cycle_memory_usage as f64,
-						total_state_count,
-						ragtimer_state_count,
-						cycle_state_count,
-						output_file
-					)
-					.expect("Failed to write CSV row");
-				} else {
-					error!("Could not parse model");
 				}
 			}
 		}

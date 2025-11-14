@@ -1,8 +1,8 @@
 use std::{
-	cmp::min,
 	collections::{BTreeSet, HashMap},
 	fmt,
 	fs::File,
+	io::stdout,
 };
 
 use crate::{
@@ -450,6 +450,82 @@ impl AbstractVas {
 		output.push_str("==========================================\n");
 		output
 	}
+
+	/// Returns a list of transition IDs that are enabled in the current state.
+	pub fn get_available_transitions(&self, current_state: &VasStateVector) -> Vec<usize> {
+		let available_transitions = self
+			.transitions
+			.iter()
+			.filter(|t| {
+				t.enabled_bounds
+					.iter()
+					.zip(current_state.iter())
+					.all(|(bound, &val)| val >= (*bound).try_into().unwrap())
+			})
+			.map(|t| t.transition_id)
+			.collect();
+		available_transitions
+	}
+
+	/// Returns a list of transition IDs that are enabled in the current state in a subset.
+	pub fn get_available_transition_subset(
+		&self,
+		current_state: &VasStateVector,
+		subset: &Vec<VasTransition>,
+	) -> Vec<usize> {
+		let available_transitions = subset
+			.iter()
+			.filter(|t| {
+				t.enabled_bounds
+					.iter()
+					.zip(current_state.iter())
+					.all(|(bound, &val)| val >= (*bound).try_into().unwrap())
+			})
+			.map(|t| t.transition_id)
+			.collect();
+		available_transitions
+	}
+
+	/// Calculates the transition rate for a given transition in the context
+	/// of the current state under the SCK assumption for CRN models.
+	pub fn crn_transition_rate(
+		&self,
+		current_state: &VasStateVector,
+		transition: &VasTransition,
+	) -> ProbabilityOrRate {
+		let mut transition_rate = 0.0;
+		for (_, &current_value) in current_state.iter().enumerate() {
+			transition_rate += transition.rate_const * (current_value as ProbabilityOrRate);
+		}
+		transition_rate
+	}
+
+	/// Calculates the transition probability for a given transition in the context
+	/// of the current state under the SCK assumption for CRN models.
+	pub fn crn_transition_probability(
+		&self,
+		current_state: &VasStateVector,
+		transition: &VasTransition,
+	) -> ProbabilityOrRate {
+		let total_outgoing_rate = self.crn_total_outgoing_rate(current_state);
+		self.crn_transition_rate(current_state, transition) / total_outgoing_rate
+	}
+
+	/// Calculates the transition probability for a given transition in the context
+	/// of the current state under the SCK assumption for CRN models.
+	pub fn crn_total_outgoing_rate(&self, current_state: &VasStateVector) -> ProbabilityOrRate {
+		let mut total_outgoing_rate = 0.0;
+		let available_transitions = self.get_available_transitions(current_state);
+		for t in available_transitions {
+			if let Some(vas_transition) = self.get_transition_from_id(t) {
+				total_outgoing_rate += self.crn_transition_rate(current_state, vas_transition);
+			} else {
+				error!("Transition ID {} not found in model.", t);
+				return 0.0; // If the transition is not found, return 0 probability
+			}
+		}
+		total_outgoing_rate
+	}
 }
 
 #[derive(Clone)]
@@ -480,7 +556,7 @@ pub(crate) struct PrismVasModel {
 	pub(crate) m_type: ModelType,
 	pub(crate) state_trie: VasTrieNode, // Optional trie for storing states, if needed
 	pub(crate) trace_trie: TraceTrieNode, // Optional trie for storing traces, if needed
-	pub(crate) transition_map: HashMap<usize, Vec<(usize, usize)>>, // Quick transition from-(to, transitions list index) lookup
+	pub(crate) transition_map: HashMap<usize, Vec<(usize, usize)>>, // Quick transition from-(to, transition id) lookup
 }
 
 /// Default implementation for PrismVasModel
@@ -610,7 +686,13 @@ impl PrismVasModel {
 
 	/// Adds a transition to the model
 	pub fn add_transition(&mut self, transition: PrismVasTransition) {
+		let from_state = transition.from_state;
+		let to_state = transition.to_state;
 		self.transitions.push(transition);
+		self.transition_map
+			.entry(from_state)
+			.or_insert_with(Vec::new)
+			.push((to_state, self.transitions.len() - 1));
 	}
 
 	/// Adds a state to the model
@@ -622,16 +704,25 @@ impl PrismVasModel {
 	pub fn add_absorbing_transitions(&mut self) {
 		// Clone states to avoid holding an immutable borrow on self while we mutably
 		// add transitions to self.transitions.
+		println!("\nABSORBING TRANSITION ADDITION PROGRESS:");
 		let num_states = self.states.len();
 		let mut num_added = 0;
-		let interval = min(num_states / 100 + 1, 5000);
+		let percent_step = (num_states as f64 / 100.0).ceil().max(1.0) as usize;
 		for state in self.states.clone() {
-			if num_added % interval == 0 {
-				debug_message!(
-					"Adding absorbing transitions: {}/{} states handled so far",
-					num_added,
-					num_states
+			if num_added % percent_step == 0 || num_added == num_states - 1 {
+				let bar_width = 40;
+				let progress = (num_added + 1) as f64 / num_states as f64;
+				let filled = (progress * bar_width as f64).round() as usize;
+				let bar = format!(
+					"\r|{}{}| {}/{} states ({:.1}%)",
+					"█".repeat(filled),
+					" ".repeat(bar_width - filled),
+					num_added + 1,
+					num_states,
+					progress * 100.0
 				);
+				print!("{}", bar);
+				stdout().flush().unwrap();
 			}
 			num_added += 1;
 			if state.state_id == 0 {
@@ -655,6 +746,20 @@ impl PrismVasModel {
 						"State {} has used rate {} greater than total outgoing rate {}",
 						state.state_id, used_rate, total_outgoing_rate
 					);
+					self.transitions.iter().for_each(|tr| {
+						if tr.from_state == state.state_id {
+							debug_message!(
+								"    Transition {} from state {} ({:?}) to state {} ({:?}) with rate {}",
+								tr.transition_id,
+								tr.from_state,
+								self.states[tr.from_state].vector.iter().collect::<Vec<_>>(),
+								tr.to_state,
+								self.states[tr.to_state].vector.iter().collect::<Vec<_>>(),
+								tr.rate
+							);
+						}
+					});
+					panic!("Inconsistent rates for state {}", state.state_id);
 				}
 				// No need to add an absorbing transition if all rate is already used
 				continue;
@@ -667,6 +772,8 @@ impl PrismVasModel {
 			};
 			self.add_transition(transition);
 		}
+		println!("\n");
+		message!("All absorbing transitions added.");
 	}
 
 	/// This function prints the PRISM-style explicit state space to .sta and .tra files.
