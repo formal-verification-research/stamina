@@ -89,16 +89,6 @@ pub fn cycle_commute(
 								transition_id,
 								abstract_model.get_transition_from_id(transition_id).unwrap().transition_name,
 							);
-							error!("Explicit model states:");
-							for s in explicit_model.states.iter() {
-								let vec_str = s
-									.vector
-									.iter()
-									.map(|x| x.to_string())
-									.collect::<Vec<_>>()
-									.join(", ");
-								error!("  State {}: [{}]", s.state_id, vec_str);
-							}
 						}
 						let prism_transition = explicit_model.transitions.iter().find(|t| {
 							t.from_state == current_state_id && t.to_state == next_state_id
@@ -224,29 +214,22 @@ fn commute(
 				next_state_id = existing_id;
 			} else {
 				// Compute total outgoing rate for the new state
-				let rate_sum = abstract_model
-					.transitions
-					.iter()
-					.map(|trans| trans.get_sck_rate())
-					.sum();
-				explicit_model.states.push(PrismVasState {
+				explicit_model.add_state(PrismVasState {
 					state_id: next_state_id,
 					vector: next_state.clone(),
 					label: None,
-					total_outgoing_rate: rate_sum,
+					total_outgoing_rate: abstract_model.crn_total_outgoing_rate(&next_state),
 				});
 				*num_states_added += 1;
 				if *num_states_added % 1000 == 0 {
 					debug_message!(
-						"Commute at depth {}: added {} states so far. Current explicit model size: {} states, {} transitions.",
-						depth + 1,
+						"Commute added {} states so far. Current explicit model size: {} states, {} transitions.",
 						num_states_added,
 						explicit_model.states.len(),
 						explicit_model.transitions.len()
 					);
 				}
 			}
-			// Check if this transition already exists
 			let transition_exists =
 				explicit_model
 					.transition_map
@@ -297,18 +280,58 @@ fn add_cycles(
 	// Collect all transition indices for easier cycle enumeration
 	let transition_indices: Vec<usize> = (0..abstract_model.transitions.len()).collect();
 	// For all cycle lengths from 2 up to max_cycle_length
-	for cycle_len in 2..=max_cycle_length {
+	// let mut seen_cycle_counts: Vec<Vec<usize>> = Vec::new();
+
+	for cycle_len in (2..=max_cycle_length).rev() {
 		// Generate all possible multisets (with repetition) of transitions
 		for cycle in Itertools::combinations_with_replacement(transition_indices.iter(), cycle_len)
 		{
+			// Build count vector for this multiset to allow sub-cycle checks
+			// let mut counts = vec![0usize; abstract_model.transitions.len()];
+			// for &&i in cycle.iter() {
+			// 	counts[i] += 1;
+			// }
+
 			// For each multiset, check if the sum of update vectors is zero
-			let mut sum_update = abstract_model.transitions[*cycle[0]].update_vector.clone();
-			for &idx in &cycle[1..] {
-				sum_update += abstract_model.transitions[*idx].update_vector.clone();
-			}
-			if sum_update.iter().all(|&x| x == 0) {
+			if (0..abstract_model.transitions[*cycle[0]].update_vector.len()).all(|j| {
+				cycle
+					.iter()
+					.map(|&&i| abstract_model.transitions[i].update_vector[j])
+					.sum::<i128>() == 0
+			}) {
+				// Skip this cycle if it is a sub-multiset of any already-checked (larger) cycle
+				// Note: I decided not to skip any cycles, as smaller cycles may still add new states
+				// because of the construction of new states during the first pass.
+				// if seen_cycle_counts.iter().any(|seen| {
+				// 	seen.iter()
+				// 		.zip(counts.iter())
+				// 		.all(|(&s, &c)| s >= c)
+				// }) {
+				// 	debug_message!(
+				// 		"Skipping cycle {:?} as it is a sub-cycle of a previously seen cycle.",
+				// 		cycle
+				// 	);
+				// 	// continue;
+				// }
+				// Mark this multiset as seen (so smaller sub-cycles can be skipped later)
+				// seen_cycle_counts.push(counts);
+
 				// This is a cycle
-				debug_message!("Found cycle: {:?}", cycle);
+				debug_message!(
+					"Applying cycle: {:?}. Added {} states so far.",
+					cycle,
+					num_states_added
+				);
+				// debug_message!("Cycle details:");
+				// for &&idx in &cycle {
+				// 	let transition = &abstract_model.transitions[idx];
+				// 	debug_message!(
+				// 		"    Transition {} (ID: {}), update vector\t{:?}",
+				// 		transition.transition_name,
+				// 		transition.transition_id,
+				// 		transition.update_vector.iter().collect::<Vec<_>>()
+				// 	);
+				// }
 				// Get every permutation of the cycle
 				let mut cycle_permutations = Vec::new();
 				let mut cycle_indices = cycle.clone();
@@ -329,9 +352,9 @@ fn add_cycles(
 					for perm in &cycle_permutations {
 						// For each permutation, find the min possible value for each values
 						let mut min_vector =
-							abstract_model.transitions[*cycle[0]].update_vector.clone();
+							abstract_model.transitions[*perm[0]].update_vector.clone();
 						let mut running_sum = min_vector.clone();
-						for &idx in &cycle[1..] {
+						for &idx in &perm[1..] {
 							running_sum += abstract_model.transitions[*idx].update_vector.clone();
 							for i in 0..min_vector.len() {
 								if running_sum[i] < min_vector[i] {
@@ -342,21 +365,15 @@ fn add_cycles(
 						let enabled = state_vector
 							.iter()
 							.zip(min_vector.iter())
-							.all(|(&s, &m)| (s) + m >= 0);
+							.all(|(&s, &m)| s + m >= 0);
 						if !enabled {
 							continue;
 						}
 						let mut current_state = state_vector.clone();
+						let mut current_state_id = state_id;
 						// Try to apply each transition in the permutation
 						for &&idx in perm {
 							let transition = &abstract_model.transitions[idx];
-							// Check if enabled: min_vector + update_vector must be non-negative
-							if (current_state.clone() + transition.update_vector.clone())
-								.iter()
-								.any(|&x| x < 0)
-							{
-								break;
-							}
 							// Compute next state
 							let next_state =
 								current_state.clone() + transition.update_vector.clone();
@@ -369,32 +386,19 @@ fn add_cycles(
 								next_state_id = existing_id;
 							} else {
 								// Compute total outgoing rate for the new state
-								let rate_sum = abstract_model
-									.transitions
-									.iter()
-									.map(|trans| trans.get_sck_rate())
-									.sum();
-								explicit_model.states.push(PrismVasState {
+								explicit_model.add_state(PrismVasState {
 									state_id: next_state_id,
 									vector: next_state.clone(),
 									label: None,
-									total_outgoing_rate: rate_sum,
+									total_outgoing_rate: abstract_model
+										.crn_total_outgoing_rate(&next_state),
 								});
 								*num_states_added += 1;
-								if *num_states_added % 1000 == 0 {
-									debug_message!(
-										"Cycle added {} states so far. Current explicit model size: {} states, {} transitions.",
-										num_states_added,
-										explicit_model.states.len(),
-										explicit_model.transitions.len()
-									);
-								}
 							}
 							// Add transition if not already present
-							// Check if this transition already exists
 							let transition_exists = explicit_model
 								.transition_map
-								.get(&state_id)
+								.get(&current_state_id)
 								.map_or(false, |to_state_map| {
 									to_state_map
 										.iter()
@@ -404,13 +408,14 @@ fn add_cycles(
 								// Create the new transition
 								let new_transition = PrismVasTransition {
 									transition_id: explicit_model.transitions.len(),
-									from_state: state_id,
+									from_state: current_state_id,
 									to_state: next_state_id,
 									rate: transition.get_sck_rate(),
 								};
 								explicit_model.add_transition(new_transition);
 							}
 							current_state = next_state;
+							current_state_id = next_state_id;
 						}
 					}
 				}

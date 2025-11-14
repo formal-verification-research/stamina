@@ -79,12 +79,12 @@ impl<'a> RagtimerBuilder<'a> {
 				}
 			}
 		}
-		debug_message!("Rewards for each transition:",);
-		for &transition_id in rewards.keys().sorted() {
-			if let Some(reward) = rewards.get(&transition_id) {
-				println!("  Transition {}: {:.3e}", transition_id, *reward);
-			}
-		}
+		// debug_message!("Rewards for each transition:",);
+		// for &transition_id in rewards.keys().sorted() {
+		// 	if let Some(reward) = rewards.get(&transition_id) {
+		// 		println!("  Transition {}: {:.3e}", transition_id, *reward);
+		// 	}
+		// }
 		rewards
 	}
 
@@ -205,7 +205,9 @@ impl<'a> RagtimerBuilder<'a> {
 				);
 			}
 			// Get available transitions
-			let available_transitions = self.get_available_transitions(&current_state);
+			let available_transitions = self
+				.abstract_model
+				.get_available_transitions(&current_state);
 			if available_transitions.is_empty() {
 				trace_probability *= 0.01;
 				break;
@@ -232,8 +234,9 @@ impl<'a> RagtimerBuilder<'a> {
 					{
 						current_state = current_state + vas_transition.update_vector.clone();
 						trace.push(transition);
-						trace_probability *=
-							self.crn_transition_probability(&current_state, &vas_transition);
+						trace_probability *= self
+							.abstract_model
+							.crn_transition_probability(&current_state, &vas_transition);
 					} else {
 						error!("Transition ID {} not found in model.", transition);
 					}
@@ -271,7 +274,7 @@ impl<'a> RagtimerBuilder<'a> {
 			state_id: current_state_id,
 			vector: current_state.clone(),
 			label: Some("init".to_string()),
-			total_outgoing_rate: self.crn_total_outgoing_rate(&current_state),
+			total_outgoing_rate: self.abstract_model.crn_total_outgoing_rate(&current_state),
 		});
 
 		// If the dependency graph is not provided, we try to construct it from the abstract model.
