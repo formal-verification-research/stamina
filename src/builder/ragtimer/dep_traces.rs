@@ -155,11 +155,11 @@ impl<'a> RagtimerBuilder<'a> {
 			}
 		}
 		println!("\n");
-		message!("All RL traces generated.");
+		message!("All RDG traces generated.");
 		explicit_model.trace_trie = trace_trie;
 
 		message!(
-			"Ragtimer RL Traces complete. Explicit model now has {} states and {} transitions.",
+			"Ragtimer RDG Traces complete. Explicit model now has {} states and {} transitions.",
 			explicit_model.states.len(),
 			explicit_model.transitions.len()
 		);
