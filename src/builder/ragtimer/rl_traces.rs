@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use itertools::Itertools;
 use rand::{seq::SliceRandom, Rng};
 use std::io::{stdout, Write};
 

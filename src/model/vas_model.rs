@@ -19,6 +19,8 @@ use std::io::Write;
 
 use super::model::{AbstractModel, ModelType, ProbabilityOrRate, State, Transition};
 
+const ROUNDING_ERROR: f64 = 1e-3;
+
 /// Type alias for a VAS variable valuation
 pub type VasValue = i128;
 pub type VasStateVector = DVector<VasValue>;
@@ -741,7 +743,7 @@ impl PrismVasModel {
 				.map(|tr| tr.rate)
 				.sum::<ProbabilityOrRate>();
 			if used_rate >= total_outgoing_rate {
-				if used_rate > total_outgoing_rate {
+				if used_rate > total_outgoing_rate + ROUNDING_ERROR {
 					error!(
 						"State {} has used rate {} greater than total outgoing rate {}",
 						state.state_id, used_rate, total_outgoing_rate
@@ -764,6 +766,7 @@ impl PrismVasModel {
 				// No need to add an absorbing transition if all rate is already used
 				continue;
 			}
+			// Add the absorbing transition
 			let transition = PrismVasTransition {
 				transition_id: self.transitions.len(),
 				from_state: state.state_id,
