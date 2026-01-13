@@ -12,6 +12,7 @@ use crate::{
 	property::property,
 	trace::trace_trie::TraceTrieNode,
 	validator::vas_validator::validate_vas,
+	warning,
 };
 
 use nalgebra::DVector;
@@ -19,7 +20,7 @@ use std::io::Write;
 
 use super::model::{AbstractModel, ModelType, ProbabilityOrRate, State, Transition};
 
-const ROUNDING_ERROR: f64 = 1e-3;
+const ROUNDING_ERROR: f64 = 1e-6;
 
 /// Type alias for a VAS variable valuation
 pub type VasValue = i128;
@@ -180,14 +181,25 @@ impl VasTransition {
 			custom_rate_fn: None,
 		}
 	}
-}
 
-impl VasTransition {
+	/// Calculates the SCK rate of the transition.
+	/// This function is temporary and intended only for quick C&C result generation ---
+	/// it will eventually be replaced by a system-wide more-powerful rate calculation
+	/// that allows for more complex rate calculations.
+	pub fn get_sck_rate(&self) -> ProbabilityOrRate {
+		self.rate_const
+			* self
+				.enabled_bounds
+				.iter()
+				.filter(|&&r| r != 0)
+				.map(|&r| r as ProbabilityOrRate)
+				.product::<ProbabilityOrRate>()
+	}
+
 	/// Check to see if our state is above every bound in the enabled
 	/// bound. We use try-fold to short circuit and return false if we
 	/// encounter at least one value that does not satisfy.
 	/// This function is used with a plain state vector rather than object.
-
 	pub fn enabled_vector(&self, state: &VasStateVector) -> bool {
 		self.enabled_bounds
 			.iter()
@@ -466,6 +478,7 @@ impl AbstractVas {
 			})
 			.map(|t| t.transition_id)
 			.collect();
+		// debug_message!("Available transitions for {:?}: {:?}", current_state, available_transitions);
 		available_transitions
 	}
 
@@ -488,31 +501,6 @@ impl AbstractVas {
 		available_transitions
 	}
 
-	/// Calculates the transition rate for a given transition in the context
-	/// of the current state under the SCK assumption for CRN models.
-	pub fn crn_transition_rate(
-		&self,
-		current_state: &VasStateVector,
-		transition: &VasTransition,
-	) -> ProbabilityOrRate {
-		let mut transition_rate = 0.0;
-		for (_, &current_value) in current_state.iter().enumerate() {
-			transition_rate += transition.rate_const * (current_value as ProbabilityOrRate);
-		}
-		transition_rate
-	}
-
-	/// Calculates the transition probability for a given transition in the context
-	/// of the current state under the SCK assumption for CRN models.
-	pub fn crn_transition_probability(
-		&self,
-		current_state: &VasStateVector,
-		transition: &VasTransition,
-	) -> ProbabilityOrRate {
-		let total_outgoing_rate = self.crn_total_outgoing_rate(current_state);
-		self.crn_transition_rate(current_state, transition) / total_outgoing_rate
-	}
-
 	/// Calculates the transition probability for a given transition in the context
 	/// of the current state under the SCK assumption for CRN models.
 	pub fn crn_total_outgoing_rate(&self, current_state: &VasStateVector) -> ProbabilityOrRate {
@@ -520,13 +508,51 @@ impl AbstractVas {
 		let available_transitions = self.get_available_transitions(current_state);
 		for t in available_transitions {
 			if let Some(vas_transition) = self.get_transition_from_id(t) {
-				total_outgoing_rate += self.crn_transition_rate(current_state, vas_transition);
+				total_outgoing_rate += vas_transition.get_sck_rate();
+				// debug_message!(
+				// 	"TOTALING transition ID {} from state {:?} with rate {} to total outgoing rate, new total: {}",
+				// 	t,
+				// 	current_state.iter().collect::<Vec<_>>(),
+				// 	vas_transition.get_sck_rate(),
+				// 	total_outgoing_rate
+				// );
 			} else {
 				error!("Transition ID {} not found in model.", t);
 				return 0.0; // If the transition is not found, return 0 probability
 			}
 		}
 		total_outgoing_rate
+	}
+
+	/// Calculates the probability for a transition given the current state
+	pub fn transition_probability(
+		&self,
+		current_state: &VasStateVector,
+		transition: &VasTransition,
+	) -> ProbabilityOrRate {
+		let total_outgoing_rate = self.crn_total_outgoing_rate(current_state);
+		if total_outgoing_rate == 0.0 {
+			warning!(
+				"No outgoing transitions from state {}, returning 0 probability.",
+				format!(
+					"[{}]",
+					current_state
+						.iter()
+						.map(|v| v.to_string())
+						.collect::<Vec<_>>()
+						.join(",")
+				)
+			);
+			return 0.0; // No outgoing transitions, return 0 probability
+		}
+		if let Some(transition_rate) = transition.rate_probability_at(&VasState {
+			vector: current_state.clone(),
+			labels: None,
+		}) {
+			transition_rate / total_outgoing_rate
+		} else {
+			0.0 // Transition not enabled, return 0 probability
+		}
 	}
 }
 
@@ -545,6 +571,7 @@ pub(crate) struct PrismVasState {
 	pub(crate) state_id: usize,
 	pub(crate) vector: DVector<i128>,
 	pub(crate) label: Option<String>, // Optional label for the state, useful for sink states
+	pub(crate) used_rate: ProbabilityOrRate, // Optional total outgoing rate for the state
 	pub(crate) total_outgoing_rate: ProbabilityOrRate, // Optional total outgoing rate for the state
 }
 
@@ -573,6 +600,7 @@ impl Default for PrismVasModel {
 			state_id: absorbing_state_id,
 			vector: absorbing_state,
 			label: Some("absorbing".to_string()), // Label for the absorbing state
+			used_rate: 0.0,                       // No used rate for the absorbing state
 			total_outgoing_rate: 0.0,             // No outgoing rate for the absorbing state
 		});
 		PrismVasModel {
@@ -614,6 +642,7 @@ impl ExplicitModel for PrismVasModel {
 				state_id: new_index,
 				vector: state.vector.map(|v| v as i128),
 				label: None,              // No label by default
+				used_rate: 0.0,           // No used rate by default
 				total_outgoing_rate: 0.0, // No outgoing rate by default
 			});
 			return new_index; // Return the newly added index
@@ -680,21 +709,43 @@ impl PrismVasModel {
 		model.add_state(PrismVasState {
 			state_id: absorbing_state_id,
 			vector: absorbing_state,
-			label: Some("absorbing".to_string()), // Label for the absorbing state
-			total_outgoing_rate: 0.0,             // No outgoing rate for the absorbing state
+			label: Some("absorbing".to_string()), // Label
+			used_rate: 0.0,                       // No used rate
+			total_outgoing_rate: 0.0,             // No outgoing rate
 		});
 		model
 	}
 
 	/// Adds a transition to the model
 	pub fn add_transition(&mut self, transition: PrismVasTransition) {
+		let transition_id = transition.transition_id;
 		let from_state = transition.from_state;
 		let to_state = transition.to_state;
+		// let transition_rate = transition.rate;
+		if let Some(from_state) = self.states.iter_mut().find(|s| s.state_id == from_state) {
+			from_state.used_rate += transition.rate;
+			if from_state.used_rate > from_state.total_outgoing_rate + ROUNDING_ERROR {
+				error!(
+					"State {:?} has used rate {} greater than total outgoing rate {} after adding transition {}.",
+					from_state.vector.iter().collect::<Vec<_>>(),
+					from_state.used_rate,
+					from_state.total_outgoing_rate,
+					transition_id
+				);
+			}
+		}
 		self.transitions.push(transition);
 		self.transition_map
 			.entry(from_state)
 			.or_insert_with(Vec::new)
 			.push((to_state, self.transitions.len() - 1));
+		// debug_message!(
+		// 	"Added transition {} from state {} to state {} with rate {}.",
+		// 	transition_id,
+		// 	from_state,
+		// 	to_state,
+		// 	transition_rate,
+		// );
 	}
 
 	/// Adds a state to the model
@@ -736,17 +787,16 @@ impl PrismVasModel {
 				// No need to add an absorbing transition if there are no outgoing transitions
 				continue;
 			}
-			let used_rate = self
-				.transitions
-				.iter()
-				.filter(|tr| tr.from_state == state.state_id)
-				.map(|tr| tr.rate)
-				.sum::<ProbabilityOrRate>();
+			let used_rate = state.used_rate;
 			if used_rate >= total_outgoing_rate {
 				if used_rate > total_outgoing_rate + ROUNDING_ERROR {
+					println!("");
 					error!(
-						"State {} has used rate {} greater than total outgoing rate {}",
-						state.state_id, used_rate, total_outgoing_rate
+						"State {} {:?} has used rate {} greater than total outgoing rate {}",
+						state.state_id,
+						state.vector.iter().collect::<Vec<_>>(),
+						used_rate,
+						total_outgoing_rate
 					);
 					self.transitions.iter().for_each(|tr| {
 						if tr.from_state == state.state_id {
@@ -768,11 +818,12 @@ impl PrismVasModel {
 			}
 			// Add the absorbing transition
 			let transition = PrismVasTransition {
-				transition_id: self.transitions.len(),
+				transition_id: usize::MAX, // Use a special ID for absorbing transitions
 				from_state: state.state_id,
 				to_state: 0,
 				rate: total_outgoing_rate - used_rate, // Absorbing transitions have zero rate
 			};
+			// debug_message!("vas_model.rs adding absorbing transition()");
 			self.add_transition(transition);
 		}
 		println!("\n");

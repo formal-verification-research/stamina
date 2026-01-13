@@ -86,6 +86,7 @@ impl<'a> RagtimerBuilder<'a> {
 			state_id: current_state_id,
 			vector: current_state.clone(),
 			label: Some("init".to_string()),
+			used_rate: 0.0,
 			total_outgoing_rate: self.abstract_model.crn_total_outgoing_rate(&current_state),
 		});
 

@@ -143,8 +143,6 @@ impl<'a> RagtimerBuilder<'a> {
 				} else {
 					warning!("During exploration, current state {:?} does not already exist in the model, but it should. Adding it under ID {}", current_state, available_state_id);
 					current_state_id = available_state_id;
-					let current_outgoing_rate =
-						self.abstract_model.crn_total_outgoing_rate(&current_state);
 					explicit_model.add_state(PrismVasState {
 						state_id: current_state_id,
 						vector: current_state.clone(),
@@ -156,7 +154,10 @@ impl<'a> RagtimerBuilder<'a> {
 						} else {
 							None
 						},
-						total_outgoing_rate: current_outgoing_rate,
+						used_rate: 0.0,
+						total_outgoing_rate: self
+							.abstract_model
+							.crn_total_outgoing_rate(&current_state),
 					});
 				}
 				// Find the next state after applying the transition
@@ -169,8 +170,6 @@ impl<'a> RagtimerBuilder<'a> {
 					next_state_id = existing_id;
 				} else {
 					next_state_id = available_state_id;
-					let next_outgoing_rate =
-						self.abstract_model.crn_total_outgoing_rate(&next_state);
 					explicit_model.add_state(PrismVasState {
 						state_id: next_state_id,
 						vector: next_state.clone(),
@@ -182,7 +181,10 @@ impl<'a> RagtimerBuilder<'a> {
 						} else {
 							None
 						},
-						total_outgoing_rate: next_outgoing_rate,
+						used_rate: 0.0,
+						total_outgoing_rate: self
+							.abstract_model
+							.crn_total_outgoing_rate(&next_state),
 					});
 				}
 			} else {
@@ -201,36 +203,18 @@ impl<'a> RagtimerBuilder<'a> {
 				let transition_rate = if let Some(vas_transition) =
 					self.abstract_model.get_transition_from_id(transition_id)
 				{
-					self.abstract_model
-						.crn_transition_rate(&current_state, vas_transition)
+					vas_transition.get_sck_rate()
 				} else {
 					error!("Transition ID {} not found in model.", transition_id);
 					0.0
 				};
+				// debug_message!("ragtimer.rs store_explicit_trace()");
 				explicit_model.add_transition(PrismVasTransition {
 					transition_id,
 					from_state: current_state_id,
 					to_state: next_state_id,
 					rate: transition_rate,
 				});
-
-				// // Update the absorbing state transition of the current state to account for the new transition
-				// if let Some(outgoing_transitions) =
-				// 	explicit_model.transition_map.get_mut(&current_state_id)
-				// {
-				// 	// Find the index of the absorbing transition (to_state == 0)
-				// 	if let Some((absorbing_index, _)) = outgoing_transitions
-				// 		.iter()
-				// 		.find(|(to_state, _)| *to_state == 0)
-				// 	{
-				// 		// Update the rate of the absorbing transition
-				// 		let absorbing_transition =
-				// 			&mut explicit_model.transitions[*absorbing_index];
-				// 		absorbing_transition.rate -= transition_rate;
-				// 	}
-				// } else {
-				// 	error!("No outgoing transitions found for state ID {}. Something probably went wrong with its absorbing state.", current_state_id);
-				// }
 			}
 			current_state = next_state.clone();
 		}

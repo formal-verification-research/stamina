@@ -68,13 +68,13 @@ impl<'a> RagtimerBuilder<'a> {
 				let additional_reward = effective_dependency_reward / (distance as f64 + 1.0);
 				if let Some(reward) = rewards.get_mut(&transition.transition_id) {
 					*reward += additional_reward;
-					debug_message!(
-						"Transition {} is in dependency graph at distance {}: adding reward {:.3e}, total reward now {:.3e}",
-						transition.transition_id,
-						distance,
-						additional_reward,
-						*reward
-					);
+					// debug_message!(
+					// 	"Transition {} is in dependency graph at distance {}: adding reward {:.3e}, total reward now {:.3e}",
+					// 	transition.transition_id,
+					// 	distance,
+					// 	additional_reward,
+					// 	*reward
+					// );
 				}
 			}
 		}
@@ -235,7 +235,7 @@ impl<'a> RagtimerBuilder<'a> {
 						trace.push(transition);
 						trace_probability *= self
 							.abstract_model
-							.crn_transition_probability(&current_state, &vas_transition);
+							.transition_probability(&current_state, &vas_transition);
 					} else {
 						error!("Transition ID {} not found in model.", transition);
 					}
@@ -273,6 +273,7 @@ impl<'a> RagtimerBuilder<'a> {
 			state_id: current_state_id,
 			vector: current_state.clone(),
 			label: Some("init".to_string()),
+			used_rate: 0.0,
 			total_outgoing_rate: self.abstract_model.crn_total_outgoing_rate(&current_state),
 		});
 

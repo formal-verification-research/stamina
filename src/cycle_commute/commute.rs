@@ -1,32 +1,12 @@
 use itertools::Itertools;
 
 use crate::{
-	model::{
-		model::ProbabilityOrRate,
-		vas_model::{AbstractVas, PrismVasModel, PrismVasState, PrismVasTransition, VasTransition},
+	model::vas_model::{
+		AbstractVas, PrismVasModel, PrismVasState, PrismVasTransition, VasTransition,
 	},
 	trace::trace_trie::TraceTrieNode,
 	*,
 };
-
-/// This function calculates the outgoing rate of a transition.
-/// It currently assumes the SCK assumption that the rate
-/// depends on the product of the enabled bounds.
-impl VasTransition {
-	/// Calculates the SCK rate of the transition.
-	/// This function is temporary and intended only for quick C&C result generation ---
-	/// it will eventually be replaced by a system-wide more-powerful rate calculation
-	/// that allows for more complex rate calculations.
-	fn get_sck_rate(&self) -> ProbabilityOrRate {
-		self.rate_const
-			* self
-				.enabled_bounds
-				.iter()
-				.filter(|&&r| r != 0)
-				.map(|&r| r as ProbabilityOrRate)
-				.product::<ProbabilityOrRate>()
-	}
-}
 
 /// This is the main function that implements the cycle & commute algorithm.
 /// It reads an explicit prism-style model (assuming EVERY trace leads to a target),
@@ -192,44 +172,78 @@ fn commute(
 			.collect();
 		universally_enabled_transitions.retain(|t| enabled_transitions.contains(t));
 	}
+	// debug_message!(
+	// 	"At depth {}, found {} universally enabled transitions: {:?}",
+	// 	depth,
+	// 	universally_enabled_transitions.len(),
+	// 	universally_enabled_transitions.iter().map(|t| t.transition_name.clone()).collect::<Vec<_>>()
+	// );
 	// Fire all universally enabled transitions from the initial state to create parallel traces
-	// Do this in 2 steps:
-	// Step 1. From each state in the trace, fire all universally enabled transitions
-	for (i, trace_transition) in trace.iter().enumerate() {
+	// From each state in the trace, fire all universally enabled transitions
+	// debug_message!(
+	// 	"Trace: {:?}",
+	// 	trace
+	// 		.iter()
+	// 		.map(|tt| abstract_model.get_transition_from_id(tt.transition_id).unwrap().transition_name.clone())
+	// 		.collect::<Vec<_>>()
+	// );
+	let mut parallel_traces: Vec<Vec<PrismVasTransition>> = Vec::new();
+	parallel_traces.extend(universally_enabled_transitions.iter().map(|_| Vec::new()));
+	for (_, trace_transition) in trace.iter().enumerate() {
 		let state_id = trace_transition.from_state;
 		let state_vector = explicit_model.states[state_id].vector.clone();
-		for transition in &universally_enabled_transitions {
+		let abstract_trace_transition = abstract_model
+			.get_transition_from_id(trace_transition.transition_id)
+			.unwrap();
+		for (commutable_index, commutable_transition) in
+			universally_enabled_transitions.iter().enumerate()
+		{
 			// Compute the next state
-			let next_state = (state_vector.clone() + transition.update_vector.clone()).clone();
-			// Skip if next state has negative entries
-			if next_state.iter().any(|&x| x < 0) {
+			if !(commutable_transition.enabled_vector(&state_vector)) {
 				continue;
 			}
-			// Insert or get the state ID
-			let mut next_state_id = explicit_model.states.len();
+			let vertical_state =
+				(state_vector.clone() + commutable_transition.update_vector.clone()).clone();
+			// debug_message!(
+			// 	"Firing transition {}\n\t{} +\n\t{} =\n\t{}",
+			// 	commutable_transition.transition_name,
+			// 	format!("{:?}", state_vector.iter().collect::<Vec<_>>()),
+			// 	format!("{:?}", commutable_transition.update_vector.iter().collect::<Vec<_>>()),
+			// 	format!("{:?}", vertical_state.iter().collect::<Vec<_>>())
+			// );
+			// Check that the next state contains only non-negative entries
+			if vertical_state.iter().any(|&x| x < 0) {
+				continue;
+			}
+			// Fire the commutable transition first
+			let mut vertical_state_id = explicit_model.states.len();
 			if let Some(existing_id) = explicit_model
 				.state_trie
-				.insert_if_not_exists(&next_state, next_state_id)
+				.insert_if_not_exists(&vertical_state, vertical_state_id)
 			{
-				next_state_id = existing_id;
+				vertical_state_id = existing_id;
+				// debug_message!(
+				// 	"State {:?} already exists with ID {}",
+				// 	vertical_state.iter().collect::<Vec<_>>(),
+				// 	vertical_state_id
+				// );
 			} else {
-				// Compute total outgoing rate for the new state
+				// Create a new state
 				explicit_model.add_state(PrismVasState {
-					state_id: next_state_id,
-					vector: next_state.clone(),
+					state_id: vertical_state_id,
+					vector: vertical_state.clone(),
 					label: None,
-					total_outgoing_rate: abstract_model.crn_total_outgoing_rate(&next_state),
+					used_rate: 0.0,
+					total_outgoing_rate: abstract_model.crn_total_outgoing_rate(&vertical_state),
 				});
+				// debug_message!(
+				// 	"Added new state ID {} with vector {:?}",
+				// 	vertical_state_id,
+				// 	vertical_state.iter().collect::<Vec<_>>()
+				// );
 				*num_states_added += 1;
-				if *num_states_added % 1000 == 0 {
-					debug_message!(
-						"Commute added {} states so far. Current explicit model size: {} states, {} transitions.",
-						num_states_added,
-						explicit_model.states.len(),
-						explicit_model.transitions.len()
-					);
-				}
 			}
+			// Check if the transition already exists
 			let transition_exists =
 				explicit_model
 					.transition_map
@@ -237,35 +251,87 @@ fn commute(
 					.map_or(false, |to_state_map| {
 						to_state_map
 							.iter()
-							.any(|(to_state, _)| *to_state == next_state_id)
+							.any(|(to_state, _)| *to_state == vertical_state_id)
 					});
 			if !transition_exists {
 				// Create the new transition
 				let new_transition = PrismVasTransition {
-					transition_id: explicit_model.transitions.len(),
+					transition_id: commutable_transition.transition_id,
 					from_state: state_id,
-					to_state: next_state_id,
-					rate: transition.get_sck_rate(),
+					to_state: vertical_state_id,
+					rate: commutable_transition.get_sck_rate(),
 				};
-				// explicit_model[state_id].next_states.push(next_state_id);
 				explicit_model.add_transition(new_transition);
-				// Step 2. For each new state, create a new trace with the transition added
-				let mut new_trace = trace[..i + 1].to_vec();
-				// Get the last transition index before mutably borrowing explicit_model
-				let last_transition_index = explicit_model.transitions.len() - 1;
-				// Now push the reference after the mutable borrow
-				let last_transition = explicit_model.transitions[last_transition_index].clone();
-				new_trace.push(last_transition);
-				commute(
-					abstract_model,
-					explicit_model,
-					&new_trace,
-					depth + 1,
-					max_depth,
-					num_states_added,
-				);
 			}
+
+			// Fire the trace transition from the new state
+			if !(commutable_transition.enabled_vector(&vertical_state)) {
+				continue;
+			}
+			let horizontal_state =
+				(vertical_state.clone() + abstract_trace_transition.update_vector.clone()).clone();
+
+			// Check that the next state contains only non-negative entries
+			if horizontal_state.iter().any(|&x| x < 0) {
+				continue;
+			}
+			let mut horizontal_state_id = explicit_model.states.len();
+			if let Some(existing_id) = explicit_model
+				.state_trie
+				.insert_if_not_exists(&horizontal_state, horizontal_state_id)
+			{
+				horizontal_state_id = existing_id;
+			} else {
+				// Create a new state
+				explicit_model.add_state(PrismVasState {
+					state_id: horizontal_state_id,
+					vector: horizontal_state.clone(),
+					label: None,
+					used_rate: 0.0,
+					total_outgoing_rate: abstract_model.crn_total_outgoing_rate(&horizontal_state),
+				});
+				*num_states_added += 1;
+				if *num_states_added % 1000 == 0 {
+					debug_message!(
+						"C&C added {} states so far (total {} states)",
+						num_states_added,
+						explicit_model.states.len()
+					);
+				}
+			}
+			// Check if the transition already exists
+			let transition_exists = explicit_model
+				.transition_map
+				.get(&vertical_state_id)
+				.map_or(false, |to_state_map| {
+					to_state_map
+						.iter()
+						.any(|(to_state, _)| *to_state == horizontal_state_id)
+				});
+			let horizontal_new_transition = PrismVasTransition {
+				transition_id: abstract_trace_transition.transition_id,
+				from_state: vertical_state_id,
+				to_state: horizontal_state_id,
+				rate: abstract_trace_transition.get_sck_rate(),
+			};
+			if !transition_exists {
+				// Create the new transition
+				explicit_model.add_transition(horizontal_new_transition.clone());
+			}
+			// Update the parallel traces
+			parallel_traces[commutable_index].push(horizontal_new_transition.clone());
 		}
+	}
+	// Recurse on each parallel trace
+	for parallel_trace in parallel_traces {
+		commute(
+			abstract_model,
+			explicit_model,
+			&parallel_trace,
+			depth + 1,
+			max_depth,
+			num_states_added,
+		);
 	}
 }
 
@@ -286,12 +352,6 @@ fn add_cycles(
 		// Generate all possible multisets (with repetition) of transitions
 		for cycle in Itertools::combinations_with_replacement(transition_indices.iter(), cycle_len)
 		{
-			// Build count vector for this multiset to allow sub-cycle checks
-			// let mut counts = vec![0usize; abstract_model.transitions.len()];
-			// for &&i in cycle.iter() {
-			// 	counts[i] += 1;
-			// }
-
 			// For each multiset, check if the sum of update vectors is zero
 			if (0..abstract_model.transitions[*cycle[0]].update_vector.len()).all(|j| {
 				cycle
@@ -299,39 +359,8 @@ fn add_cycles(
 					.map(|&&i| abstract_model.transitions[i].update_vector[j])
 					.sum::<i128>() == 0
 			}) {
-				// Skip this cycle if it is a sub-multiset of any already-checked (larger) cycle
-				// Note: I decided not to skip any cycles, as smaller cycles may still add new states
-				// because of the construction of new states during the first pass.
-				// if seen_cycle_counts.iter().any(|seen| {
-				// 	seen.iter()
-				// 		.zip(counts.iter())
-				// 		.all(|(&s, &c)| s >= c)
-				// }) {
-				// 	debug_message!(
-				// 		"Skipping cycle {:?} as it is a sub-cycle of a previously seen cycle.",
-				// 		cycle
-				// 	);
-				// 	// continue;
-				// }
-				// Mark this multiset as seen (so smaller sub-cycles can be skipped later)
-				// seen_cycle_counts.push(counts);
-
 				// This is a cycle
-				debug_message!(
-					"Applying cycle: {:?}. Added {} states so far.",
-					cycle,
-					num_states_added
-				);
-				// debug_message!("Cycle details:");
-				// for &&idx in &cycle {
-				// 	let transition = &abstract_model.transitions[idx];
-				// 	debug_message!(
-				// 		"    Transition {} (ID: {}), update vector\t{:?}",
-				// 		transition.transition_name,
-				// 		transition.transition_id,
-				// 		transition.update_vector.iter().collect::<Vec<_>>()
-				// 	);
-				// }
+				debug_message!("Applying cycle: {:?}.", cycle,);
 				// Get every permutation of the cycle
 				let mut cycle_permutations = Vec::new();
 				let mut cycle_indices = cycle.clone();
@@ -390,6 +419,7 @@ fn add_cycles(
 									state_id: next_state_id,
 									vector: next_state.clone(),
 									label: None,
+									used_rate: 0.0,
 									total_outgoing_rate: abstract_model
 										.crn_total_outgoing_rate(&next_state),
 								});
@@ -419,6 +449,7 @@ fn add_cycles(
 						}
 					}
 				}
+				debug_message!("C&C added {} states so far.", num_states_added);
 			}
 		}
 	}
