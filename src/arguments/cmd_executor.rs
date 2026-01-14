@@ -15,7 +15,7 @@ pub fn run_commands(args: &clap::ArgMatches) {
 	match args.subcommand() {
 		// Benchmark set
 		Some(("benchmark", sub_m)) => {
-			let dir = sub_m.get_one::<String>("dir");
+			let model = sub_m.get_one::<String>("model").unwrap();
 			let num_traces = sub_m
 				.get_one::<String>("num-traces")
 				.and_then(|s| s.parse::<usize>().ok())
@@ -28,18 +28,50 @@ pub fn run_commands(args: &clap::ArgMatches) {
 				.get_one::<String>("commute-depth")
 				.and_then(|s| s.parse::<usize>().ok())
 				.unwrap_or(DEFAULT_COMMUTE_DEPTH.parse::<usize>().unwrap());
+			let approach = sub_m.get_one::<String>("approach").unwrap();
+			let output = sub_m
+				.get_one::<String>("output")
+				.map(|s| s.to_string())
+				.unwrap_or_else(|| DEFAULT_BENCHMARK_OUTPUT.to_string());
 			let _timeout = sub_m
 				.get_one::<String>("timeout")
 				.and_then(|s| s.parse::<usize>().ok())
 				.unwrap_or(DEFAULT_TIMEOUT_SECONDS.parse::<usize>().unwrap());
-			ragtimer_benchmark(
-				dir.unwrap().as_ref(),
-				num_traces,
-				0,
-				commute_depth,
-				0,
-				cycle_length,
-			);
+			match approach.as_str() {
+				"RL" => {
+					message!("Ragtimer with Reinforcement Learning");
+					let mut magic_numbers = default_magic_numbers();
+					magic_numbers.num_traces = num_traces;
+					ragtimer_benchmark(
+						model,
+						cycle_length,
+						commute_depth,
+						RagtimerApproach::ReinforcementLearning(magic_numbers),
+						&output,
+					);
+				}
+				"random" => {
+					message!("Ragtimer with Random approach is not yet implemented.");
+					unimplemented!();
+				}
+				"shortest" => {
+					message!("Ragtimer with Random Dependency Graph path approach");
+					ragtimer_benchmark(
+						model,
+						cycle_length,
+						commute_depth,
+						RagtimerApproach::RandomDependencyGraph(num_traces),
+						&output,
+					);
+				}
+				_ => {
+					error!(
+						"Invalid approach: {}. Must be one of: RL, random, shortest.",
+						approach
+					);
+					return;
+				}
+			}
 		}
 		Some(("bmc", sub_m)) => {
 			let model_file = sub_m.get_one::<String>("model").unwrap();

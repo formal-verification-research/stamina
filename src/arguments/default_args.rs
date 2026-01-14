@@ -7,3 +7,4 @@ pub const DEFAULT_OUTPUT_NAME: &str = "output";
 pub const DEFAULT_BMC_BITS: &str = "16";
 pub const DEFAULT_BMC_MAX_STEPS: &str = "100";
 pub const DEFAULT_BOUNDER_BITS: &str = "16";
+pub const DEFAULT_BENCHMARK_OUTPUT: &str = "output";

@@ -11,11 +11,11 @@ pub fn parse_args() -> clap::ArgMatches {
             Command::new("benchmark")
             .about("Runs a benchmark set. This mode is under development. Currently, it benchmarks only Ragtimer and its dependencies.")
 			.arg(
-				Arg::new("dir")
-					.short('d')
-					.long("dir")
-					.value_name("DIR")
-					.help("Set a directory with multiple models (alternative to --model)")
+				Arg::new("model")
+					.short('m')
+					.long("model")
+					.value_name("MODEL")
+					.help("Set the input model file (required)")
 					.required(true)
 			)
             .arg(
@@ -38,6 +38,22 @@ pub fn parse_args() -> clap::ArgMatches {
                     .value_name("COMMUTE_DEPTH")
                     .help(&format!("Sets the commute depth (default {})", DEFAULT_COMMUTE_DEPTH))
                     .default_value(DEFAULT_COMMUTE_DEPTH),
+            )
+            .arg(
+                Arg::new("approach")
+                    .short('a')
+                    .long("approach")
+                    .value_name("APPROACH")
+                    .help("Sets the approach to use for benchmarking (required)")
+                    .required(true),
+            )
+            .arg(
+                Arg::new("output")
+                    .short('o')
+                    .long("output")
+                    .value_name("OUTPUT")
+                    .help(&format!("Sets the output filename (default {})", DEFAULT_BENCHMARK_OUTPUT))
+                    .default_value(DEFAULT_BENCHMARK_OUTPUT),
             )
             .arg(
             Arg::new("timeout")
