@@ -259,7 +259,7 @@ fn commute(
 					transition_id: commutable_transition.transition_id,
 					from_state: state_id,
 					to_state: vertical_state_id,
-					rate: commutable_transition.get_sck_rate(),
+					rate: commutable_transition.get_sck_rate(&state_vector),
 				};
 				explicit_model.add_transition(new_transition);
 			}
@@ -293,7 +293,7 @@ fn commute(
 				*num_states_added += 1;
 				if *num_states_added % 1000 == 0 {
 					debug_message!(
-						"C&C added {} states so far (total {} states)",
+						"C&C added {} states so far\t(total {} states)",
 						num_states_added,
 						explicit_model.states.len()
 					);
@@ -312,7 +312,7 @@ fn commute(
 				transition_id: abstract_trace_transition.transition_id,
 				from_state: vertical_state_id,
 				to_state: horizontal_state_id,
-				rate: abstract_trace_transition.get_sck_rate(),
+				rate: abstract_trace_transition.get_sck_rate(&vertical_state),
 			};
 			if !transition_exists {
 				// Create the new transition
@@ -440,7 +440,7 @@ fn add_cycles(
 									transition_id: explicit_model.transitions.len(),
 									from_state: current_state_id,
 									to_state: next_state_id,
-									rate: transition.get_sck_rate(),
+									rate: transition.get_sck_rate(&current_state),
 								};
 								explicit_model.add_transition(new_transition);
 							}
@@ -449,7 +449,11 @@ fn add_cycles(
 						}
 					}
 				}
-				debug_message!("C&C added {} states so far.", num_states_added);
+				debug_message!(
+					"C&C added {} states so far\t(total {} states)",
+					num_states_added,
+					explicit_model.states.len()
+				);
 			}
 		}
 	}

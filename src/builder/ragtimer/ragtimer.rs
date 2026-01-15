@@ -203,7 +203,7 @@ impl<'a> RagtimerBuilder<'a> {
 				let transition_rate = if let Some(vas_transition) =
 					self.abstract_model.get_transition_from_id(transition_id)
 				{
-					vas_transition.get_sck_rate()
+					vas_transition.get_sck_rate(&current_state)
 				} else {
 					error!("Transition ID {} not found in model.", transition_id);
 					0.0

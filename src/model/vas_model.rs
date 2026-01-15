@@ -186,13 +186,14 @@ impl VasTransition {
 	/// This function is temporary and intended only for quick C&C result generation ---
 	/// it will eventually be replaced by a system-wide more-powerful rate calculation
 	/// that allows for more complex rate calculations.
-	pub fn get_sck_rate(&self) -> ProbabilityOrRate {
+	pub fn get_sck_rate(&self, state: &VasStateVector) -> ProbabilityOrRate {
 		self.rate_const
 			* self
 				.enabled_bounds
 				.iter()
-				.filter(|&&r| r != 0)
-				.map(|&r| r as ProbabilityOrRate)
+				.zip(state.iter())
+				.filter(|(bound, _)| **bound != 0)
+				.map(|(_, &s)| s as ProbabilityOrRate)
 				.product::<ProbabilityOrRate>()
 	}
 
@@ -508,7 +509,7 @@ impl AbstractVas {
 		let available_transitions = self.get_available_transitions(current_state);
 		for t in available_transitions {
 			if let Some(vas_transition) = self.get_transition_from_id(t) {
-				total_outgoing_rate += vas_transition.get_sck_rate();
+				total_outgoing_rate += vas_transition.get_sck_rate(current_state);
 				// debug_message!(
 				// 	"TOTALING transition ID {} from state {:?} with rate {} to total outgoing rate, new total: {}",
 				// 	t,
