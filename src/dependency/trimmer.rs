@@ -76,6 +76,7 @@ pub fn trim_model(model: &AbstractVas, dg: DependencyGraph) -> AbstractVas {
 	let target = VasProperty {
 		variable_index: target_index,
 		target_value: model.target.target_value,
+		comparison_op: model.target.comparison_op,
 	};
 	// Create the trimmed model with the collected variables, initial state, and transitions
 	let trimmed_model = AbstractVas {

@@ -6,7 +6,7 @@ use crate::{
 	logging::messages::*,
 	model::{
 		model::{AbstractModel, ProbabilityOrRate},
-		vas_model::{AbstractVas, VasProperty, VasState, VasTransition, VasValue},
+		vas_model::{AbstractVas, ComparisonOperator, VasProperty, VasState, VasTransition, VasValue},
 	},
 	util::util::read_lines,
 };
@@ -368,13 +368,31 @@ fn build_property(
 		));
 	}
 	let variable_index = variable_index.unwrap();
+	
+	// Parse the comparison operator (words[2])
+	let operator_str = words.get(2).unwrap_or(&"");
+	let comparison_op = match *operator_str {
+		"=" | "==" => ComparisonOperator::Equal,
+		"<" => ComparisonOperator::LessThan,
+		"<=" => ComparisonOperator::LessThanOrEqual,
+		">" => ComparisonOperator::GreaterThan,
+		">=" => ComparisonOperator::GreaterThanOrEqual,
+		"!=" => ComparisonOperator::NotEqual,
+		_ => {
+			return Err(ModelParseError::unexpected_token(
+				raw_data[0].0.try_into().unwrap(),
+				&format!("Invalid comparison operator: '{}'", operator_str),
+			));
+		}
+	};
+	
 	let target_value = if words.len() == 4 {
 		if let Ok(value) = words[3].parse::<VasValue>() {
 			value
 		} else {
 			return Err(ModelParseError::expected_integer(
 				raw_data[0].0.try_into().unwrap(),
-				&words[2],
+				&words[3],
 			));
 		}
 	} else {
@@ -387,6 +405,7 @@ fn build_property(
 	let property = VasProperty {
 		variable_index,
 		target_value,
+		comparison_op,
 	};
 
 	Ok(property)
