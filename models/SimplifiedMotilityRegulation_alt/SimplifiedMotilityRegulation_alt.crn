@@ -1,0 +1,65 @@
+species codY init 1
+species flache init 1
+species SigD_hag init 1
+species CodY init 10
+species CodY_flache init 1
+species hag init 1
+species CodY_hag init 1
+species SigD init 10
+species Hag init 10
+target CodY = 20
+reaction R1
+    consume codY
+    produce codY
+    produce CodY
+    const 0.1
+reaction R2 
+    consume CodY 
+    const 0.0002
+reaction R3 
+    consume flache
+    produce flache
+    produce SigD
+    const 1.0
+reaction R4
+    consume SigD 
+    const 0.0002
+reaction R5
+    consume SigD_hag
+    produce SigD
+    produce hag
+    produce Hag 
+    const 1.0
+reaction R6
+    consume Hag 
+    const 0.0002
+reaction R7
+    consume SigD 
+    consume hag 
+    produce SigD_hag
+    const 0.01
+reaction R8
+    consume SigD_hag
+    produce SigD 
+    produce hag 
+    const 0.1
+reaction R9
+    consume CodY 
+    consume flache
+    produce CodY_flache
+    const 0.02
+reaction R10
+    consume CodY_flache
+    produce CodY 
+    produce flache
+    const 0.1
+reaction R11
+    consume CodY 
+    consume hag 
+    produce CodY_hag
+    const 0.01
+reaction R12
+    consume CodY_hag
+    produce CodY 
+    produce hag 
+    const 0.1

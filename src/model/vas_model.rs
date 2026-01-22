@@ -534,7 +534,7 @@ impl AbstractVas {
 		let total_outgoing_rate = self.crn_total_outgoing_rate(current_state);
 		if total_outgoing_rate == 0.0 {
 			warning!(
-				"No outgoing transitions from state {}, returning 0 probability.",
+				"No outgoing transitions from state {}, returning 0 probability. Transition {}",
 				format!(
 					"[{}]",
 					current_state
@@ -542,7 +542,8 @@ impl AbstractVas {
 						.map(|v| v.to_string())
 						.collect::<Vec<_>>()
 						.join(",")
-				)
+				),
+				transition.transition_name
 			);
 			return 0.0; // No outgoing transitions, return 0 probability
 		}

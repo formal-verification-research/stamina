@@ -8,13 +8,14 @@ cargo build -r
 # CYCLE_LENGTHS=(0)
 # APPROACHES=("RL" "shortest")
 
-MODEL_FILES=("ModifiedYeastPolarization" "EnzymaticFutileCycle" "ReversibleIsomerization" "SimplifiedMotilityRegulation" "SingleSpeciesProductionDegradation")
-NUMS_TRACES=(10 100 1000 10000 100000 1000000)
-COMMUTE_DEPTHS=(0 1 2 3 4)
-CYCLE_LENGTHS=(0 2 3 4 5 6)
+# MODEL_FILES=("ModifiedYeastPolarization" "EnzymaticFutileCycle" "ReversibleIsomerization" "SimplifiedMotilityRegulation" "SingleSpeciesProductionDegradation")
+MODEL_FILES=("EnzymaticFutileCycle" "ReversibleIsomerization" "SingleSpeciesProductionDegradation")
+NUMS_TRACES=(10000)
+COMMUTE_DEPTHS=(0 5)
+CYCLE_LENGTHS=(0 5)
 APPROACHES=("RL" "shortest")
 
-OUTPUT_FOLDER="$(date +%Y%m%d-%H%M%S)"
+OUTPUT_FOLDER="$(date +%Y%m%d-%H%M%S)_10k_smallModels"
 
 for MODEL in "${MODEL_FILES[@]}"; do
   for NUM_TRACES in "${NUMS_TRACES[@]}"; do

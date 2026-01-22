@@ -16,6 +16,7 @@ use crate::{
 		vas_trie::VasTrieNode,
 	},
 	trace::trace_trie::TraceTrieNode,
+	warning,
 };
 
 const DEFAULT_NUM_TRACES: usize = 1000;
@@ -185,12 +186,14 @@ impl<'a> RagtimerBuilder<'a> {
 		rewards: &HashMap<usize, RewardValue>,
 	) -> (Vec<usize>, ProbabilityOrRate) {
 		let mut trace = Vec::new();
+		let mut trace_states = Vec::new();
 		let mut trace_probability = 1.0;
 		let vas_target = &self.abstract_model.target;
 
 		// Starting in the initial state, generate a trace
 		let mut current_state = self.abstract_model.initial_states[0].vector.clone();
 		while trace.len() < MAX_TRACE_LENGTH {
+			trace_states.push(current_state.clone());
 			// Check if we have reached the target state
 			if current_state.len() > vas_target.variable_index {
 				if current_state[vas_target.variable_index] == vas_target.target_value {
@@ -208,8 +211,40 @@ impl<'a> RagtimerBuilder<'a> {
 				.abstract_model
 				.get_available_transitions(&current_state);
 			if available_transitions.is_empty() {
-				trace_probability *= 0.01;
-				break;
+				warning!(
+					"Trace found dead end at state {:?}, terminating trace.",
+					current_state
+				);
+				debug_message!(
+					"Current trace:\n{}\n{}",
+					format!(
+						"[{}]",
+						trace_states[0]
+							.iter()
+							.map(|state| format!("{:?}", state))
+							.collect::<Vec<_>>()
+							.join(",")
+					),
+					trace_states
+						.windows(2)
+						.zip(trace.iter())
+						.map(|(states, &transition)| {
+							let from_state = states[0]
+								.iter()
+								.map(|state| format!("{:?}", state))
+								.collect::<Vec<_>>()
+								.join(",");
+							let to_state = states[1]
+								.iter()
+								.map(|state| format!("{:?}", state))
+								.collect::<Vec<_>>()
+								.join(",");
+							format!("[{}]\t--[{}]-->\t[{}]", from_state, transition, to_state)
+						})
+						.collect::<Vec<_>>()
+						.join("\n")
+				);
+				return (Vec::new(), 0.0);
 			}
 			// Shuffle the available transitions to add randomness
 			let mut shuffled_transitions = available_transitions.clone();

@@ -19,6 +19,7 @@ pub struct GraphNode {
 	node_init: VasState,
 	node_target: Vec<VasProperty>,
 	decrement: bool,
+	upstream_targets: Vec<VasProperty>,
 }
 
 /// A dependency graph containing only a root node.
@@ -109,6 +110,11 @@ impl GraphNode {
 		// Combine all the targets into a single vector.
 		let mut all_targets = child_targets;
 		all_targets.extend(negative_targets);
+		// If there are no targets, mark this node as enabled and return.
+		if all_targets.is_empty() {
+			self.enabled = true;
+			return Ok(());
+		}
 		// For all targets, try and add children nodes that meet that target.
 		for target in &all_targets {
 			for trans in &vas.transitions {
@@ -116,7 +122,9 @@ impl GraphNode {
 					.parents
 					.iter()
 					.all(|p| p.transition_name != trans.transition_name)
-				{
+					&& !self.upstream_targets.iter().any(|upstream_target| {
+						trans.update_vector[upstream_target.variable_index] < 0
+					}) {
 					let mut this_child_targets: Vec<VasProperty> = Vec::new();
 					let executions: VasValue;
 					if (target.target_value > 0 && trans.update_vector[target.variable_index] > 0)
@@ -144,6 +152,11 @@ impl GraphNode {
 							node_init: child_init.clone(),
 							node_target: this_child_targets.clone(),
 							decrement: executions < 0,
+							upstream_targets: {
+								let mut combined = self.upstream_targets.clone();
+								combined.extend(self.node_target.clone());
+								combined
+							},
 						};
 						child.parents.push(self.transition.clone());
 						self.children.push(Box::new(child));
@@ -167,13 +180,34 @@ impl GraphNode {
 			}
 		}
 		self.children = merged_children;
+
+		// If no children were added, mark this node as not enabled and return.
+		if self.children.is_empty() {
+			self.enabled = false;
+			return Ok(());
+		}
+
 		// Recursively build the graph for each child node, propagating enabled status back up the graph.
-		for child in &mut self.children {
+		self.children.retain_mut(|child| {
 			let _ = child.rec_build_graph(vas, depth + 1);
 			if !child.enabled {
-				self.enabled = false;
+				false
+			} else {
+				true
 			}
-		}
+		});
+
+		self.enabled = !self.children.is_empty()
+			&& self.children.iter().all(|child| child.enabled)
+			&& all_targets.iter().all(|target| {
+				self.children.iter().any(|child| {
+					child.node_target.iter().any(|child_target| {
+						child_target.variable_index == target.variable_index
+							&& child_target.target_value >= target.target_value
+					})
+				})
+			});
+
 		Ok(())
 	}
 }
@@ -241,6 +275,7 @@ pub fn make_dependency_graph(
 					target_value: target_difference,
 				}]),
 				decrement,
+				upstream_targets: Vec::new(),
 			})
 		},
 	};
@@ -343,10 +378,11 @@ impl DependencyGraph {
 		fn print_node(vas: &AbstractVas, node: &GraphNode, depth: usize) {
 			let indent = " ".repeat(depth * 2);
 			message!(
-				"{}Node: {} (Executions: {})",
+				"{}Node: {} (Executions: {}, Enabled: {})",
 				indent,
 				node.transition.transition_name,
-				node.executions
+				node.executions,
+				node.enabled
 			);
 			for child in &node.children {
 				print_node(vas, child, depth + 1);

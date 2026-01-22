@@ -14,7 +14,7 @@ use crate::{
 pub type RewardValue = f64;
 type LowerBound = Option<ProbabilityOrRate>;
 
-pub(super) const MAX_TRACE_LENGTH: usize = 1000000;
+pub(super) const MAX_TRACE_LENGTH: usize = 10000;
 
 /// Magic numbers used for RL traces in Ragtimer.
 #[derive(Debug, Clone)]
