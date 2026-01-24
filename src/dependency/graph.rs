@@ -91,6 +91,7 @@ impl GraphNode {
 					Some(VasProperty {
 						variable_index: prop.variable_index,
 						target_value: reqd,
+						comparison_op: prop.comparison_op,
 					})
 				} else {
 					None
@@ -104,6 +105,7 @@ impl GraphNode {
 				negative_targets.push(VasProperty {
 					variable_index: i,
 					target_value: -child_init.vector[i],
+					comparison_op: vas_model::ComparisonOperator::Equal,
 				});
 			}
 		}
@@ -134,6 +136,7 @@ impl GraphNode {
 						this_child_targets.push(VasProperty {
 							variable_index: target.variable_index,
 							target_value: target.target_value,
+							comparison_op: target.comparison_op,
 						});
 						executions = (target.target_value
 							/ trans.update_vector[target.variable_index])
@@ -214,17 +217,16 @@ impl GraphNode {
 
 /// Checks if a given property is satisfied in the current state.
 fn property_sat(prop: &VasProperty, state: &VasState) -> Result<bool, String> {
-	if state.vector.len() < prop.variable_index {
+	if state.vector.len() <= prop.variable_index {
 		return Err(format!(
 			"Error: Index out of bounds for state vector: {} >= {}",
 			prop.variable_index,
 			state.vector.len()
 		));
 	}
-	if state.vector[prop.variable_index] == prop.target_value {
-		return Ok(true);
-	}
-	return Ok(false);
+	let state_value = state.vector[prop.variable_index];
+	let is_satisfied = prop.comparison_op.evaluate(state_value, prop.target_value);
+	return Ok(is_satisfied);
 }
 
 /// Top-level function to create a dependency graph from an abstract VAS model.
@@ -273,6 +275,7 @@ pub fn make_dependency_graph(
 				node_target: Vec::from([VasProperty {
 					variable_index: target_variable,
 					target_value: target_difference,
+					comparison_op: vas.target.comparison_op,
 				}]),
 				decrement,
 				upstream_targets: Vec::new(),

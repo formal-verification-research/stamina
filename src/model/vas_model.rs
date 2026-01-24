@@ -26,6 +26,31 @@ const ROUNDING_ERROR: f64 = 1e-6;
 pub type VasValue = i128;
 pub type VasStateVector = DVector<VasValue>;
 
+/// Comparison operators for VAS properties
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum ComparisonOperator {
+	Equal,              // ==
+	LessThan,           // <
+	LessThanOrEqual,    // <=
+	GreaterThan,        // >
+	GreaterThanOrEqual, // >=
+	NotEqual,           // !=
+}
+
+impl ComparisonOperator {
+	/// Evaluate the comparison between two values
+	pub fn evaluate(&self, lhs: VasValue, rhs: VasValue) -> bool {
+		match self {
+			ComparisonOperator::Equal => lhs == rhs,
+			ComparisonOperator::LessThan => lhs < rhs,
+			ComparisonOperator::LessThanOrEqual => lhs <= rhs,
+			ComparisonOperator::GreaterThan => lhs > rhs,
+			ComparisonOperator::GreaterThanOrEqual => lhs >= rhs,
+			ComparisonOperator::NotEqual => lhs != rhs,
+		}
+	}
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct StateLabel {
 	// Add fields as needed
@@ -294,6 +319,7 @@ impl Transition for VasTransition {
 pub struct VasProperty {
 	pub(crate) variable_index: usize,
 	pub(crate) target_value: VasValue,
+	pub(crate) comparison_op: ComparisonOperator,
 }
 
 /// The data for an abstract Vector Addition System
