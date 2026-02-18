@@ -17,6 +17,7 @@ const TRANSITION_TERMS: &[&str] = &["reaction", "transition"];
 const DECREASE_TERMS: &[&str] = &["consume", "decrease", "decrement"];
 const INCREASE_TERMS: &[&str] = &["produce", "increase", "increment"];
 const RATE_TERMS: &[&str] = &["rate", "const"];
+const FORMULA_TERMS: &[&str] = &["formula"];
 const TARGET_TERMS: &[&str] = &["target", "goal", "prop", "check"];
 
 #[derive(Clone, Debug)]
@@ -202,6 +203,7 @@ fn build_transitions(
 		let mut increment = [0; 64][..num_variables].to_vec().into_boxed_slice();
 		let mut decrement = [0; 64][..num_variables].to_vec().into_boxed_slice();
 		let mut rate_const: ProbabilityOrRate = 0.0;
+		let mut rate_fn_str: Option<String> = None;
 
 		for line in declaration.iter() {
 			let words: &[&str] = &line.1.split_whitespace().collect::<Vec<&str>>()[..];
@@ -322,6 +324,8 @@ fn build_transitions(
 						&line.1,
 					));
 				}
+			} else if FORMULA_TERMS.contains(first_word) {
+				rate_fn_str = Some(words[1..].join(" "));
 			} else {
 				return Err(ModelParseError::unexpected_token(
 					line.0.try_into().unwrap(),
@@ -336,6 +340,7 @@ fn build_transitions(
 			increment,
 			decrement,
 			rate_const,
+			rate_fn_str,
 		);
 
 		transitions.push(transition);

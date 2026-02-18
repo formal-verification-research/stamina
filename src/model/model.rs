@@ -9,16 +9,16 @@ pub type ProbabilityOrRate = f64;
 /// to use lifetime parameters and contain a reference to the state
 /// space's metadata (i.e., a variable ordering in the case of a VAS)
 
-pub(crate) trait State: evalexpr::Context + Labeled + Clone + PartialEq {
+pub(crate) trait State: Labeled + Clone + PartialEq {
 	type VariableValueType: num::Integer;
 	// type StateLabelType: Label;
 
 	// Functions for which no default implementation is provided
 	// and must be provided by derived types
 
-	/// Valuates the state by a certain variable name
+	// / Valuates the state by a certain variable name
 
-	fn valuate(&self, var_name: &str) -> Self::VariableValueType;
+	// fn valuate(&self, var_name: &str) -> Self::VariableValueType;
 }
 
 /// A trait representing a transition in a model

@@ -65,7 +65,8 @@ pub fn trim_model(model: &AbstractVas, dg: DependencyGraph) -> AbstractVas {
 				.collect::<Vec<_>>()
 				.into(),
 			rate_const: t.rate_const,
-			custom_rate_fn: t.custom_rate_fn,
+			rate_fn_str: t.rate_fn_str.clone(),
+			rate_fn: t.rate_fn.clone(),
 		});
 	}
 	// Update the target property to match the trimmed model
@@ -84,6 +85,7 @@ pub fn trim_model(model: &AbstractVas, dg: DependencyGraph) -> AbstractVas {
 		transitions: transitions,
 		m_type: model.m_type,
 		target: target,
+		evalexp_context: model.evalexp_context.clone(),
 	};
 	trimmed_model
 }

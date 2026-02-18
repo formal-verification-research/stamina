@@ -15,6 +15,7 @@ use crate::{
 	warning,
 };
 
+use evalexpr::ContextWithMutableVariables;
 use nalgebra::DVector;
 use std::io::Write;
 
@@ -70,40 +71,12 @@ impl property::Labeled for VasState {
 	}
 }
 
-impl evalexpr::Context for VasState {
-	type NumericTypes = evalexpr::DefaultNumericTypes; // Use the default numeric types provided by evalexpr
-
-	fn get_value(&self, _identifier: &str) -> Option<&evalexpr::Value<Self::NumericTypes>> {
-		todo!()
-	}
-
-	fn call_function(
-		&self,
-		_identifier: &str,
-		_argument: &evalexpr::Value<Self::NumericTypes>,
-	) -> evalexpr::error::EvalexprResultValue<Self::NumericTypes> {
-		todo!()
-	}
-
-	fn are_builtin_functions_disabled(&self) -> bool {
-		todo!()
-	}
-
-	fn set_builtin_functions_disabled(
-		&mut self,
-		_disabled: bool,
-	) -> evalexpr::EvalexprResult<(), Self::NumericTypes> {
-		todo!()
-	}
-	// Implement required methods for evalexpr::Context
-}
-
 impl State for VasState {
 	type VariableValueType = u64;
 
-	fn valuate(&self, _var_name: &str) -> Self::VariableValueType {
-		todo!()
-	}
+	// fn valuate(&self, var_name: &str) -> Self::VariableValueType {
+	// 		todo!()
+	// 	}
 }
 
 /// A transition in a Vector Addition System (VAS)
@@ -119,9 +92,9 @@ pub(crate) struct VasTransition {
 	pub(crate) rate_const: ProbabilityOrRate,
 	// An override function to find the rate probability
 	// (when this is not provided defaults to the implemenation in
-	// rate_probability_at). The override must be stored in static
-	// memory for now (may change this later).
-	pub(crate) custom_rate_fn: Option<CustomRateFn>,
+	// rate_probability_at).
+	pub(crate) rate_fn_str: Option<String>,
+	pub(crate) rate_fn: Option<CustomRateFn>,
 }
 
 #[derive(Clone)]
@@ -155,7 +128,7 @@ impl VasTransition {
 		&mut self,
 		rate_fn: std::sync::Arc<dyn Fn(&VasState) -> ProbabilityOrRate + Send + Sync + 'static>,
 	) {
-		self.custom_rate_fn = Some(CustomRateFn(rate_fn));
+		self.rate_fn = Some(CustomRateFn(rate_fn));
 	}
 
 	pub fn new(
@@ -164,6 +137,7 @@ impl VasTransition {
 		increment: Box<[VasValue]>,
 		decrement: Box<[VasValue]>,
 		rate_const: ProbabilityOrRate,
+		rate_fn_str: Option<String>,
 	) -> Self {
 		Self {
 			transition_id,
@@ -178,7 +152,8 @@ impl VasTransition {
 			),
 			enabled_bounds: DVector::from_iterator(decrement.len(), decrement),
 			rate_const,
-			custom_rate_fn: None,
+			rate_fn_str,
+			rate_fn: None, // rate_fn will be set later if rate_fn_str is provided
 		}
 	}
 
@@ -214,6 +189,42 @@ impl VasTransition {
 			})
 			.is_some()
 	}
+
+	/// Fills the rate function for this transition if a string representation of the function is provided.
+	pub fn fill_rate_fn(&mut self, model: &AbstractVas) {
+		if let Some(rate_fn_str) = &self.rate_fn_str {
+			let expr = rate_fn_str.clone();
+			let var_names: Vec<String> = model.variable_names.iter().cloned().collect();
+
+			let arc_fn = std::sync::Arc::new(move |state: &VasState| -> ProbabilityOrRate {
+				// Build a fresh context for each evaluation and populate with variable values from the state
+				let mut ctx = evalexpr::HashMapContext::<evalexpr::DefaultNumericTypes>::new();
+				for name in var_names.iter() {
+					let _ = ctx.set_value(name.clone(), evalexpr::Value::Int(0));
+				}
+				for (i, name) in var_names.iter().enumerate() {
+					let val: VasValue = *state.vector.get(i).unwrap_or(&0);
+					// cast to i64 for evalexpr::Value::Int (may truncate large values)
+					let _ = ctx.set_value(name.clone(), evalexpr::Value::Int(val as i64));
+				}
+
+				let result: ProbabilityOrRate =
+					match evalexpr::eval_with_context(&expr, &ctx) {
+						Ok(evalexpr::Value::Float(f)) => f,
+						Ok(_) => {
+							warning!("Custom rate function '{}' returned non-float value, treating as 0.", expr);
+							0.0
+						}
+						Err(e) => {
+							warning!("Error evaluating custom rate function '{}': {}", expr, e);
+							0.0
+						}
+					};
+				result
+			});
+			self.rate_fn = Some(CustomRateFn(arc_fn));
+		}
+	}
 }
 
 impl Transition for VasTransition {
@@ -241,7 +252,7 @@ impl Transition for VasTransition {
 	fn rate_probability_at(&self, state: &VasState) -> Option<ProbabilityOrRate> {
 		let enabled = self.enabled(state);
 		if enabled {
-			let rate = if let Some(rate_fn) = &self.custom_rate_fn {
+			let rate = if let Some(rate_fn) = &self.rate_fn {
 				(rate_fn.0)(state)
 			} else {
 				// Compute the transition rate using the same equation that
@@ -304,6 +315,7 @@ pub(crate) struct AbstractVas {
 	pub(crate) m_type: ModelType,
 	pub(crate) target: VasProperty,
 	// pub(crate) z3_context: Option<z3::Context>, // Removed because z3::Context and z3::Config do not implement Clone
+	pub(crate) evalexp_context: Option<evalexpr::HashMapContext<evalexpr::DefaultNumericTypes>>, // Global context for evalexpr to use when evaluating rate functions
 }
 
 impl AbstractModel for AbstractVas {
@@ -361,6 +373,7 @@ impl AbstractVas {
 			m_type: ModelType::ContinuousTime,
 			target,
 			// z3_context: None, // z3_context is not initialized here
+			evalexp_context: None, // evalexp_context is not initialized here
 		}
 	}
 
@@ -554,6 +567,23 @@ impl AbstractVas {
 			transition_rate / total_outgoing_rate
 		} else {
 			0.0 // Transition not enabled, return 0 probability
+		}
+	}
+
+	/// Checks if there are any rate functions in the model that need to be filled and fills them if so.
+	pub fn fill_rate_functions(&mut self) {
+		if self.transitions.iter().any(|t| t.rate_fn_str.is_some()) {
+			// Initialize variable names in the evalexpr context with zero values
+			// so that expressions referencing them can be parsed/evaluated later.
+			let mut ctx = evalexpr::HashMapContext::<evalexpr::DefaultNumericTypes>::new();
+			for name in self.variable_names.iter() {
+				let _ = ctx.set_value(name.clone(), evalexpr::Value::Int(0));
+			}
+			self.evalexp_context = Some(ctx);
+		} else {
+			// No rate functions to fill, so we can skip initializing the context
+			self.evalexp_context = None;
+			return;
 		}
 	}
 }

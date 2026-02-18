@@ -263,7 +263,8 @@ pub fn make_dependency_graph(
 					update_vector: DVector::zeros(vas.variable_names.len()),
 					enabled_bounds: DVector::zeros(vas.variable_names.len()),
 					rate_const: 0.0,
-					custom_rate_fn: None, // make the artificial transition here
+					rate_fn_str: None,
+					rate_fn: None,
 				},
 				children: Vec::new(),
 				parents: Vec::new(),
